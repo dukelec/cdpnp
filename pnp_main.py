@@ -362,6 +362,16 @@ if ret == 1:
         print(f'cali grab offset done, ofs: {grab_ofs[0]:.3f}, {grab_ofs[1]:.3f}...')
 
 
+print('show components...')
+for comp in pos['0402']['100nF']:
+    print(f'--- {comp}')
+    p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
+    print(f'goto: ({p_x:.3f}, {p_y:.3f})')
+    cur_pos[0] = p_x
+    cur_pos[1] = p_y
+    goto_pos(cur_pos)
+    pos_set()
+
 
 print('exit...')
 
