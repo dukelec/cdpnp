@@ -71,6 +71,7 @@ K_PAGEDOWN = 54
 K_R = 114
 k_SHF_R = 82
 K_P = 112
+K_H = 104
 
 K_0 = 48
 K_INC = 61 # +
@@ -201,11 +202,41 @@ def goto_pos(pos):
         sleep(0.1)
 
 
+def load_pos():
+    pos = [0, 0, 0, 0]
+    
+    print(f'motor read pos')
+    
+    sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:03', 0x5))
+    dat, src = sock.recvfrom(timeout=0.5)
+    if dat and dat[0] == 0x80:
+        pos[0] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP
+    
+    sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:01', 0x5))
+    dat, src = sock.recvfrom(timeout=0.5)
+    if dat and dat[0] == 0x80:
+        pos[1] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP
+    
+    sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:04', 0x5))
+    dat, src = sock.recvfrom(timeout=0.5)
+    if dat and dat[0] == 0x80:
+        pos[2] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP
+    
+    sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:05', 0x5))
+    dat, src = sock.recvfrom(timeout=0.5)
+    if dat and dat[0] == 0x80:
+        pos[3] = struct.unpack("<i", dat[1:])[0] * DIV_DEG2STEP
+    
+    return pos
+
+
+
 motor_enable()
 
 
-del_pow = 0 # + - by key
-cur_pos = [0, 0, 0, 0] # x, y, z, r
+del_pow = 3 # + - by key
+#cur_pos = [0, 0, 0, 0] # x, y, z, r
+cur_pos = load_pos()
 cur_cam = 0
 cur_pump = 0
 
@@ -230,9 +261,19 @@ while True:
     elif k == K_PAGEDOWN:
         cur_pos[2] += pow(10, del_pow)/100
     elif k == K_R:
-        cur_pos[3] += pow(10, del_pow)/100
+        cur_pos[3] += pow(10, del_pow)/10
     elif k == k_SHF_R:
-        cur_pos[3] -= pow(10, del_pow)/100
+        cur_pos[3] -= pow(10, del_pow)/10
+    
+    if k == K_H:
+        print('set home')
+        for i in range(5):
+            print(f'motor set home: #{i+1}')
+            sock.sendto(b'\x20'+struct.pack("<H", 0x00b1) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
+            rx = sock.recvfrom(timeout=1)
+            print('motor set home: ' + rx[0].hex(), rx[1])
+        for i in range(4):
+            cur_pos[i] = 0
     
     if k == K_INC or k == K_DEC:
         del_pow += (1 if k == K_INC else -1)
@@ -265,47 +306,4 @@ while True:
 
 
 print('exit...')
-exit()
 
-
-
-print('run...')
-#sock.sendto(b'\x20'+struct.pack("<i", pos) + struct.pack("<i", speed), ('80:00:ff', 0x6))
-
-if x != None:
-    x = int(x, 0)
-    sock.sendto(b'\x20'+struct.pack("<H", 0x00d6) + struct.pack("<B", 1), ('80:00:03', 0x5))
-    rx = sock.recvfrom()
-    print('\r-> ' + rx[0].hex(), rx[1])
-    sock.sendto(b'\x20'+struct.pack("<i", x), ('80:00:03', 0x6))
-    rx = sock.recvfrom()
-    print('\rset x ret: ' + rx[0].hex(), rx[1])
-
-if y != None:
-    y = int(y, 0)
-    sock.sendto(b'\x20'+struct.pack("<H", 0x00d6) + struct.pack("<B", 1), ('80:00:e0', 0x5))
-    rx = sock.recvfrom()
-    print('\r-> ' + rx[0].hex(), rx[1])
-    sock.sendto(b'\x20'+struct.pack("<i", y), ('80:00:e0', 0x6))
-    rx = sock.recvfrom()
-    print('\rset z ret: ' + rx[0].hex(), rx[1])
-
-if z != None:
-    z = int(z, 0)
-    sock.sendto(b'\x20'+struct.pack("<H", 0x00d6) + struct.pack("<B", 1), ('80:00:04', 0x5))
-    rx = sock.recvfrom()
-    print('\r-> ' + rx[0].hex(), rx[1])
-    sock.sendto(b'\x20'+struct.pack("<i", z), ('80:00:04', 0x6))
-    rx = sock.recvfrom()
-    print('\rset z ret: ' + rx[0].hex(), rx[1])
-
-if r != None:
-    r = int(r, 0)
-    sock.sendto(b'\x20'+struct.pack("<H", 0x00d6) + struct.pack("<B", 1), ('80:00:05', 0x5))
-    rx = sock.recvfrom()
-    print('\r-> ' + rx[0].hex(), rx[1])
-    sock.sendto(b'\x20'+struct.pack("<i", r), ('80:00:05', 0x6))
-    rx = sock.recvfrom()
-    print('\rset r ret: ' + rx[0].hex(), rx[1])
-
-print('exit...')
