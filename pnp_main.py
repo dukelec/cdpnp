@@ -17,6 +17,9 @@ import struct
 from time import sleep
 import _thread
 import re
+import math
+import numpy as np
+from scipy.optimize import fsolve
 try:
     import readline
 except:
@@ -73,6 +76,7 @@ k_SHF_R = 82
 K_P = 112
 K_H = 104
 
+K_W = 119
 K_0 = 48
 K_INC = 61 # +
 K_DEC = 45 # -
@@ -107,15 +111,46 @@ print('start...')
 DIV_MM2STEP = 0.005
 DIV_DEG2STEP = 0.45
 
-grab_ofs = [20, 0]  # grab offset to camera
+work_dft_pos = [50, 150, -80] # default work position
+grab_ofs = [-33.77, -6.71]  # grab offset to camera
 
 pcb_origin = [0, 0]
 pcb_angle = 0.0
 
-fiducial = [
-    [2.0, 2.0],     # point 0 (main)
-    [42.0, 42.0],   # point 1 (calc angle)
+fiducial_pcb = [
+    [-26.375, 21.35],   # point 0 (main)
+    [-6.3, 4.75],       # point 1 (calc angle)
 ]
+
+fiducial_xyz = [
+    [102.64, 167.83],   # point 0 (main)
+    [123.02, 151.59],   # point 1 (calc angle)
+]
+
+dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
+dlt_xyz = [fiducial_xyz[1][0]-fiducial_xyz[0][0], fiducial_xyz[1][1]-fiducial_xyz[0][1]]
+print(f'pcb dlt: {dlt_pcb[0]}, {dlt_pcb[1]}', math.sqrt(pow(dlt_pcb[0], 2) + pow(dlt_pcb[1], 2)))
+print(f'xyz dlt: {dlt_xyz[0]}, {dlt_xyz[1]}', math.sqrt(pow(dlt_xyz[0], 2) + pow(dlt_xyz[1], 2)))
+
+def equations(p):
+    s, a, d_x, d_y = p
+    F = np.empty((4))
+    for i in range(2):
+        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_xyz[i][0]
+        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_xyz[i][1]
+    return F
+
+def pcb2xyz(p, pcb):
+    s, a, d_x, d_y = p
+    step_x = (pcb[0] * math.cos(a) - pcb[1] * math.sin(a)) * s + d_x
+    step_y = (pcb[0] * math.sin(a) + pcb[1] * math.cos(a)) * s + d_y
+    return step_x, step_y
+
+coeff =  fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
+print('coefficient:', coeff)
+print('equations(coeff):', equations(coeff))
+print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
+
 
 pos = {}
 
@@ -146,18 +181,19 @@ def motor_enable():
         print('motor enable ret: ' + rx[0].hex(), rx[1])
 
 
-def goto_pos(pos):
+def goto_pos(pos, s_speed=20000):
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
+    b_speed = struct.pack("<i", s_speed)
     while True:
         if not done_flag[0]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP)), ('80:00:03', 0x6))
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP))+b_speed, ('80:00:03', 0x6))
         if (not done_flag[1]) or (not done_flag[2]):
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP)), ('80:00:e0', 0x6))
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP))+b_speed, ('80:00:e0', 0x6))
         if not done_flag[2]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[2]/DIV_MM2STEP)), ('80:00:04', 0x6))
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed, ('80:00:04', 0x6))
         if not done_flag[3]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[3]/DIV_DEG2STEP)), ('80:00:05', 0x6))
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[3]/DIV_DEG2STEP))+b_speed, ('80:00:05', 0x6))
         
         for i in range(5 - (done_flag[0] + done_flag[1] + done_flag[2] + done_flag[3] + done_flag[4])):
             dat, src = sock.recvfrom(timeout=0.5)
@@ -220,7 +256,7 @@ def load_pos():
     sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:04', 0x5))
     dat, src = sock.recvfrom(timeout=0.5)
     if dat and dat[0] == 0x80:
-        pos[2] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP
+        pos[2] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP * -1
     
     sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:05', 0x5))
     dat, src = sock.recvfrom(timeout=0.5)
@@ -234,75 +270,97 @@ def load_pos():
 motor_enable()
 
 
-del_pow = 3 # + - by key
+del_pow = 2 # + - by key
 #cur_pos = [0, 0, 0, 0] # x, y, z, r
 cur_pos = load_pos()
 cur_cam = 0
 cur_pump = 0
 
-while True:
-    k = getkey()
-    print(k)
-    if k == K_ESC:
-        break
-    if k == K_RET:
-        pass
-    
-    if k == K_DOWN:
-        cur_pos[1] += pow(10, del_pow)/100
-    elif k == K_UP:
-        cur_pos[1] -= pow(10, del_pow)/100
-    elif k == K_LEFT:
-        cur_pos[0] -= pow(10, del_pow)/100
-    elif k == K_RIGHT:
-        cur_pos[0] += pow(10, del_pow)/100
-    elif k == K_PAGEUP:
-        cur_pos[2] -= pow(10, del_pow)/100
-    elif k == K_PAGEDOWN:
-        cur_pos[2] += pow(10, del_pow)/100
-    elif k == K_R:
-        cur_pos[3] += pow(10, del_pow)/10
-    elif k == k_SHF_R:
-        cur_pos[3] -= pow(10, del_pow)/10
-    
-    if k == K_H:
-        print('set home')
-        for i in range(5):
-            print(f'motor set home: #{i+1}')
-            sock.sendto(b'\x20'+struct.pack("<H", 0x00b1) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
+def pos_set():
+    global del_pow, cur_pos, cur_cam, cur_pump
+    while True:
+        k = getkey()
+        print(k)
+        if k == K_ESC:
+            return 0
+        if k == K_RET:
+            return 1
+        
+        if k == K_DOWN:
+            cur_pos[1] += pow(10, del_pow)/100
+        elif k == K_UP:
+            cur_pos[1] -= pow(10, del_pow)/100
+        elif k == K_LEFT:
+            cur_pos[0] -= pow(10, del_pow)/100
+        elif k == K_RIGHT:
+            cur_pos[0] += pow(10, del_pow)/100
+        elif k == K_PAGEDOWN:
+            cur_pos[2] -= pow(10, del_pow)/100
+        elif k == K_PAGEUP:
+            cur_pos[2] += pow(10, del_pow)/100
+        elif k == K_R:
+            cur_pos[3] += pow(10, del_pow)/10
+        elif k == k_SHF_R:
+            cur_pos[3] -= pow(10, del_pow)/10
+        
+        if k == K_W:
+            print('goto workspace')
+            cur_pos[0] = work_dft_pos[0]
+            cur_pos[1] = work_dft_pos[1]
+            cur_pos[2] = work_dft_pos[2]
+            cur_pos[3] = 0
+        
+        if k == K_H:
+            print('set home')
+            for i in range(5):
+                print(f'motor set home: #{i+1}')
+                sock.sendto(b'\x20'+struct.pack("<H", 0x00b1) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
+                rx = sock.recvfrom(timeout=1)
+                print('motor set home: ' + rx[0].hex(), rx[1])
+            for i in range(4):
+                cur_pos[i] = 0
+        
+        if k == K_INC or k == K_DEC:
+            del_pow += (1 if k == K_INC else -1)
+            del_pow = max(0, min(del_pow, 4))
+            print(f'del_pow: {del_pow}')
+        
+        if k == K_SPACE:
+            cur_cam = 255 if cur_cam == 0 else 0
+            print('set cam...', cur_cam)
+            sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", cur_cam), ('80:00:10', 0x5))
             rx = sock.recvfrom(timeout=1)
-            print('motor set home: ' + rx[0].hex(), rx[1])
-        for i in range(4):
-            cur_pos[i] = 0
-    
-    if k == K_INC or k == K_DEC:
-        del_pow += (1 if k == K_INC else -1)
-        del_pow = max(0, min(del_pow, 4))
-        print(f'del_pow: {del_pow}')
-    
-    if k == K_SPACE:
-        cur_cam = 255 if cur_cam == 0 else 0
-        print('set cam...', cur_cam)
-        sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", cur_cam), ('80:00:10', 0x5))
-        rx = sock.recvfrom(timeout=1)
-        print('set cam ret: ' + rx[0].hex(), rx[1])
-    
-    if k == K_P:
-        cur_pump = 2 if cur_pump == 0 else 1
-        print('set pump...', cur_pump)
-        sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", cur_pump), ('80:00:11', 0x5))
-        rx = sock.recvfrom(timeout=1)
-        print('set pump ret: ' + rx[0].hex(), rx[1])
-        if cur_pump == 1:
-            sleep(0.5)
-            cur_pump = 0
+            print('set cam ret: ' + rx[0].hex(), rx[1])
+        
+        if k == K_P:
+            cur_pump = 2 if cur_pump == 0 else 1
             print('set pump...', cur_pump)
             sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", cur_pump), ('80:00:11', 0x5))
             rx = sock.recvfrom(timeout=1)
             print('set pump ret: ' + rx[0].hex(), rx[1])
-    
-    print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
-    goto_pos(cur_pos)
+            if cur_pump == 1:
+                sleep(0.5)
+                cur_pump = 0
+                print('set pump...', cur_pump)
+                sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", cur_pump), ('80:00:11', 0x5))
+                rx = sock.recvfrom(timeout=1)
+                print('set pump ret: ' + rx[0].hex(), rx[1])
+        
+        print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
+        goto_pos(cur_pos)
+
+
+print('cali grab offset, set camera pos...')
+ret = pos_set()
+if ret == 1:
+    print('cali grab offset, set grab pos...')
+    tmp = [cur_pos[0], cur_pos[1]]
+    ret = pos_set()
+    if ret == 1:
+        grab_ofs[0] = cur_pos[0] - tmp[0]
+        grab_ofs[1] = cur_pos[1] - tmp[1]
+        print(f'cali grab offset done, ofs: {grab_ofs[0]:.3f}, {grab_ofs[1]:.3f}...')
+
 
 
 print('exit...')

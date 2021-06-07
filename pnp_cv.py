@@ -65,12 +65,10 @@ def cv_get_pos(img):
       else:
         angle = -angle
              
-      label = "  Rotation Angle: " + str(angle) + " degrees"
+      label = str(angle)
       cv.drawContours(img,[box],0,(0,0,255),1)
-      #textbox = cv.rectangle(img, (center[0]-35, center[1]-25), 
-      #  (center[0] + 295, center[1] + 10), (255,255,255), -1)
-      cv.putText(img, label, (center[0]-50, center[1]), 
-        cv.FONT_HERSHEY_SIMPLEX, 0.4, (255,0,0), 1, cv.LINE_AA)
+      cv.putText(img, label, (center[0]+14, center[1]), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0,200,255), 1, cv.LINE_AA)
+      cv.drawMarker(img, (center[0],center[1]), color=(0,255,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=10)
 
 
 def pic_rx():
