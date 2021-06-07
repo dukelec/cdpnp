@@ -22,6 +22,7 @@ import cv2 as cv
 from math import atan2, cos, sin, sqrt, pi
 import numpy as np
 
+cv_dat = []
 
 sock_pic = None
 cur_pic = None
@@ -37,7 +38,8 @@ def cv_get_pos(img):
      
     # Find all the contours in the thresholded image
     contours, _ = cv.findContours(bw, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
-     
+    
+    cv_dat.clear()
     for i, c in enumerate(contours):
      
       # Calculate the area of each contour
@@ -64,7 +66,9 @@ def cv_get_pos(img):
         angle = 90 - angle
       else:
         angle = -angle
-             
+      
+      cv_dat.append([center[0], center[1], angle])
+      
       label = str(angle)
       cv.drawContours(img,[box],0,(0,0,255),1)
       cv.putText(img, label, (center[0]+14, center[1]), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0,200,255), 1, cv.LINE_AA)

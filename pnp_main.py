@@ -34,7 +34,7 @@ from cdnet.dev.cdbus_serial import CDBusSerial
 from cdnet.dev.cdbus_bridge import CDBusBridge
 from cdnet.dispatch import *
 
-from pnp_cv import pnp_cv_init
+from pnp_cv import pnp_cv_init, cv_dat
 
 args = CdArgs()
 dev_str = args.get("--dev", dft="ttyACM0")
@@ -77,6 +77,11 @@ K_P = 112
 K_H = 104
 
 K_W = 119
+K_S = 115
+K_ARROW_L = 44 # <
+K_ARROW_R = 46 # >
+K_SHF_S = 83   # save component z
+K_SHF_P = 80   # save pcb z
 K_0 = 48
 K_INC = 61 # +
 K_DEC = 45 # -
@@ -106,6 +111,10 @@ pnp_cv_init()
 
 print('start...')
 
+
+# 10mm / 275 pixel
+DIV_MM2PIXEL = 10/275
+
 # 4mm / (50 * 16 (md: 2)) = 0.005mm per micro step
 # 360' / (50 * 16 (md: 2)) = 0.45' per micro step
 DIV_MM2STEP = 0.005
@@ -113,9 +122,6 @@ DIV_DEG2STEP = 0.45
 
 work_dft_pos = [50, 150, -80] # default work position
 grab_ofs = [-33.77, -6.71]  # grab offset to camera
-
-pcb_origin = [0, 0]
-pcb_angle = 0.0
 
 fiducial_pcb = [
     [-26.375, 21.35],   # point 0 (main)
@@ -173,6 +179,21 @@ with open('pos.csv', newline='') as csvfile:
 
 #print(pos)
 
+def set_pump(val):
+    pump = 2 if val != 0 else 1
+    print('set pump...', pump)
+    sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", pump), ('80:00:11', 0x5))
+    rx = sock.recvfrom(timeout=1)
+    print('set pump ret: ' + rx[0].hex(), rx[1])
+    if pump == 1:
+        sleep(0.5)
+        pump = 0
+        print('set pump...', pump)
+        sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", pump), ('80:00:11', 0x5))
+        rx = sock.recvfrom(timeout=1)
+        print('set pump ret: ' + rx[0].hex(), rx[1])
+
+
 def motor_enable():
     for i in range(5):
         print(f'motor enable: #{i+1}')
@@ -181,7 +202,7 @@ def motor_enable():
         print('motor enable ret: ' + rx[0].hex(), rx[1])
 
 
-def goto_pos(pos, s_speed=20000):
+def goto_pos(pos, wait=False, s_speed=20000):
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
     b_speed = struct.pack("<i", s_speed)
@@ -216,7 +237,8 @@ def goto_pos(pos, s_speed=20000):
             print(f'error: set retry > 3, done_flag: f{done_flag}')
             return -1
     
-    return 0
+    if not wait:
+        return 0
     
     retry_cnt = 0
     tgt = 1
@@ -276,8 +298,11 @@ cur_pos = load_pos()
 cur_cam = 0
 cur_pump = 0
 
+comp_top_z = -83.6
+pcb_top_z = -83.2 # include component height
+
 def pos_set():
-    global del_pow, cur_pos, cur_cam, cur_pump
+    global del_pow, cur_pos, cur_cam, cur_pump, comp_top_z, pcb_top_z
     while True:
         k = getkey()
         print(k)
@@ -305,10 +330,7 @@ def pos_set():
         
         if k == K_W:
             print('goto workspace')
-            cur_pos[0] = work_dft_pos[0]
-            cur_pos[1] = work_dft_pos[1]
-            cur_pos[2] = work_dft_pos[2]
-            cur_pos[3] = 0
+            cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
         
         if k == K_H:
             print('set home')
@@ -319,6 +341,40 @@ def pos_set():
                 print('motor set home: ' + rx[0].hex(), rx[1])
             for i in range(4):
                 cur_pos[i] = 0
+        
+        if k == K_S:
+            print('snap to cv_dat', len(cv_dat))
+            if len(cv_dat):
+                print('cv point', cv_dat[0])
+                dx = (cv_dat[0][0] - 480/2) * DIV_MM2PIXEL
+                dy = (cv_dat[0][1] - 640/2) * DIV_MM2PIXEL
+                print('cv dx dy', dx, dy)
+                cur_pos[0] += dx
+                cur_pos[1] += dy
+                cur_pos[3] = cv_dat[0][2] * -1
+        
+        if k == K_SHF_S:
+            comp_top_z = cur_pos[2]
+            print('set comp_top_z', comp_top_z)
+        if k == K_SHF_P:
+            pcb_top_z = cur_pos[2]
+            print('set pcb_top_z', pcb_top_z)
+        
+        if k == K_ARROW_L:
+            print('grap current comp')
+            cur_pos[0] += grab_ofs[0]
+            cur_pos[1] += grab_ofs[1]
+            goto_pos(cur_pos, wait=True)
+            sleep(1)
+            cur_pos[2] = comp_top_z
+            goto_pos(cur_pos, wait=True)
+            sleep(1)
+            set_pump(1)
+            sleep(1)
+            cur_pos[2] = work_dft_pos[2]
+            goto_pos(cur_pos, wait=True)
+            sleep(1)
+            
         
         if k == K_INC or k == K_DEC:
             del_pow += (1 if k == K_INC else -1)
@@ -333,18 +389,9 @@ def pos_set():
             print('set cam ret: ' + rx[0].hex(), rx[1])
         
         if k == K_P:
-            cur_pump = 2 if cur_pump == 0 else 1
-            print('set pump...', cur_pump)
-            sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", cur_pump), ('80:00:11', 0x5))
-            rx = sock.recvfrom(timeout=1)
-            print('set pump ret: ' + rx[0].hex(), rx[1])
-            if cur_pump == 1:
-                sleep(0.5)
-                cur_pump = 0
-                print('set pump...', cur_pump)
-                sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", cur_pump), ('80:00:11', 0x5))
-                rx = sock.recvfrom(timeout=1)
-                print('set pump ret: ' + rx[0].hex(), rx[1])
+            cur_pump = int(not cur_pump)
+            print('cur_pump:', cur_pump)
+            set_pump(cur_pump)
         
         print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
         goto_pos(cur_pos)
@@ -367,10 +414,12 @@ for comp in pos['0402']['100nF']:
     print(f'--- {comp}')
     p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
     print(f'goto: ({p_x:.3f}, {p_y:.3f})')
-    cur_pos[0] = p_x
-    cur_pos[1] = p_y
+    cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2]
     goto_pos(cur_pos)
     pos_set()
+    
+    print('goto workspace')
+    cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
 
 
 print('exit...')
