@@ -122,14 +122,22 @@ DIV_DEG2STEP = 0.45
 work_dft_pos = [50, 165, -86.5] # default work position
 grab_ofs = [-33.87, -6.64]  # grab offset to camera
 
-fiducial_pcb = [
-    [-26.375, 21.35],   # point 0
-    [-6.3, 4.75],       # point 1 (calc angle) (near aux zero)
+fiducial_pcb_bk = [
+    [10, -2.5],   # point 0
+    [52, -54.7],  # point 1 (calc angle) (near aux zero)
+]
+fiducial_xyz_bk = [
+    [197.165, 155.495],   # point 0
+    [239.105, 103.605],   # point 1 (calc angle)
 ]
 
+fiducial_pcb = [
+    [10, -54.7],  # point 0
+    [52, -2.5],   # point 1 (calc angle) (near aux zero)
+]
 fiducial_xyz = [
-    [119.740, 181.125],   # point 0
-    [139.690, 164.475],   # point 1 (calc angle)
+    [196.710, 103.130],   # point 0
+    [238.770, 155.210],   # point 1 (calc angle)
 ]
 
 dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
@@ -157,41 +165,28 @@ print('equations(coeff):', equations(coeff))
 print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
 
 
-pos = {}
+sub_len = 0.877
+sub_delta = (10, 11.3)
+#sub_first = [(7.0, -50.2), (14.123, -50.2), (7.0, -40.9), (14.123, -40.9)]
+sub_first = [(7.0, -50.3), (14.123, -50.3), (7.0, -40.8), (14.123, -40.8)]
+pos = []
 
-import csv
-with open('pos.csv', newline='') as csvfile:
-    spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
-    for row in spamreader:
-        if row[0] == 'Ref':
-            continue
-        
-        if row[2] in pos:
-            if row[1] in pos[row[2]]:
-                pos[row[2]][row[1]].append(row)
-            else:
-                pos[row[2]][row[1]] = [row]
-        else:
-            pos[row[2]] = {}
-            pos[row[2]][row[1]] = [row]
+for ix in range(5):
+    for iy in range(4):
+        for p in sub_first:
+            pos.append((p[0] + sub_delta[0] * ix, p[1] + sub_delta[1] * iy))
 
 
 #print(pos)
 
-def set_pump(val):
-    pump = 2 if val != 0 else 1
-    print('set pump...', pump)
-    sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", pump), ('80:00:11', 0x5))
-    rx = sock.recvfrom(timeout=1)
-    print('set pump ret: ' + rx[0].hex(), rx[1])
-    if pump == 1:
-        sleep(0.5)
-        pump = 0
-        print('set pump...', pump)
-        sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", pump), ('80:00:11', 0x5))
-        rx = sock.recvfrom(timeout=1)
-        print('set pump ret: ' + rx[0].hex(), rx[1])
 
+
+def motor_min_speed(min_speed):
+    for i in range(5):
+        print(f'motor set min speed: #{i+1}')
+        sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", min_speed), (f'80:00:0{i+1}', 0x5))
+        rx = sock.recvfrom(timeout=1)
+        print('motor set min speed ret: ' + rx[0].hex(), rx[1])
 
 def motor_enable():
     for i in range(5):
@@ -199,11 +194,7 @@ def motor_enable():
         sock.sendto(b'\x20'+struct.pack("<H", 0x00d6) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
         rx = sock.recvfrom(timeout=1)
         print('motor enable ret: ' + rx[0].hex(), rx[1])
-    for i in range(5):
-        print(f'motor set min speed: #{i+1}')
-        sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", 500), (f'80:00:0{i+1}', 0x5))
-        rx = sock.recvfrom(timeout=1)
-        print('motor set min speed ret: ' + rx[0].hex(), rx[1])
+    motor_min_speed(400)
 
 last_pos = None
 def goto_pos(pos, wait=False, s_speed=20000):
@@ -308,26 +299,15 @@ del_pow = 2 # + - by key
 #cur_pos = [0, 0, 0, 0] # x, y, z, r
 cur_pos = load_pos()
 aux_pos = [0, 0, 0, 0]
-cur_pump = 0
-down_put = True
+pause = False
 
 # not include component height
-comp_base_z = -90.25
-pcb_base_z = -89.25
-
-cur_comp = None
-comp_height = {
-    '0402': 0.2
-}
-
-def get_comp_height(comp=None):
-    if not comp or comp not in comp_height:
-        return 0.2
-    return comp_height[comp]
+#pcb_base_z = -65.75
+pcb_base_z = -64.85
 
 
 def pos_set():
-    global del_pow, cur_pos, aux_pos, cur_pump, comp_base_z, pcb_base_z, down_put
+    global del_pow, cur_pos, aux_pos, pcb_base_z, pause
     while True:
         k = getkey()
         print(k)
@@ -377,35 +357,9 @@ def pos_set():
                 cur_pos[1] += dy
                 cur_pos[3] = cv_dat['cur'][2]
         
-        if k == K_SHF_S:
-            comp_base_z = cur_pos[2]
-            print('set comp_base_z', comp_base_z)
         if k == K_SHF_P:
             pcb_base_z = cur_pos[2]
             print('set pcb_base_z', pcb_base_z)
-        if k == K_L:
-            print('limit angle')
-            cv_dat['limit_angle'] = not cv_dat['limit_angle']
-        if k == K_D:
-            print('set down_put:', not down_put)
-            down_put = not down_put
-        
-        if k == K_ARROW_L:
-            print('grap current comp')
-            cur_pos[0] += grab_ofs[0]
-            cur_pos[1] += grab_ofs[1]
-            goto_pos(cur_pos, wait=True)
-            sleep(1)
-            cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
-            goto_pos(cur_pos, wait=True)
-            sleep(0.5)
-            set_pump(1)
-            cur_pump = 1
-            sleep(0.5)
-            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-            goto_pos(cur_pos, wait=True)
-            cur_pos[3] = 0
-            goto_pos(cur_pos)
         
         
         if k == K_INC or k == K_DEC:
@@ -424,69 +378,56 @@ def pos_set():
             rx = sock.recvfrom(timeout=1)
             print('set cam ret: ' + rx[0].hex(), rx[1])
         
-        if k == K_P:
-            cur_pump = int(not cur_pump)
-            print('cur_pump:', cur_pump)
-            set_pump(cur_pump)
+        if k == K_SPACE:
+            pause = not pause
+            print('toggle pause, pause =', pause)
         
         print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
         print(f'delt: {cur_pos[0]-aux_pos[0]:.3f} {cur_pos[1]-aux_pos[1]:.3f} {cur_pos[2]-aux_pos[2]:.3f} {cur_pos[3]-aux_pos[3]:.3f}')
         goto_pos(cur_pos)
 
 
-print('cali grab offset, set camera pos...')
-ret = pos_set()
-if ret == 1:
-    print('cali grab offset, set grab pos...')
-    tmp = [cur_pos[0], cur_pos[1]]
-    ret = pos_set()
-    if ret == 1:
-        grab_ofs[0] = cur_pos[0] - tmp[0]
-        grab_ofs[1] = cur_pos[1] - tmp[1]
-        print(f'cali grab offset done, ofs: {grab_ofs[0]:.3f}, {grab_ofs[1]:.3f}...')
+print('free run...')
+pos_set()
 
 
-print('show components...')
-for footprint in pos:
-    cur_comp = footprint
-    for comp_val in pos[footprint]:
-        for comp in pos[footprint][comp_val]:
-            print(f'--- {comp}')
-            p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
-            p_a = float(comp[5])
-            if comp[6] == 'bottom':
-                p_a = 180 - p_a
-            elif p_a > 180:
-                p_a = - (360 - p_a)
-            
-            print(f'goto: ({p_x:.3f}, {p_y:.3f})')
-            cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
-            goto_pos(cur_pos)
-            ret = pos_set()
-            
-            if ret == 1:
-                print('put current comp')
-                cur_pos[0] = p_x + grab_ofs[0]
-                cur_pos[1] = p_y + grab_ofs[1]
-                cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-                cur_pos[3] = p_a
-                goto_pos(cur_pos, wait=True)
-                if down_put:
-                    sleep(1)
-                    cur_pos[2] = pcb_base_z + get_comp_height(cur_comp)
-                    goto_pos(cur_pos, wait=True)
-                    sleep(0.5)
-                    set_pump(0)
-                    cur_pump = 0
-                    cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                    goto_pos(cur_pos, wait=True)
-                else:
-                    print('not down_put')
-                    pos_set()
-            
-            #print('goto workspace')
-            #cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
+def work_thread():
+    global pause
+    print('start cut...')
+    motor_min_speed(100)
+    for p in pos:
+        print(f'--- {p}')
+        p_x, p_y = pcb2xyz(coeff, (p[0], p[1]))
+        
+        print(f'goto left top')
+        cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z + 3
+        goto_pos(cur_pos, wait=True)
+        while pause:
+            sleep(0.5)
+        
+        print(f'goto left down')
+        cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z
+        goto_pos(cur_pos, wait=True, s_speed=5000)
+        while pause:
+            sleep(0.5)
+        
+        print(f'goto right down')
+        cur_pos[0], cur_pos[1], cur_pos[2] = p_x+sub_len+0.4, p_y, pcb_base_z
+        goto_pos(cur_pos, wait=True, s_speed=100)
+        while pause:
+            sleep(0.5)
+        
+        print(f'goto right up')
+        cur_pos[0], cur_pos[1], cur_pos[2] = p_x+sub_len+0.4, p_y, pcb_base_z + 3
+        goto_pos(cur_pos, wait=True)
+        while pause:
+            sleep(0.5)
+    
+    print('end cut...')
+    motor_min_speed(300)
 
+_thread.start_new_thread(work_thread, ())
+pos_set()
 
 print('exit...')
 
