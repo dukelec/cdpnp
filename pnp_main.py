@@ -115,21 +115,31 @@ print('start...')
 DIV_MM2PIXEL = 10/275
 
 # 4mm / (50 * 16 (md: 2)) = 0.005mm per micro step
-# 360' / (50 * 16 (md: 2)) = 0.45' per micro step
+# 360' / (50 * 64 (md: 4)) = 0.45' per micro step
 DIV_MM2STEP = 0.005
-DIV_DEG2STEP = 0.45
+DIV_DEG2STEP = 0.1125
 
 work_dft_pos = [50, 165, -86.5] # default work position
-grab_ofs = [-33.87, -6.64]  # grab offset to camera
+#grab_ofs = [-33.87, -6.64]  # grab offset to camera
+#grab_ofs = [-33.900, -6.700]  # grab offset to camera
+grab_ofs = [-33.82, -6.7]  # grab offset to camera
 
-fiducial_pcb = [
+fiducial_pcb_bk = [
     [-26.375, 21.35],   # point 0
     [-6.3, 4.75],       # point 1 (calc angle) (near aux zero)
 ]
+fiducial_xyz_bk = [
+    [114.370, 180.160],   # point 0
+    [134.480, 163.680],   # point 1 (calc angle)
+]
 
+fiducial_pcb = [
+    [0.625, 22.175],   # point 0
+    [23.7, 4.75],       # point 1
+]
 fiducial_xyz = [
-    [119.740, 181.125],   # point 0
-    [139.690, 164.475],   # point 1 (calc angle)
+    [113.689, 180.421],   # point 0
+    [136.869, 163.261],   # point 1
 ]
 
 dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
@@ -201,9 +211,19 @@ def motor_enable():
         print('motor enable ret: ' + rx[0].hex(), rx[1])
     for i in range(5):
         print(f'motor set min speed: #{i+1}')
-        sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", 500), (f'80:00:0{i+1}', 0x5))
+        sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", 400), (f'80:00:0{i+1}', 0x5))
         rx = sock.recvfrom(timeout=1)
         print('motor set min speed ret: ' + rx[0].hex(), rx[1])
+    '''
+    print(f'motor set #5')
+    sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", 100), (f'80:00:05', 0x5))
+    rx = sock.recvfrom(timeout=1)
+    print('motor set #5 ret: ' + rx[0].hex(), rx[1])
+    '''
+    print(f'motor set #5')
+    sock.sendto(b'\x20'+struct.pack("<H", 0x00c4) + struct.pack("<I", 100), (f'80:00:05', 0x5))
+    rx = sock.recvfrom(timeout=1)
+    print('motor set #5 ret: ' + rx[0].hex(), rx[1])
 
 last_pos = None
 def goto_pos(pos, wait=False, s_speed=20000):
@@ -215,7 +235,7 @@ def goto_pos(pos, wait=False, s_speed=20000):
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
     m_vector = max(math.sqrt(math.pow(delta[0], 2) + math.pow(delta[1], 2) + math.pow(delta[2], 2)), 0.01)
-    v_speed = [round(s_speed * abs(delta[0])/m_vector), round(s_speed * abs(delta[1])/m_vector), round(s_speed * abs(delta[2])/m_vector), round(s_speed / 10)]
+    v_speed = [round(s_speed * abs(delta[0])/m_vector), round(s_speed * abs(delta[1])/m_vector), round(s_speed * abs(delta[2])/m_vector), round(s_speed / 100)]
     b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
     
     while True:
@@ -308,26 +328,30 @@ del_pow = 2 # + - by key
 #cur_pos = [0, 0, 0, 0] # x, y, z, r
 cur_pos = load_pos()
 aux_pos = [0, 0, 0, 0]
+cv_cur_r = 0
 cur_pump = 0
 down_put = True
 
 # not include component height
-comp_base_z = -90.25
-pcb_base_z = -89.25
+comp_base_z = -90.5
+pcb_base_z = -87.6 # -89.3
 
 cur_comp = None
 comp_height = {
-    '0402': 0.2
+    '0402': 0.2,
+    '0402C_BIG': 0.4
 }
 
 def get_comp_height(comp=None):
     if not comp or comp not in comp_height:
+        print(f'comp_height: default 0.2 ({comp})')
         return 0.2
+    print(f'comp_height: {comp}: {comp_height[comp]}')
     return comp_height[comp]
 
 
 def pos_set():
-    global del_pow, cur_pos, aux_pos, cur_pump, comp_base_z, pcb_base_z, down_put
+    global del_pow, cur_pos, aux_pos, cur_pump, comp_base_z, pcb_base_z, cv_cur_r, down_put
     while True:
         k = getkey()
         print(k)
@@ -355,6 +379,8 @@ def pos_set():
         
         if k == K_W:
             print('goto workspace')
+            cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2] + (pcb_base_z - comp_base_z), 0
+            goto_pos(cur_pos, wait=True)
             cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
         
         if k == K_H:
@@ -375,7 +401,8 @@ def pos_set():
                 print('cv dx dy', dx, dy)
                 cur_pos[0] += dx
                 cur_pos[1] += dy
-                cur_pos[3] = cv_dat['cur'][2]
+                cur_pos[3] = 0 #cv_dat['cur'][2]
+                cv_cur_r = cv_dat['cur'][2]
         
         if k == K_SHF_S:
             comp_base_z = cur_pos[2]
@@ -395,17 +422,18 @@ def pos_set():
             cur_pos[0] += grab_ofs[0]
             cur_pos[1] += grab_ofs[1]
             goto_pos(cur_pos, wait=True)
-            sleep(1)
-            cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
-            goto_pos(cur_pos, wait=True)
-            sleep(0.5)
-            set_pump(1)
-            cur_pump = 1
-            sleep(0.5)
-            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-            goto_pos(cur_pos, wait=True)
-            cur_pos[3] = 0
-            goto_pos(cur_pos)
+            if down_put:
+                sleep(1)
+                cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
+                goto_pos(cur_pos, wait=True)
+                sleep(0.5)
+                set_pump(1)
+                cur_pump = 1
+                sleep(0.5)
+                cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
+                goto_pos(cur_pos, wait=True)
+                cur_pos[3] = -cv_cur_r
+                goto_pos(cur_pos)
         
         
         if k == K_INC or k == K_DEC:
@@ -450,8 +478,10 @@ print('show components...')
 for footprint in pos:
     cur_comp = footprint
     for comp_val in pos[footprint]:
+        count = 0
         for comp in pos[footprint][comp_val]:
-            print(f'--- {comp}')
+            count += 1
+            print(f'--- {comp}, {count}/{len(pos[footprint][comp_val])}')
             p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
             p_a = float(comp[5])
             if comp[6] == 'bottom':
@@ -460,6 +490,9 @@ for footprint in pos:
                 p_a = - (360 - p_a)
             
             print(f'goto: ({p_x:.3f}, {p_y:.3f})')
+            if cur_pos[2] < work_dft_pos[2] + (pcb_base_z - comp_base_z):
+                cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
+                goto_pos(cur_pos, wait=True)
             cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
             goto_pos(cur_pos)
             ret = pos_set()
@@ -469,7 +502,7 @@ for footprint in pos:
                 cur_pos[0] = p_x + grab_ofs[0]
                 cur_pos[1] = p_y + grab_ofs[1]
                 cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-                cur_pos[3] = p_a
+                cur_pos[3] = p_a - cv_cur_r
                 goto_pos(cur_pos, wait=True)
                 if down_put:
                     sleep(1)
