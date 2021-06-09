@@ -120,17 +120,17 @@ DIV_MM2PIXEL = 10/275
 DIV_MM2STEP = 0.005
 DIV_DEG2STEP = 0.45
 
-work_dft_pos = [50, 150, -80] # default work position
-grab_ofs = [-33.77, -6.71]  # grab offset to camera
+work_dft_pos = [50, 165, -86.5] # default work position
+grab_ofs = [-33.87, -6.64]  # grab offset to camera
 
 fiducial_pcb = [
-    [-26.375, 21.35],   # point 0 (main)
-    [-6.3, 4.75],       # point 1 (calc angle)
+    [-26.375, 21.35],   # point 0
+    [-6.3, 4.75],       # point 1 (calc angle) (near aux zero)
 ]
 
 fiducial_xyz = [
-    [102.64, 167.83],   # point 0 (main)
-    [123.02, 151.59],   # point 1 (calc angle)
+    [119.740, 181.125],   # point 0
+    [139.690, 164.475],   # point 1 (calc angle)
 ]
 
 dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
@@ -298,8 +298,8 @@ cur_pos = load_pos()
 cur_cam = 0
 cur_pump = 0
 
-comp_top_z = -83.6
-pcb_top_z = -83.2 # include component height
+comp_top_z = -90.25
+pcb_top_z = -89.25 # include component height
 
 def pos_set():
     global del_pow, cur_pos, cur_cam, cur_pump, comp_top_z, pcb_top_z
@@ -368,13 +368,14 @@ def pos_set():
             sleep(1)
             cur_pos[2] = comp_top_z
             goto_pos(cur_pos, wait=True)
-            sleep(1)
+            sleep(0.5)
             set_pump(1)
-            sleep(1)
+            sleep(0.5)
             cur_pos[2] = work_dft_pos[2]
             goto_pos(cur_pos, wait=True)
-            sleep(1)
-            
+            cur_pos[3] = 0
+            goto_pos(cur_pos)
+        
         
         if k == K_INC or k == K_DEC:
             del_pow += (1 if k == K_INC else -1)
@@ -410,16 +411,32 @@ if ret == 1:
 
 
 print('show components...')
-for comp in pos['0402']['100nF']:
-    print(f'--- {comp}')
-    p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
-    print(f'goto: ({p_x:.3f}, {p_y:.3f})')
-    cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2]
-    goto_pos(cur_pos)
-    pos_set()
-    
-    print('goto workspace')
-    cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
+for footprint in pos:
+    for comp_val in pos[footprint]:
+        for comp in pos[footprint][comp_val]:
+            print(f'--- {comp}')
+            p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
+            print(f'goto: ({p_x:.3f}, {p_y:.3f})')
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2]
+            goto_pos(cur_pos)
+            ret = pos_set()
+            
+            if ret == 1:
+                print('put current comp')
+                cur_pos[0] = p_x + grab_ofs[0]
+                cur_pos[1] = p_y + grab_ofs[1]
+                cur_pos[3] = float(comp[5])
+                goto_pos(cur_pos, wait=True)
+                sleep(1)
+                cur_pos[2] = pcb_top_z
+                goto_pos(cur_pos, wait=True)
+                sleep(0.5)
+                set_pump(0)
+                cur_pos[2] = work_dft_pos[2]
+                goto_pos(cur_pos, wait=True)
+            
+            #print('goto workspace')
+            #cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
 
 
 print('exit...')
