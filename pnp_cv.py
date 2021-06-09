@@ -22,7 +22,10 @@ import cv2 as cv
 from math import atan2, cos, sin, sqrt, pi
 import numpy as np
 
-cv_dat = []
+cv_dat = {
+    'limit_angle': False,
+    'cur': None
+}
 
 sock_pic = None
 cur_pic = None
@@ -39,7 +42,7 @@ def cv_get_pos(img):
     # Find all the contours in the thresholded image
     contours, _ = cv.findContours(bw, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
     
-    cv_dat.clear()
+    comps = []
     for i, c in enumerate(contours):
      
       # Calculate the area of each contour
@@ -60,19 +63,35 @@ def cv_get_pos(img):
       width = int(rect[1][0])
       height = int(rect[1][1])
       angle = int(rect[2])
-     
-         
+      
       if width < height:
         angle = 90 - angle
       else:
         angle = -angle
       
-      cv_dat.append([center[0], center[1], angle])
+      if cv_dat['limit_angle']:
+        if angle < -45:
+            angle += 90
+        elif angle > 45:
+            angle -= 90
       
-      label = str(angle)
+      height, width = img.shape[:2]
+      x_center, y_center = int(width/2), int(height/2)
+      l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
+      comps.append([center[0], center[1], angle, l_center])
+      
+      label = str(angle) + (' !' if cv_dat['limit_angle'] else '')
       cv.drawContours(img,[box],0,(0,0,255),1)
       cv.putText(img, label, (center[0]+14, center[1]), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0,200,255), 1, cv.LINE_AA)
       cv.drawMarker(img, (center[0],center[1]), color=(0,255,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=10)
+    
+    if len(comps):
+        comps.sort(key = lambda e : e[3])
+        cv.drawMarker(img, (comps[0][0],comps[0][1]), color=(0,0,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=5)
+        cv_dat['cur'] = comps[0]
+    else:
+        cv_dat['cur'] = None
+
 
 
 def pic_rx():
