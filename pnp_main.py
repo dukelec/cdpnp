@@ -331,6 +331,8 @@ aux_pos = [0, 0, 0, 0]
 cv_cur_r = 0
 cur_pump = 0
 down_put = True
+pause = False
+redo = False
 
 # not include component height
 comp_base_z = -90.5
@@ -350,8 +352,67 @@ def get_comp_height(comp=None):
     return comp_height[comp]
 
 
+def cam_comp_ws():
+    print('camera goto components workspace')
+    cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2] + (pcb_base_z - comp_base_z), 0
+    goto_pos(cur_pos, wait=True)
+    cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
+    goto_pos(cur_pos, wait=True)
+
+def cam_comp_snap():
+    global cv_cur_r
+    print('camera snap to component', cv_dat['cur'])
+    if cv_dat['cur']:
+        dx = (cv_dat['cur'][0] - 480/2) * DIV_MM2PIXEL
+        dy = (cv_dat['cur'][1] - 640/2) * DIV_MM2PIXEL
+        print('cv dx dy', dx, dy)
+        cur_pos[0] += dx
+        cur_pos[1] += dy
+        cur_pos[3] = 0 #cv_dat['cur'][2]
+        cv_cur_r = cv_dat['cur'][2]
+        goto_pos(cur_pos, wait=True)
+        return 0
+    return -1
+
+def pickup_comp():
+    print('pickup focused comp')
+    cur_pos[0] += grab_ofs[0]
+    cur_pos[1] += grab_ofs[1]
+    goto_pos(cur_pos, wait=True)
+    if down_put:
+        sleep(1)
+        cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
+        goto_pos(cur_pos, wait=True)
+        sleep(0.5)
+        set_pump(1)
+        cur_pump = 1
+        sleep(0.5)
+        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
+        goto_pos(cur_pos, wait=True)
+        cur_pos[3] = -cv_cur_r
+        goto_pos(cur_pos, wait=True)
+
+def putdown_comp(p_x, p_y, p_a):
+    global cur_pump
+    print('putdown comp to pcb')
+    cur_pos[0] = p_x + grab_ofs[0]
+    cur_pos[1] = p_y + grab_ofs[1]
+    cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
+    cur_pos[3] = p_a - cv_cur_r
+    goto_pos(cur_pos, wait=True)
+    if down_put:
+        sleep(1)
+        cur_pos[2] = pcb_base_z + get_comp_height(cur_comp)
+        goto_pos(cur_pos, wait=True)
+        sleep(0.5)
+        set_pump(0)
+        cur_pump = 0
+        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
+        goto_pos(cur_pos, wait=True)
+
+
 def pos_set():
-    global del_pow, cur_pos, aux_pos, cur_pump, comp_base_z, pcb_base_z, cv_cur_r, down_put
+    global del_pow, cur_pos, aux_pos, cur_pump, comp_base_z, pcb_base_z, cv_cur_r, down_put, pause, redo
     while True:
         k = getkey()
         print(k)
@@ -378,10 +439,7 @@ def pos_set():
             cur_pos[3] -= pow(10, del_pow)/10
         
         if k == K_W:
-            print('goto workspace')
-            cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2] + (pcb_base_z - comp_base_z), 0
-            goto_pos(cur_pos, wait=True)
-            cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
+            cam_comp_ws()
         
         if k == K_H:
             print('set home')
@@ -394,15 +452,7 @@ def pos_set():
                 cur_pos[i] = 0
         
         if k == K_S:
-            print('snap to cv_dat', cv_dat['cur'])
-            if cv_dat['cur']:
-                dx = (cv_dat['cur'][0] - 480/2) * DIV_MM2PIXEL
-                dy = (cv_dat['cur'][1] - 640/2) * DIV_MM2PIXEL
-                print('cv dx dy', dx, dy)
-                cur_pos[0] += dx
-                cur_pos[1] += dy
-                cur_pos[3] = 0 #cv_dat['cur'][2]
-                cv_cur_r = cv_dat['cur'][2]
+            cam_comp_snap()
         
         if k == K_SHF_S:
             comp_base_z = cur_pos[2]
@@ -418,23 +468,10 @@ def pos_set():
             down_put = not down_put
         
         if k == K_ARROW_L:
-            print('grap current comp')
-            cur_pos[0] += grab_ofs[0]
-            cur_pos[1] += grab_ofs[1]
-            goto_pos(cur_pos, wait=True)
-            if down_put:
-                sleep(1)
-                cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
-                goto_pos(cur_pos, wait=True)
-                sleep(0.5)
-                set_pump(1)
-                cur_pump = 1
-                sleep(0.5)
-                cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-                goto_pos(cur_pos, wait=True)
-                cur_pos[3] = -cv_cur_r
-                goto_pos(cur_pos)
-        
+            pickup_comp()
+        if k == K_ARROW_R:
+            print('set redo')
+            redo = True
         
         if k == K_INC or k == K_DEC:
             del_pow += (1 if k == K_INC else -1)
@@ -457,6 +494,10 @@ def pos_set():
             print('cur_pump:', cur_pump)
             set_pump(cur_pump)
         
+        if k == K_SPACE:
+            pause = not pause
+            print('toggle pause, pause =', pause)
+        
         print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
         print(f'delt: {cur_pos[0]-aux_pos[0]:.3f} {cur_pos[1]-aux_pos[1]:.3f} {cur_pos[2]-aux_pos[2]:.3f} {cur_pos[3]-aux_pos[3]:.3f}')
         goto_pos(cur_pos)
@@ -474,52 +515,77 @@ if ret == 1:
         print(f'cali grab offset done, ofs: {grab_ofs[0]:.3f}, {grab_ofs[1]:.3f}...')
 
 
-print('show components...')
-for footprint in pos:
-    cur_comp = footprint
-    for comp_val in pos[footprint]:
-        count = 0
-        for comp in pos[footprint][comp_val]:
-            count += 1
-            print(f'--- {comp}, {count}/{len(pos[footprint][comp_val])}')
-            p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
-            p_a = float(comp[5])
-            if comp[6] == 'bottom':
-                p_a = 180 - p_a
-            elif p_a > 180:
-                p_a = - (360 - p_a)
-            
-            print(f'goto: ({p_x:.3f}, {p_y:.3f})')
-            if cur_pos[2] < work_dft_pos[2] + (pcb_base_z - comp_base_z):
-                cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                goto_pos(cur_pos, wait=True)
-            cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
-            goto_pos(cur_pos)
-            ret = pos_set()
-            
-            if ret == 1:
-                print('put current comp')
-                cur_pos[0] = p_x + grab_ofs[0]
-                cur_pos[1] = p_y + grab_ofs[1]
-                cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-                cur_pos[3] = p_a - cv_cur_r
-                goto_pos(cur_pos, wait=True)
-                if down_put:
+def work_thread():
+    global pause, redo, cv_cur_r
+    print('show components...')
+    for footprint in pos:
+        cur_comp = footprint
+        for comp_val in pos[footprint]:
+            count = 0
+            for comp in pos[footprint][comp_val]:
+                count += 1
+                while True:
+                    redo = False
+                    print(f'--- {comp}, {count}/{len(pos[footprint][comp_val])}')
+                    p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
+                    p_a = float(comp[5])
+                    if comp[6] == 'bottom':
+                        p_a = 180 - p_a
+                    elif p_a > 180:
+                        p_a = - (360 - p_a)
+                    
+                    print(f'goto: ({p_x:.3f}, {p_y:.3f})')
+                    if cur_pos[2] < work_dft_pos[2] + (pcb_base_z - comp_base_z):
+                        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
+                        goto_pos(cur_pos, wait=True)
+                    cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
+                    goto_pos(cur_pos, wait=True)
                     sleep(1)
-                    cur_pos[2] = pcb_base_z + get_comp_height(cur_comp)
-                    goto_pos(cur_pos, wait=True)
-                    sleep(0.5)
-                    set_pump(0)
-                    cur_pump = 0
-                    cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                    goto_pos(cur_pos, wait=True)
-                else:
-                    print('not down_put')
-                    pos_set()
-            
-            #print('goto workspace')
-            #cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
+                    while pause:
+                        sleep(0.5)
+                    if redo:
+                        continue
+                    
+                    cam_comp_ws()
+                    sleep(1)
+                    while pause:
+                        sleep(0.5)
+                    if redo:
+                        continue
+                    
+                    if cam_comp_snap() < 0:
+                        print('snap empty, wait')
+                        pause = True
+                    sleep(1)
+                    while pause:
+                        sleep(0.5)
+                    if redo:
+                        continue
+                    
+                    pickup_comp()
+                    if not down_put:
+                        print('pickup wait')
+                        pause = True
+                    sleep(1)
+                    while pause:
+                        sleep(0.5)
+                    if redo:
+                        continue
+                    
+                    putdown_comp(p_x, p_y, p_a)
+                    if not down_put:
+                        print('putdown wait')
+                        pause = True
+                    sleep(1)
+                    while pause:
+                        sleep(0.5)
+                    if redo:
+                        continue
+                    break
 
+
+_thread.start_new_thread(work_thread, ())
+pos_set()
 
 print('exit...')
 
