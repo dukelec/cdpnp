@@ -527,6 +527,10 @@ def work_thread():
         cur_comp = footprint
         for comp_val in pos[footprint]:
             count = 0
+            print(f'\n-> {footprint} -> {comp_val}, paused')
+            pause = True
+            while pause:
+                sleep(0.1)
             for comp in pos[footprint][comp_val]:
                 count += 1
                 while True:
@@ -550,14 +554,14 @@ def work_thread():
                         break
                     sleep(1)
                     while pause:
-                        sleep(0.5)
+                        sleep(0.1)
                     if redo:
                         continue
                     
                     cam_comp_ws()
                     sleep(1)
                     while pause:
-                        sleep(0.5)
+                        sleep(0.1)
                     if redo:
                         continue
                     
@@ -566,7 +570,7 @@ def work_thread():
                         pause = True
                     sleep(1)
                     while pause:
-                        sleep(0.5)
+                        sleep(0.1)
                     if redo:
                         continue
                     
@@ -576,7 +580,7 @@ def work_thread():
                         pause = True
                     sleep(1)
                     while pause:
-                        sleep(0.5)
+                        sleep(0.1)
                     if redo:
                         continue
                     
@@ -586,7 +590,7 @@ def work_thread():
                         pause = True
                     sleep(1)
                     while pause:
-                        sleep(0.5)
+                        sleep(0.1)
                     if redo:
                         continue
                     break
