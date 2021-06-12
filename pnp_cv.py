@@ -113,8 +113,8 @@ def pic_rx():
         elif (hdr & 0xf0) == 0x60: # more
             if dat_cnt == (hdr & 0xf):
                 rx_dat += dat
-            else:
-                print(f'pic, wrong cnt, local: {dat_cnt} != rx: {hdr & 0xf}, dat len: {len(dat)}')
+            #else:
+            #    print(f'pic, wrong cnt, local: {dat_cnt} != rx: {hdr & 0xf}, dat len: {len(dat)}')
         
         elif (hdr & 0xf0) == 0x70: # end
             if dat_cnt == (hdr & 0xf):
@@ -126,11 +126,11 @@ def pic_rx():
                 cv_get_pos(img)
                 cur_pic = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
                 pic_ready = True
-            else:
-                print(f'pic, wrong cnt at end, local: {dat_cnt} != rx: {hdr & 0xf}, dat len: {len(dat)}')
+            #else:
+            #    print(f'pic, wrong cnt at end, local: {dat_cnt} != rx: {hdr & 0xf}, dat len: {len(dat)}')
         
-        else:
-            print(f'pic, receive err, local: {dat_cnt}, rx: {hdr & 0xf}, all len: {len(img_dat)}')
+        #else:
+        #    print(f'pic, receive err, local: {dat_cnt}, rx: {hdr & 0xf}, all len: {len(img_dat)}')
         
         dat_cnt += 1
         if dat_cnt == 0x10:

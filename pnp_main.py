@@ -122,18 +122,18 @@ DIV_MM2PIXEL = 10/275
 DIV_MM2STEP = 0.005
 DIV_DEG2STEP = 0.1125
 
-work_dft_pos = [50, 165, -86.5] # default work position
+work_dft_pos = [50, 165, -85.5] # default work position
 #grab_ofs = [-33.87, -6.64]  # grab offset to camera
 #grab_ofs = [-33.900, -6.700]  # grab offset to camera
-grab_ofs = [-33.82, -6.7]  # grab offset to camera
+grab_ofs = [-33.82, -6.75]  # grab offset to camera
 
 fiducial_pcb = [
-    [-26.375, 21.35],   # point 0
-    [-6.3, 4.75],       # point 1 (calc angle) (near aux zero)
+    [3, 45.9],   # point 0
+    [67, 6],     # point 1
 ]
 fiducial_xyz = [
-    [114.370, 180.160],   # point 0
-    [134.480, 163.680],   # point 1 (calc angle)
+    [106.430, 165.850],   # point 0
+    [170.840, 127.010],   # point 1
 ]
 
 dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
@@ -214,6 +214,28 @@ def motor_enable():
     rx = sock.recvfrom(timeout=1)
     print('motor set #5 ret: ' + rx[0].hex(), rx[1])
 
+
+def wait_stop():
+    retry_cnt = 0
+    tgt = 1
+    while True:
+        sock.sendto(b'\x00'+struct.pack("<H", 0x00d7) + struct.pack("<B", 1), (f'80:00:0{tgt}', 0x5))
+        dat, src = sock.recvfrom(timeout=0.5)
+        if src == None:
+            print(f'error: retry_cnt: {retry_cnt}')
+            retry_cnt += 1
+            if retry_cnt > 3:
+                print('error: poll retry > 3')
+                return -1
+            continue
+        retry_cnt = 0
+        if dat[0] == 0x80 and dat[1] == 0:
+            tgt += 1
+            if tgt > 5:
+                return 0
+        sleep(0.1)
+
+
 last_pos = None
 def goto_pos(pos, wait=False, s_speed=20000):
     global last_pos
@@ -260,25 +282,8 @@ def goto_pos(pos, wait=False, s_speed=20000):
     
     if not wait:
         return 0
-    
-    retry_cnt = 0
-    tgt = 1
-    while True:
-        sock.sendto(b'\x00'+struct.pack("<H", 0x00d7) + struct.pack("<B", 1), (f'80:00:0{tgt}', 0x5))
-        dat, src = sock.recvfrom(timeout=0.5)
-        if src == None:
-            print(f'error: retry_cnt: {retry_cnt}')
-            retry_cnt += 1
-            if retry_cnt > 3:
-                print('error: poll retry > 3')
-                return -1
-            continue
-        retry_cnt = 0
-        if dat[0] == 0x80 and dat[1] == 0:
-            tgt += 1
-            if tgt > 5:
-                return 0
-        sleep(0.1)
+    wait_stop()
+
 
 
 def load_pos():
@@ -325,8 +330,8 @@ redo = False
 skip = False
 
 # not include component height
-comp_base_z = -90.5
-pcb_base_z = -87.6 # -89.3
+comp_base_z = -89.1
+pcb_base_z = -87.8 # -89.3
 
 cur_comp = None
 comp_height = {
@@ -368,6 +373,7 @@ def cam_comp_snap():
     return -1
 
 def pickup_comp():
+    global cur_pump
     print('pickup focused comp')
     cur_pos[0] += grab_ofs[0]
     cur_pos[1] += grab_ofs[1]
@@ -393,7 +399,9 @@ def putdown_comp(p_x, p_y, p_a):
     cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
     cur_pos[3] = p_a - cv_cur_r
     goto_pos(cur_pos, wait=True)
-    if down_put:
+    while pause:
+        sleep(0.1)
+    if not redo and down_put:
         sleep(1)
         cur_pos[2] = pcb_base_z + get_comp_height(cur_comp)
         goto_pos(cur_pos, wait=True)
@@ -452,7 +460,7 @@ def pos_set():
             pcb_base_z = cur_pos[2]
             print('set pcb_base_z', pcb_base_z)
         if k == K_L:
-            print('limit angle')
+            print('limit angle', not cv_dat['limit_angle'])
             cv_dat['limit_angle'] = not cv_dat['limit_angle']
             continue
         if k == K_D:
@@ -468,7 +476,7 @@ def pos_set():
             pause = False
             continue
         if k == K_N:
-            print('set down_put:', not down_put)
+            print('set skip')
             skip = True
             continue
         
@@ -521,14 +529,16 @@ print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
 
 
 def work_thread():
-    global pause, redo, skip
+    global cur_comp, pause, redo, skip
+    fast_to = None # e.g.: 'U12'
     print('show components...')
     for footprint in pos:
         cur_comp = footprint
         for comp_val in pos[footprint]:
             count = 0
             print(f'\n-> {footprint} -> {comp_val}, paused')
-            pause = True
+            if not fast_to:
+                pause = True
             while pause:
                 sleep(0.1)
             for comp in pos[footprint][comp_val]:
@@ -537,6 +547,10 @@ def work_thread():
                     redo = False
                     skip = False
                     print(f'--- {comp}, {count}/{len(pos[footprint][comp_val])}')
+                    if comp[0] == fast_to:
+                        fast_to = None
+                    if fast_to:
+                        break
                     p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
                     p_a = float(comp[5])
                     if comp[6] == 'bottom':
@@ -544,21 +558,28 @@ def work_thread():
                     elif p_a > 180:
                         p_a = - (360 - p_a)
                     
+                    if skip:
+                        break
                     print(f'goto: ({p_x:.3f}, {p_y:.3f})')
                     if cur_pos[2] < work_dft_pos[2] + (pcb_base_z - comp_base_z):
                         cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
                         goto_pos(cur_pos, wait=True)
                     cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                    goto_pos(cur_pos, wait=True)
+                    goto_pos(cur_pos)
                     if skip:
                         break
+                    wait_stop()
                     sleep(1)
+                    if skip:
+                        break
                     while pause:
                         sleep(0.1)
                     if redo:
                         continue
                     
                     cam_comp_ws()
+                    if skip:
+                        break
                     sleep(1)
                     while pause:
                         sleep(0.1)
@@ -568,6 +589,8 @@ def work_thread():
                     if cam_comp_snap() < 0:
                         print('snap empty, wait')
                         pause = True
+                    if skip:
+                        break
                     sleep(1)
                     while pause:
                         sleep(0.1)
@@ -578,13 +601,20 @@ def work_thread():
                     if not down_put:
                         print('pickup wait')
                         pause = True
+                    if skip:
+                        break
                     sleep(1)
                     while pause:
                         sleep(0.1)
                     if redo:
                         continue
+                    if not down_put:
+                        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
+                        goto_pos(cur_pos, wait=True)
                     
                     putdown_comp(p_x, p_y, p_a)
+                    if skip:
+                        break
                     if not down_put:
                         print('putdown wait')
                         pause = True
@@ -593,7 +623,13 @@ def work_thread():
                         sleep(0.1)
                     if redo:
                         continue
+                    if not down_put:
+                        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
+                        goto_pos(cur_pos, wait=True)
                     break
+    
+    print('')
+    print('all finished...\n')
 
 
 _thread.start_new_thread(work_thread, ())
