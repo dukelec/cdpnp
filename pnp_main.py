@@ -81,6 +81,7 @@ K_L = 108      # limit angle
 K_M = 109      # enable monitor
 K_SHF_M = 77   # disable monitor
 K_D = 100      # toggle down put
+K_N = 110      # skip
 K_0 = 48
 K_1 = 49
 K_2 = 50
@@ -321,6 +322,7 @@ cur_pump = 0
 down_put = True
 pause = False
 redo = False
+skip = False
 
 # not include component height
 comp_base_z = -90.5
@@ -403,14 +405,12 @@ def putdown_comp(p_x, p_y, p_a):
 
 
 def pos_set():
-    global del_pow, aux_pos, cur_pump, comp_base_z, pcb_base_z, down_put, pause, redo
+    global del_pow, aux_pos, cur_pump, comp_base_z, pcb_base_z, down_put, pause, redo, skip
     while True:
         k = getkey()
         print(k)
         if k == K_ESC:
             return 0
-        if k == K_RET:
-            return 1
         
         if k == K_DOWN:
             cur_pos[1] += pow(10, del_pow)/100
@@ -454,9 +454,11 @@ def pos_set():
         if k == K_L:
             print('limit angle')
             cv_dat['limit_angle'] = not cv_dat['limit_angle']
+            continue
         if k == K_D:
             print('set down_put:', not down_put)
             down_put = not down_put
+            continue
         
         if k == K_ARROW_L:
             pickup_comp()
@@ -464,6 +466,11 @@ def pos_set():
             print('set redo')
             redo = True
             pause = False
+            continue
+        if k == K_N:
+            print('set down_put:', not down_put)
+            skip = True
+            continue
         
         if k == K_INC or k == K_DEC:
             del_pow += (1 if k == K_INC else -1)
@@ -497,6 +504,7 @@ def pos_set():
         if k == K_SPACE:
             pause = not pause
             print('toggle pause, pause =', pause)
+            continue
         
         print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
         print(f'delt: {cur_pos[0]-aux_pos[0]:.3f} {cur_pos[1]-aux_pos[1]:.3f} {cur_pos[2]-aux_pos[2]:.3f} {cur_pos[3]-aux_pos[3]:.3f}')
@@ -513,7 +521,7 @@ print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
 
 
 def work_thread():
-    global pause, redo
+    global pause, redo, skip
     print('show components...')
     for footprint in pos:
         cur_comp = footprint
@@ -523,6 +531,7 @@ def work_thread():
                 count += 1
                 while True:
                     redo = False
+                    skip = False
                     print(f'--- {comp}, {count}/{len(pos[footprint][comp_val])}')
                     p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
                     p_a = float(comp[5])
@@ -537,6 +546,8 @@ def work_thread():
                         goto_pos(cur_pos, wait=True)
                     cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
                     goto_pos(cur_pos, wait=True)
+                    if skip:
+                        break
                     sleep(1)
                     while pause:
                         sleep(0.5)
