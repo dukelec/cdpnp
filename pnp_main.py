@@ -82,6 +82,8 @@ K_M = 109      # enable monitor
 K_SHF_M = 77   # disable monitor
 K_D = 100      # toggle down put
 K_0 = 48
+K_1 = 49
+K_2 = 50
 K_INC = 61 # +
 K_DEC = 45 # -
 K_SPACE = 32
@@ -124,22 +126,13 @@ work_dft_pos = [50, 165, -86.5] # default work position
 #grab_ofs = [-33.900, -6.700]  # grab offset to camera
 grab_ofs = [-33.82, -6.7]  # grab offset to camera
 
-fiducial_pcb_bk = [
+fiducial_pcb = [
     [-26.375, 21.35],   # point 0
     [-6.3, 4.75],       # point 1 (calc angle) (near aux zero)
 ]
-fiducial_xyz_bk = [
+fiducial_xyz = [
     [114.370, 180.160],   # point 0
     [134.480, 163.680],   # point 1 (calc angle)
-]
-
-fiducial_pcb = [
-    [0.625, 22.175],   # point 0
-    [23.7, 4.75],       # point 1
-]
-fiducial_xyz = [
-    [113.689, 180.421],   # point 0
-    [136.869, 163.261],   # point 1
 ]
 
 dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
@@ -160,11 +153,6 @@ def pcb2xyz(p, pcb):
     step_x = (pcb[0] * math.cos(a) - pcb[1] * math.sin(a)) * s + d_x
     step_y = (pcb[0] * math.sin(a) + pcb[1] * math.cos(a)) * s + d_y
     return step_x, step_y
-
-coeff =  fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
-print('coefficient:', coeff)
-print('equations(coeff):', equations(coeff))
-print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
 
 
 pos = {}
@@ -346,8 +334,8 @@ comp_height = {
 
 def get_comp_height(comp=None):
     if not comp or comp not in comp_height:
-        print(f'comp_height: default 0.2 ({comp})')
-        return 0.2
+        print(f'comp_height: default 1.0 ({comp})')
+        return 1.0
     print(f'comp_height: {comp}: {comp_height[comp]}')
     return comp_height[comp]
 
@@ -361,16 +349,19 @@ def cam_comp_ws():
 
 def cam_comp_snap():
     global cv_cur_r
-    print('camera snap to component', cv_dat['cur'])
+    for i in range(3):
+        print(f'camera snap to component {i}:', cv_dat['cur'])
+        if cv_dat['cur']:
+            dx = (cv_dat['cur'][0] - 480/2) * DIV_MM2PIXEL
+            dy = (cv_dat['cur'][1] - 640/2) * DIV_MM2PIXEL
+            print('cv dx dy', dx, dy)
+            cur_pos[0] += dx
+            cur_pos[1] += dy
+            cur_pos[3] = 0 #cv_dat['cur'][2]
+            cv_cur_r = cv_dat['cur'][2]
+            goto_pos(cur_pos, wait=True)
+        sleep(0.2)
     if cv_dat['cur']:
-        dx = (cv_dat['cur'][0] - 480/2) * DIV_MM2PIXEL
-        dy = (cv_dat['cur'][1] - 640/2) * DIV_MM2PIXEL
-        print('cv dx dy', dx, dy)
-        cur_pos[0] += dx
-        cur_pos[1] += dy
-        cur_pos[3] = 0 #cv_dat['cur'][2]
-        cv_cur_r = cv_dat['cur'][2]
-        goto_pos(cur_pos, wait=True)
         return 0
     return -1
 
@@ -412,7 +403,7 @@ def putdown_comp(p_x, p_y, p_a):
 
 
 def pos_set():
-    global del_pow, cur_pos, aux_pos, cur_pump, comp_base_z, pcb_base_z, cv_cur_r, down_put, pause, redo
+    global del_pow, aux_pos, cur_pump, comp_base_z, pcb_base_z, down_put, pause, redo
     while True:
         k = getkey()
         print(k)
@@ -472,6 +463,7 @@ def pos_set():
         if k == K_ARROW_R:
             print('set redo')
             redo = True
+            pause = False
         
         if k == K_INC or k == K_DEC:
             del_pow += (1 if k == K_INC else -1)
@@ -481,6 +473,14 @@ def pos_set():
         if k == K_0:
             print('update aux_pos!')
             aux_pos = [cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3]]
+        if k == K_1:
+            print('update fiducial p1!')
+            fiducial_xyz[0][0] = cur_pos[0]
+            fiducial_xyz[0][1] = cur_pos[1]
+        if k == K_2:
+            print('update fiducial p2!')
+            fiducial_xyz[1][0] = cur_pos[0]
+            fiducial_xyz[1][1] = cur_pos[1]
         
         if k == K_SHF_M or k == K_M:
             cur_cam = 255 if k == K_M else 0
@@ -503,20 +503,17 @@ def pos_set():
         goto_pos(cur_pos)
 
 
-print('cali grab offset, set camera pos...')
-ret = pos_set()
-if ret == 1:
-    print('cali grab offset, set grab pos...')
-    tmp = [cur_pos[0], cur_pos[1]]
-    ret = pos_set()
-    if ret == 1:
-        grab_ofs[0] = cur_pos[0] - tmp[0]
-        grab_ofs[1] = cur_pos[1] - tmp[1]
-        print(f'cali grab offset done, ofs: {grab_ofs[0]:.3f}, {grab_ofs[1]:.3f}...')
+print('free run...')
+pos_set()
+
+coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
+print('coefficient:', coeff)
+print('equations(coeff):', equations(coeff))
+print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
 
 
 def work_thread():
-    global pause, redo, cv_cur_r
+    global pause, redo
     print('show components...')
     for footprint in pos:
         cur_comp = footprint
