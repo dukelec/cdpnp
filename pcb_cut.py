@@ -128,8 +128,8 @@ fiducial_pcb = [
     [55, -7],   # right bottom
 ]
 fiducial_cam = [
-    [227.225, 186.811],   # left bottom
-    [275.125, 186.971],   # right bottom
+    [235.615, 182.641],   # left bottom
+    [283.515, 182.941],   # right bottom
 ]
 
 fiducial_xyz = [[fiducial_cam[0][0]+grab_ofs[0], fiducial_cam[0][1]+grab_ofs[1]],
@@ -178,6 +178,7 @@ for ix in range(5):
 def motor_min_speed(min_speed):
     for i in range(5):
         print(f'motor set min speed: #{i+1}')
+        sock.clear()
         sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", min_speed), (f'80:00:0{i+1}', 0x5))
         rx = sock.recvfrom(timeout=1)
         print('motor set min speed ret: ' + rx[0].hex(), rx[1])
@@ -185,6 +186,7 @@ def motor_min_speed(min_speed):
 def motor_enable():
     for i in range(5):
         print(f'motor enable: #{i+1}')
+        sock.clear()
         sock.sendto(b'\x20'+struct.pack("<H", 0x00d6) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
         rx = sock.recvfrom(timeout=1)
         print('motor enable ret: ' + rx[0].hex(), rx[1])
@@ -204,17 +206,18 @@ def goto_pos(pos, wait=False, s_speed=20000):
     b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
     
     while True:
-        if not done_flag[0]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP))+b_speed[0], ('80:00:03', 0x6))
-        if (not done_flag[1]) or (not done_flag[2]):
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP))+b_speed[1], ('80:00:e0', 0x6))
+        sock.clear()
         if not done_flag[2]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed[2], ('80:00:04', 0x6))
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP))+b_speed[0], ('80:00:03', 0x6))
+        if (not done_flag[0]) or (not done_flag[1]):
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP))+b_speed[1], ('80:00:e0', 0x6))
         if not done_flag[3]:
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed[2], ('80:00:04', 0x6))
+        if not done_flag[4]:
             sock.sendto(b'\x20'+struct.pack("<i", round(pos[3]*-1/DIV_DEG2STEP))+b_speed[3], ('80:00:05', 0x6))
         
         for i in range(5 - (done_flag[0] + done_flag[1] + done_flag[2] + done_flag[3] + done_flag[4])):
-            dat, src = sock.recvfrom(timeout=0.5)
+            dat, src = sock.recvfrom(timeout=0.8)
             if src:
                 if src[0] == '80:00:01':
                     done_flag[0] = 1
@@ -232,7 +235,7 @@ def goto_pos(pos, wait=False, s_speed=20000):
         retry_cnt += 1
         if retry_cnt > 3:
             print(f'error: set retry > 3, done_flag: f{done_flag}')
-            return -1
+            exit(-1)
     
     if not wait:
         return 0
@@ -240,17 +243,19 @@ def goto_pos(pos, wait=False, s_speed=20000):
     retry_cnt = 0
     tgt = 1
     while True:
+        sock.clear()
         sock.sendto(b'\x00'+struct.pack("<H", 0x00d7) + struct.pack("<B", 1), (f'80:00:0{tgt}', 0x5))
-        dat, src = sock.recvfrom(timeout=0.5)
+        dat, src = sock.recvfrom(timeout=0.8)
         if src == None:
             print(f'error: retry_cnt: {retry_cnt}')
             retry_cnt += 1
             if retry_cnt > 3:
                 print('error: poll retry > 3')
-                return -1
+                exit(-1)
             continue
         retry_cnt = 0
         if dat[0] == 0x80 and dat[1] == 0:
+            #print(f'm{tgt} poll ok: {dat.hex()}')
             tgt += 1
             if tgt > 5:
                 return 0
@@ -261,6 +266,7 @@ def load_pos():
     pos = [0, 0, 0, 0]
     
     print(f'motor read pos')
+    sock.clear()
     
     sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:03', 0x5))
     dat, src = sock.recvfrom(timeout=0.5)
@@ -297,7 +303,7 @@ pause = False
 
 # not include component height
 #pcb_base_z = -65.75
-pcb_base_z = -85.9
+pcb_base_z = -84.8-0.2
 
 
 def pos_set():
@@ -375,6 +381,7 @@ def pos_set():
         if k == K_SPACE:
             pause = not pause
             print('toggle pause, pause =', pause)
+            continue
         
         print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
         print(f'delt: {cur_pos[0]-aux_pos[0]:.3f} {cur_pos[1]-aux_pos[1]:.3f} {cur_pos[2]-aux_pos[2]:.3f} {cur_pos[3]-aux_pos[3]:.3f}')

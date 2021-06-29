@@ -180,6 +180,7 @@ with open('pos.csv', newline='') as csvfile:
 def set_pump(val):
     pump = 2 if val != 0 else 1
     print('set pump...', pump)
+    sock.clear()
     sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", pump), ('80:00:11', 0x5))
     rx = sock.recvfrom(timeout=1)
     print('set pump ret: ' + rx[0].hex(), rx[1])
@@ -187,6 +188,7 @@ def set_pump(val):
         sleep(0.5)
         pump = 0
         print('set pump...', pump)
+        sock.clear()
         sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", pump), ('80:00:11', 0x5))
         rx = sock.recvfrom(timeout=1)
         print('set pump ret: ' + rx[0].hex(), rx[1])
@@ -195,11 +197,13 @@ def set_pump(val):
 def motor_enable():
     for i in range(5):
         print(f'motor enable: #{i+1}')
+        sock.clear()
         sock.sendto(b'\x20'+struct.pack("<H", 0x00d6) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
         rx = sock.recvfrom(timeout=1)
         print('motor enable ret: ' + rx[0].hex(), rx[1])
     for i in range(5):
         print(f'motor set min speed: #{i+1}')
+        sock.clear()
         sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", 400), (f'80:00:0{i+1}', 0x5))
         rx = sock.recvfrom(timeout=1)
         print('motor set min speed ret: ' + rx[0].hex(), rx[1])
@@ -210,6 +214,7 @@ def motor_enable():
     print('motor set #5 ret: ' + rx[0].hex(), rx[1])
     '''
     print(f'motor set #5')
+    sock.clear()
     sock.sendto(b'\x20'+struct.pack("<H", 0x00c4) + struct.pack("<I", 100), (f'80:00:05', 0x5))
     rx = sock.recvfrom(timeout=1)
     print('motor set #5 ret: ' + rx[0].hex(), rx[1])
@@ -219,14 +224,15 @@ def wait_stop():
     retry_cnt = 0
     tgt = 1
     while True:
+        sock.clear()
         sock.sendto(b'\x00'+struct.pack("<H", 0x00d7) + struct.pack("<B", 1), (f'80:00:0{tgt}', 0x5))
-        dat, src = sock.recvfrom(timeout=0.5)
+        dat, src = sock.recvfrom(timeout=0.8)
         if src == None:
             print(f'error: retry_cnt: {retry_cnt}')
             retry_cnt += 1
             if retry_cnt > 3:
                 print('error: poll retry > 3')
-                return -1
+                exit(-1)
             continue
         retry_cnt = 0
         if dat[0] == 0x80 and dat[1] == 0:
@@ -250,17 +256,18 @@ def goto_pos(pos, wait=False, s_speed=20000):
     b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
     
     while True:
-        if not done_flag[0]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP))+b_speed[0], ('80:00:03', 0x6))
-        if (not done_flag[1]) or (not done_flag[2]):
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP))+b_speed[1], ('80:00:e0', 0x6))
+        sock.clear()
         if not done_flag[2]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed[2], ('80:00:04', 0x6))
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP))+b_speed[0], ('80:00:03', 0x6))
+        if (not done_flag[0]) or (not done_flag[1]):
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP))+b_speed[1], ('80:00:e0', 0x6))
         if not done_flag[3]:
+            sock.sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed[2], ('80:00:04', 0x6))
+        if not done_flag[4]:
             sock.sendto(b'\x20'+struct.pack("<i", round(pos[3]*-1/DIV_DEG2STEP))+b_speed[3], ('80:00:05', 0x6))
         
         for i in range(5 - (done_flag[0] + done_flag[1] + done_flag[2] + done_flag[3] + done_flag[4])):
-            dat, src = sock.recvfrom(timeout=0.5)
+            dat, src = sock.recvfrom(timeout=0.8)
             if src:
                 if src[0] == '80:00:01':
                     done_flag[0] = 1
@@ -278,7 +285,7 @@ def goto_pos(pos, wait=False, s_speed=20000):
         retry_cnt += 1
         if retry_cnt > 3:
             print(f'error: set retry > 3, done_flag: f{done_flag}')
-            return -1
+            exit(-1)
     
     if not wait:
         return 0
@@ -290,6 +297,7 @@ def load_pos():
     pos = [0, 0, 0, 0]
     
     print(f'motor read pos')
+    sock.clear()
     
     sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:03', 0x5))
     dat, src = sock.recvfrom(timeout=0.5)
