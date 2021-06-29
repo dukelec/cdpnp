@@ -119,27 +119,21 @@ DIV_MM2PIXEL = 10/275
 DIV_MM2STEP = 0.005
 DIV_DEG2STEP = 0.45
 
-work_dft_pos = [50, 165, -86.5] # default work position
-grab_ofs = [-33.87, -6.64]  # grab offset to camera
+work_dft_pos = [226.845, 186.651, -82] # default work position
+grab_ofs = [-33.520, -36.700]  # grab offset to camera
 
-fiducial_pcb_bk = [
-    [10, -2.5],   # point 0
-    [52, -54.7],  # point 1 (calc angle) (near aux zero)
-]
-fiducial_xyz_bk = [
-    [197.165, 155.495],   # point 0
-    [239.105, 103.605],   # point 1 (calc angle)
-]
 
 fiducial_pcb = [
-    [10, -54.7],  # point 0
-    [52, -2.5],   # point 1 (calc angle) (near aux zero)
+    [7, -7],    # left bottom
+    [55, -7],   # right bottom
 ]
-fiducial_xyz = [
-    [196.710, 103.130],   # point 0
-    [238.770, 155.210],   # point 1 (calc angle)
+fiducial_cam = [
+    [227.225, 186.811],   # left bottom
+    [275.125, 186.971],   # right bottom
 ]
 
+fiducial_xyz = [[fiducial_cam[0][0]+grab_ofs[0], fiducial_cam[0][1]+grab_ofs[1]],
+                [fiducial_cam[1][0]+grab_ofs[0], fiducial_cam[1][1]+grab_ofs[1]]]
 dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
 dlt_xyz = [fiducial_xyz[1][0]-fiducial_xyz[0][0], fiducial_xyz[1][1]-fiducial_xyz[0][1]]
 print(f'pcb dlt: {dlt_pcb[0]}, {dlt_pcb[1]}', math.sqrt(pow(dlt_pcb[0], 2) + pow(dlt_pcb[1], 2)))
@@ -303,7 +297,7 @@ pause = False
 
 # not include component height
 #pcb_base_z = -65.75
-pcb_base_z = -64.85
+pcb_base_z = -85.9
 
 
 def pos_set():
@@ -393,38 +387,46 @@ pos_set()
 
 def work_thread():
     global pause
-    print('start cut...')
-    motor_min_speed(100)
-    for p in pos:
-        print(f'--- {p}')
-        p_x, p_y = pcb2xyz(coeff, (p[0], p[1]))
-        
-        print(f'goto left top')
+    while True:
+        p_x, p_y = pcb2xyz(coeff, (pos[0][0], pos[0][1]))
         cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z + 3
         goto_pos(cur_pos, wait=True)
+        pause = True
         while pause:
             sleep(0.5)
         
-        print(f'goto left down')
-        cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z
-        goto_pos(cur_pos, wait=True, s_speed=5000)
-        while pause:
-            sleep(0.5)
+        print('start cut...')
+        motor_min_speed(100)
+        for p in pos:
+            print(f'--- {p}')
+            p_x, p_y = pcb2xyz(coeff, (p[0], p[1]))
+            
+            print(f'goto left top')
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z + 3
+            goto_pos(cur_pos, wait=True)
+            while pause:
+                sleep(0.5)
+            
+            print(f'goto left down')
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z
+            goto_pos(cur_pos, wait=True, s_speed=5000)
+            while pause:
+                sleep(0.5)
+            
+            print(f'goto right down')
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+sub_len+0.4, p_y, pcb_base_z
+            goto_pos(cur_pos, wait=True, s_speed=100)
+            while pause:
+                sleep(0.5)
+            
+            print(f'goto right up')
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+sub_len+0.4, p_y, pcb_base_z + 3
+            goto_pos(cur_pos, wait=True)
+            while pause:
+                sleep(0.5)
         
-        print(f'goto right down')
-        cur_pos[0], cur_pos[1], cur_pos[2] = p_x+sub_len+0.4, p_y, pcb_base_z
-        goto_pos(cur_pos, wait=True, s_speed=100)
-        while pause:
-            sleep(0.5)
-        
-        print(f'goto right up')
-        cur_pos[0], cur_pos[1], cur_pos[2] = p_x+sub_len+0.4, p_y, pcb_base_z + 3
-        goto_pos(cur_pos, wait=True)
-        while pause:
-            sleep(0.5)
-    
-    print('end cut...')
-    motor_min_speed(300)
+        print('end cut...')
+        motor_min_speed(300)
 
 _thread.start_new_thread(work_thread, ())
 pos_set()
