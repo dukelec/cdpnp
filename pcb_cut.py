@@ -134,10 +134,7 @@ fiducial_cam = [
 
 fiducial_xyz = [[fiducial_cam[0][0]+grab_ofs[0], fiducial_cam[0][1]+grab_ofs[1]],
                 [fiducial_cam[1][0]+grab_ofs[0], fiducial_cam[1][1]+grab_ofs[1]]]
-dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
-dlt_xyz = [fiducial_xyz[1][0]-fiducial_xyz[0][0], fiducial_xyz[1][1]-fiducial_xyz[0][1]]
-print(f'pcb dlt: {dlt_pcb[0]}, {dlt_pcb[1]}', math.sqrt(pow(dlt_pcb[0], 2) + pow(dlt_pcb[1], 2)))
-print(f'xyz dlt: {dlt_xyz[0]}, {dlt_xyz[1]}', math.sqrt(pow(dlt_xyz[0], 2) + pow(dlt_xyz[1], 2)))
+
 
 def equations(p):
     s, a, d_x, d_y = p

@@ -83,8 +83,6 @@ K_SHF_M = 77   # disable monitor
 K_D = 100      # toggle down put
 K_N = 110      # skip
 K_0 = 48
-K_1 = 49
-K_2 = 50
 K_INC = 61 # +
 K_DEC = 45 # -
 K_SPACE = 32
@@ -122,31 +120,39 @@ DIV_MM2PIXEL = 10/275
 DIV_MM2STEP = 0.005
 DIV_DEG2STEP = 0.1125
 
+fast_to = 'C27' # e.g.: 'U12'
+
+# not include component height
+comp_base_z = -89.3
+pcb_base_z = -86.3 # -89.3
+
 work_dft_pos = [50, 165, -85.5] # default work position
 #grab_ofs = [-33.87, -6.64]  # grab offset to camera
 #grab_ofs = [-33.900, -6.700]  # grab offset to camera
-grab_ofs = [-33.82, -6.75]  # grab offset to camera
+grab_ofs = [-33.900, -7.000]  # grab offset to camera, -33.82, -6.75 ---> -33.900 -7.000
 
 fiducial_pcb = [
-    [3, 45.9],   # point 0
-    [67, 6],     # point 1
+    [0.625, 22.175],   # point 0
+    [23.7, 4.75]      # point 1
 ]
 fiducial_xyz = [
-    [106.430, 165.850],   # point 0
-    [170.840, 127.010],   # point 1
+    [
+        [105.423, 177.636],   # point 0
+        [128.672, 160.511]    # point 1
+    ], [
+        [139.093, 178.016],   # point 0
+        [162.202, 160.771]    # point 1
+    ],
 ]
+board_idx = 0
 
-dlt_pcb = [fiducial_pcb[1][0]-fiducial_pcb[0][0], fiducial_pcb[1][1]-fiducial_pcb[0][1]]
-dlt_xyz = [fiducial_xyz[1][0]-fiducial_xyz[0][0], fiducial_xyz[1][1]-fiducial_xyz[0][1]]
-print(f'pcb dlt: {dlt_pcb[0]}, {dlt_pcb[1]}', math.sqrt(pow(dlt_pcb[0], 2) + pow(dlt_pcb[1], 2)))
-print(f'xyz dlt: {dlt_xyz[0]}, {dlt_xyz[1]}', math.sqrt(pow(dlt_xyz[0], 2) + pow(dlt_xyz[1], 2)))
 
 def equations(p):
     s, a, d_x, d_y = p
     F = np.empty((4))
     for i in range(2):
-        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_xyz[i][0]
-        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_xyz[i][1]
+        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_xyz[board_idx][i][0]
+        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_xyz[board_idx][i][1]
     return F
 
 def pcb2xyz(p, pcb):
@@ -337,10 +343,6 @@ pause = False
 redo = False
 skip = False
 
-# not include component height
-comp_base_z = -89.1
-pcb_base_z = -87.8 # -89.3
-
 cur_comp = None
 comp_height = {
     '0402': 0.2,
@@ -349,8 +351,8 @@ comp_height = {
 
 def get_comp_height(comp=None):
     if not comp or comp not in comp_height:
-        print(f'comp_height: default 1.0 ({comp})')
-        return 1.0
+        print(f'comp_height: default 0.2 ({comp})')
+        return 0.2
     print(f'comp_height: {comp}: {comp_height[comp]}')
     return comp_height[comp]
 
@@ -389,7 +391,7 @@ def pickup_comp():
     if down_put:
         sleep(1)
         cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
-        goto_pos(cur_pos, wait=True)
+        goto_pos(cur_pos, wait=True) #, s_speed=1000)
         sleep(0.5)
         set_pump(1)
         cur_pump = 1
@@ -496,14 +498,14 @@ def pos_set():
         if k == K_0:
             print('update aux_pos!')
             aux_pos = [cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3]]
-        if k == K_1:
-            print('update fiducial p1!')
-            fiducial_xyz[0][0] = cur_pos[0]
-            fiducial_xyz[0][1] = cur_pos[1]
-        if k == K_2:
-            print('update fiducial p2!')
-            fiducial_xyz[1][0] = cur_pos[0]
-            fiducial_xyz[1][1] = cur_pos[1]
+        if k == K_0 + 1:
+            print('update fiducial #0 p1!')
+            fiducial_xyz[0][0][0] = cur_pos[0]
+            fiducial_xyz[0][0][1] = cur_pos[1]
+        if k == K_0 + 2:
+            print('update fiducial #0 p2!')
+            fiducial_xyz[0][1][0] = cur_pos[0]
+            fiducial_xyz[0][1][1] = cur_pos[1]
         
         if k == K_SHF_M or k == K_M:
             cur_cam = 255 if k == K_M else 0
@@ -530,111 +532,116 @@ def pos_set():
 print('free run...')
 pos_set()
 
-coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
-print('coefficient:', coeff)
-print('equations(coeff):', equations(coeff))
-print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
+coeffs = []
+for i in range(len(fiducial_xyz)):
+    board_idx = i
+    coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
+    print(f'coefficient #{i}:', coeff)
+    print('equations(coeff):', equations(coeff))
+    print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
+    coeffs.append(coeff)
 
 
 def work_thread():
-    global cur_comp, pause, redo, skip
-    fast_to = None # e.g.: 'U12'
+    global cur_comp, pause, redo, skip, fast_to, board_idx
     print('show components...')
     for footprint in pos:
         cur_comp = footprint
         for comp_val in pos[footprint]:
             count = 0
-            print(f'\n-> {footprint} -> {comp_val}, paused')
+            print(f'\n-> {footprint} -> {comp_val}, {len(pos[footprint][comp_val])} / board, paused')
             if not fast_to:
                 pause = True
             while pause:
                 sleep(0.1)
             for comp in pos[footprint][comp_val]:
                 count += 1
-                while True:
-                    redo = False
-                    skip = False
-                    print(f'--- {comp}, {count}/{len(pos[footprint][comp_val])}')
-                    if comp[0] == fast_to:
-                        fast_to = None
-                    if fast_to:
+                for i in range(len(fiducial_xyz)):
+                    board_idx = i
+                    while True:
+                        redo = False
+                        skip = False
+                        print(f'--- board #{i}, {comp}, {count}/{len(pos[footprint][comp_val])}')
+                        if comp[0] == fast_to:
+                            fast_to = None
+                        if fast_to:
+                            break
+                        p_x, p_y = pcb2xyz(coeffs[i], (float(comp[3]), float(comp[4]) * -1))
+                        p_a = float(comp[5])
+                        if comp[6] == 'bottom':
+                            p_a = 180 - p_a
+                        elif p_a > 180:
+                            p_a = - (360 - p_a)
+                        
+                        if skip:
+                            break
+                        print(f'goto: ({p_x:.3f}, {p_y:.3f})')
+                        if cur_pos[2] < work_dft_pos[2] + (pcb_base_z - comp_base_z):
+                            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
+                            goto_pos(cur_pos, wait=True)
+                        cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
+                        goto_pos(cur_pos)
+                        if skip:
+                            break
+                        wait_stop()
+                        sleep(1)
+                        if skip:
+                            break
+                        while pause:
+                            sleep(0.1)
+                        if redo:
+                            continue
+                        
+                        cam_comp_ws()
+                        if skip:
+                            break
+                        sleep(1)
+                        while pause:
+                            sleep(0.1)
+                        if redo:
+                            continue
+                        
+                        if cam_comp_snap() < 0:
+                            print('snap empty, wait')
+                            pause = True
+                        if skip:
+                            break
+                        sleep(1)
+                        while pause:
+                            sleep(0.1)
+                        if redo:
+                            continue
+                        
+                        pickup_comp()
+                        if not down_put:
+                            print('pickup wait')
+                            pause = True
+                        if skip:
+                            break
+                        sleep(1)
+                        while pause:
+                            sleep(0.1)
+                        if redo:
+                            continue
+                        if not down_put:
+                            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
+                            goto_pos(cur_pos, wait=True)
+                        
+                        putdown_comp(p_x, p_y, p_a)
+                        if skip:
+                            break
+                        if not down_put:
+                            print('putdown wait')
+                            pause = True
+                        sleep(1)
+                        while pause:
+                            sleep(0.1)
+                        if redo:
+                            continue
+                        if not down_put:
+                            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
+                            goto_pos(cur_pos, wait=True)
                         break
-                    p_x, p_y = pcb2xyz(coeff, (float(comp[3]), float(comp[4]) * -1))
-                    p_a = float(comp[5])
-                    if comp[6] == 'bottom':
-                        p_a = 180 - p_a
-                    elif p_a > 180:
-                        p_a = - (360 - p_a)
-                    
-                    if skip:
-                        break
-                    print(f'goto: ({p_x:.3f}, {p_y:.3f})')
-                    if cur_pos[2] < work_dft_pos[2] + (pcb_base_z - comp_base_z):
-                        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                        goto_pos(cur_pos, wait=True)
-                    cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                    goto_pos(cur_pos)
-                    if skip:
-                        break
-                    wait_stop()
-                    sleep(1)
-                    if skip:
-                        break
-                    while pause:
-                        sleep(0.1)
-                    if redo:
-                        continue
-                    
-                    cam_comp_ws()
-                    if skip:
-                        break
-                    sleep(1)
-                    while pause:
-                        sleep(0.1)
-                    if redo:
-                        continue
-                    
-                    if cam_comp_snap() < 0:
-                        print('snap empty, wait')
-                        pause = True
-                    if skip:
-                        break
-                    sleep(1)
-                    while pause:
-                        sleep(0.1)
-                    if redo:
-                        continue
-                    
-                    pickup_comp()
-                    if not down_put:
-                        print('pickup wait')
-                        pause = True
-                    if skip:
-                        break
-                    sleep(1)
-                    while pause:
-                        sleep(0.1)
-                    if redo:
-                        continue
-                    if not down_put:
-                        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-                        goto_pos(cur_pos, wait=True)
-                    
-                    putdown_comp(p_x, p_y, p_a)
-                    if skip:
-                        break
-                    if not down_put:
-                        print('putdown wait')
-                        pause = True
-                    sleep(1)
-                    while pause:
-                        sleep(0.1)
-                    if redo:
-                        continue
-                    if not down_put:
-                        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                        goto_pos(cur_pos, wait=True)
-                    break
     
     print('')
     print('all finished...\n')
