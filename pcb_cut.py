@@ -38,9 +38,9 @@ from pnp_cv import pnp_cv_init, cv_dat
 
 args = CdArgs()
 dev_str = args.get("--dev", dft="ttyACM0")
-#pos = int(args.get("--pos", dft="0"), 0)
+prj = args.get("--prj", "-p")
 
-if args.get("--help", "-h") != None:
+if args.get("--help", "-h") != None or prj == None:
     print(__doc__)
     exit()
 
@@ -110,7 +110,6 @@ pnp_cv_init()
 
 print('start...')
 
-
 # 10mm / 275 pixel
 DIV_MM2PIXEL = 10/275
 
@@ -119,18 +118,21 @@ DIV_MM2PIXEL = 10/275
 DIV_MM2STEP = 0.005
 DIV_DEG2STEP = 0.45
 
-work_dft_pos = [226.845, 186.651, -82] # default work position
-grab_ofs = [-33.520, -36.700]  # grab offset to camera
+# not include component height
+pcb_base_z = -84.8-0.2 # may override by prj cfg
 
+work_dft_pos = [226.845, 186.651, -82]  # default work position
+grab_ofs = [-33.520, -36.700]           # grab offset to camera
 
-fiducial_pcb = [
-    [7, -7],    # left bottom
-    [55, -7],   # right bottom
-]
-fiducial_cam = [
-    [235.615, 182.641],   # left bottom
-    [283.515, 182.941],   # right bottom
-]
+#fiducial_pcb = [ [7, -7], [55, -7] ]
+#fiducial_cam = [ [235.615, 182.641], [283.515, 182.941] ]
+
+pos = []
+
+# update configs from prj file
+with open(f'prj/{prj}.py') as prj_file:
+    prj_txt = prj_file.read()
+    exec(prj_txt)
 
 fiducial_xyz = [[fiducial_cam[0][0]+grab_ofs[0], fiducial_cam[0][1]+grab_ofs[1]],
                 [fiducial_cam[1][0]+grab_ofs[0], fiducial_cam[1][1]+grab_ofs[1]]]
@@ -150,26 +152,10 @@ def pcb2xyz(p, pcb):
     step_y = (pcb[0] * math.sin(a) + pcb[1] * math.cos(a)) * s + d_y
     return step_x, step_y
 
-coeff =  fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
+coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
 print('coefficient:', coeff)
 print('equations(coeff):', equations(coeff))
 print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
-
-
-sub_len = 0.877
-sub_delta = (10, 11.3)
-#sub_first = [(7.0, -50.2), (14.123, -50.2), (7.0, -40.9), (14.123, -40.9)]
-sub_first = [(7.0, -50.3), (14.123, -50.3), (7.0, -40.8), (14.123, -40.8)]
-pos = []
-
-for ix in range(5):
-    for iy in range(4):
-        for p in sub_first:
-            pos.append((p[0] + sub_delta[0] * ix, p[1] + sub_delta[1] * iy))
-
-
-#print(pos)
-
 
 
 def motor_min_speed(min_speed):
@@ -288,20 +274,13 @@ def load_pos():
     return pos
 
 
-
 motor_enable()
-
 
 del_pow = 2 # + - by key
 #cur_pos = [0, 0, 0, 0] # x, y, z, r
 cur_pos = load_pos()
 aux_pos = [0, 0, 0, 0]
 pause = False
-
-# not include component height
-#pcb_base_z = -65.75
-pcb_base_z = -84.8-0.2
-
 
 def pos_set():
     global del_pow, cur_pos, aux_pos, pcb_base_z, pause
@@ -406,25 +385,25 @@ def work_thread():
             p_x, p_y = pcb2xyz(coeff, (p[0], p[1]))
             
             print(f'goto left top')
-            cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z + 3
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, pcb_base_z + 3
             goto_pos(cur_pos, wait=True)
             while pause:
                 sleep(0.5)
             
             print(f'goto left down')
-            cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, pcb_base_z
             goto_pos(cur_pos, wait=True, s_speed=5000)
             while pause:
                 sleep(0.5)
             
             print(f'goto right down')
-            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+sub_len+0.4, p_y, pcb_base_z
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+cut_len_x, p_y+cut_len_y, pcb_base_z
             goto_pos(cur_pos, wait=True, s_speed=100)
             while pause:
                 sleep(0.5)
             
             print(f'goto right up')
-            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+sub_len+0.4, p_y, pcb_base_z + 3
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+cut_len_x, p_y+cut_len_y, pcb_base_z + 3
             goto_pos(cur_pos, wait=True)
             while pause:
                 sleep(0.5)

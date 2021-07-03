@@ -38,9 +38,9 @@ from pnp_cv import pnp_cv_init, cv_dat
 
 args = CdArgs()
 dev_str = args.get("--dev", dft="ttyACM0")
-#pos = int(args.get("--pos", dft="0"), 0)
+prj = args.get("--prj", "-p")
 
-if args.get("--help", "-h") != None:
+if args.get("--help", "-h") != None or prj == None:
     print(__doc__)
     exit()
 
@@ -50,7 +50,6 @@ elif args.get("--debug", "-d") != None:
     logger_init(logging.DEBUG)
 elif args.get("--info", "-i") != None:
     logger_init(logging.INFO)
-
 
 dev = CDBusBridge(dev_str)
 CDNetIntf(dev, mac=0x00)
@@ -111,7 +110,6 @@ pnp_cv_init()
 
 print('start...')
 
-
 # 10mm / 275 pixel
 DIV_MM2PIXEL = 10/275
 
@@ -120,39 +118,34 @@ DIV_MM2PIXEL = 10/275
 DIV_MM2STEP = 0.005
 DIV_DEG2STEP = 0.1125
 
-fast_to = 'C27' # e.g.: 'U12'
+comp_height = {
+    '0402': 0.2,
+    '0402C_BIG': 0.4
+}
+fast_to = None # e.g.: 'U12'
 
 # not include component height
 comp_base_z = -89.3
-pcb_base_z = -86.3 # -89.3
+pcb_base_z = -86.3 # may override by prj cfg
 
 work_dft_pos = [50, 165, -85.5] # default work position
-#grab_ofs = [-33.87, -6.64]  # grab offset to camera
-#grab_ofs = [-33.900, -6.700]  # grab offset to camera
-grab_ofs = [-33.900, -7.000]  # grab offset to camera, -33.82, -6.75 ---> -33.900 -7.000
+grab_ofs = [-33.900, -7.000]    # grab offset to camera
 
-fiducial_pcb = [
-    [0.625, 22.175],   # point 0
-    [23.7, 4.75]      # point 1
-]
-fiducial_xyz = [
-    [
-        [105.423, 177.636],   # point 0
-        [128.672, 160.511]    # point 1
-    ], [
-        [139.093, 178.016],   # point 0
-        [162.202, 160.771]    # point 1
-    ],
-]
+#fiducial_pcb = [ [0.625, 22.175], [23.7, 4.75] ]
+#fiducial_cam = [ [[105.423, 177.636], [128.672, 160.511]] ]
 board_idx = 0
 
+# update configs from prj file
+with open(f'prj/{prj}.py') as prj_file:
+    prj_txt = prj_file.read()
+    exec(prj_txt)
 
 def equations(p):
     s, a, d_x, d_y = p
     F = np.empty((4))
     for i in range(2):
-        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_xyz[board_idx][i][0]
-        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_xyz[board_idx][i][1]
+        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_cam[board_idx][i][0]
+        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_cam[board_idx][i][1]
     return F
 
 def pcb2xyz(p, pcb):
@@ -165,7 +158,7 @@ def pcb2xyz(p, pcb):
 pos = {}
 
 import csv
-with open('pos.csv', newline='') as csvfile:
+with open(f'prj/{prj}.csv', newline='') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
     for row in spamreader:
         if row[0] == 'Ref':
@@ -328,9 +321,7 @@ def load_pos():
     return pos
 
 
-
 motor_enable()
-
 
 del_pow = 2 # + - by key
 #cur_pos = [0, 0, 0, 0] # x, y, z, r
@@ -344,10 +335,6 @@ redo = False
 skip = False
 
 cur_comp = None
-comp_height = {
-    '0402': 0.2,
-    '0402C_BIG': 0.4
-}
 
 def get_comp_height(comp=None):
     if not comp or comp not in comp_height:
@@ -391,13 +378,13 @@ def pickup_comp():
     if down_put:
         sleep(1)
         cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
-        goto_pos(cur_pos, wait=True) #, s_speed=1000)
+        goto_pos(cur_pos, wait=True, s_speed=1000)
         sleep(0.5)
         set_pump(1)
         cur_pump = 1
         sleep(0.5)
         cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-        goto_pos(cur_pos, wait=True)
+        goto_pos(cur_pos, wait=True, s_speed=1000)
         cur_pos[3] = -cv_cur_r
         goto_pos(cur_pos, wait=True)
 
@@ -414,7 +401,7 @@ def putdown_comp(p_x, p_y, p_a):
     if not redo and down_put:
         sleep(1)
         cur_pos[2] = pcb_base_z + get_comp_height(cur_comp)
-        goto_pos(cur_pos, wait=True)
+        goto_pos(cur_pos, wait=True, s_speed=1000)
         sleep(0.5)
         set_pump(0)
         cur_pump = 0
@@ -500,12 +487,12 @@ def pos_set():
             aux_pos = [cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3]]
         if k == K_0 + 1:
             print('update fiducial #0 p1!')
-            fiducial_xyz[0][0][0] = cur_pos[0]
-            fiducial_xyz[0][0][1] = cur_pos[1]
+            fiducial_cam[0][0][0] = cur_pos[0]
+            fiducial_cam[0][0][1] = cur_pos[1]
         if k == K_0 + 2:
             print('update fiducial #0 p2!')
-            fiducial_xyz[0][1][0] = cur_pos[0]
-            fiducial_xyz[0][1][1] = cur_pos[1]
+            fiducial_cam[0][1][0] = cur_pos[0]
+            fiducial_cam[0][1][1] = cur_pos[1]
         
         if k == K_SHF_M or k == K_M:
             cur_cam = 255 if k == K_M else 0
@@ -533,7 +520,7 @@ print('free run...')
 pos_set()
 
 coeffs = []
-for i in range(len(fiducial_xyz)):
+for i in range(len(fiducial_cam)):
     board_idx = i
     coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
     print(f'coefficient #{i}:', coeff)
@@ -556,7 +543,7 @@ def work_thread():
                 sleep(0.1)
             for comp in pos[footprint][comp_val]:
                 count += 1
-                for i in range(len(fiducial_xyz)):
+                for i in range(len(fiducial_cam)):
                     board_idx = i
                     while True:
                         redo = False
