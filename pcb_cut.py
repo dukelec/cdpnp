@@ -35,6 +35,7 @@ from cdnet.dev.cdbus_bridge import CDBusBridge
 from cdnet.dispatch import *
 
 from pnp_cv import pnp_cv_init, cv_dat
+cv_dat['idle'] = True
 
 args = CdArgs()
 dev_str = args.get("--dev", dft="ttyACM0")
@@ -122,7 +123,7 @@ DIV_DEG2STEP = 0.45
 pcb_base_z = -84.8-0.2 # may override by prj cfg
 
 work_dft_pos = [226.845, 186.651, -82]  # default work position
-grab_ofs = [-33.520, -36.700]           # grab offset to camera
+grab_ofs = [-33.630, -36.780]           # grab offset to camera
 
 #fiducial_pcb = [ [7, -7], [55, -7] ]
 #fiducial_cam = [ [235.615, 182.641], [283.515, 182.941] ]
@@ -347,6 +348,19 @@ def pos_set():
             print('update aux_pos!')
             aux_pos = [cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3]]
         
+        if k == K_0 + 1:
+            print('goto p1')
+            cur_pos[0] = fiducial_cam[0][0]
+            cur_pos[1] = fiducial_cam[0][1]
+            cur_pos[2] = work_dft_pos[2]
+            cur_pos[3] = 0
+        if k == K_0 + 2:
+            print('goto p2')
+            cur_pos[0] = fiducial_cam[1][0]
+            cur_pos[1] = fiducial_cam[1][1]
+            cur_pos[2] = work_dft_pos[2]
+            cur_pos[3] = 0
+        
         if k == K_SHF_M or k == K_M:
             cur_cam = 255 if k == K_M else 0
             print('set cam...', cur_cam)
@@ -359,8 +373,8 @@ def pos_set():
             print('toggle pause, pause =', pause)
             continue
         
-        print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
-        print(f'delt: {cur_pos[0]-aux_pos[0]:.3f} {cur_pos[1]-aux_pos[1]:.3f} {cur_pos[2]-aux_pos[2]:.3f} {cur_pos[3]-aux_pos[3]:.3f}')
+        print(f'goto: {cur_pos[0]:.3f}, {cur_pos[1]:.3f}, {cur_pos[2]:.3f}, {cur_pos[3]:.3f}')
+        print(f'delt: {cur_pos[0]-aux_pos[0]:.3f}, {cur_pos[1]-aux_pos[1]:.3f}, {cur_pos[2]-aux_pos[2]:.3f}, {cur_pos[3]-aux_pos[3]:.3f}')
         goto_pos(cur_pos)
 
 
@@ -369,7 +383,7 @@ pos_set()
 
 
 def work_thread():
-    global pause
+    global pause, fast_to
     while True:
         p_x, p_y = pcb2xyz(coeff, (pos[0][0], pos[0][1]))
         cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z + 3
@@ -382,6 +396,10 @@ def work_thread():
         motor_min_speed(100)
         for p in pos:
             print(f'--- {p}')
+            if fast_to > 0:
+                fast_to -= 1
+                pause = True
+                continue
             p_x, p_y = pcb2xyz(coeff, (p[0], p[1]))
             
             print(f'goto left top')

@@ -485,14 +485,14 @@ def pos_set():
         if k == K_0:
             print('update aux_pos!')
             aux_pos = [cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3]]
-        if k == K_0 + 1:
-            print('update fiducial #0 p1!')
-            fiducial_cam[0][0][0] = cur_pos[0]
-            fiducial_cam[0][0][1] = cur_pos[1]
-        if k == K_0 + 2:
-            print('update fiducial #0 p2!')
-            fiducial_cam[0][1][0] = cur_pos[0]
-            fiducial_cam[0][1][1] = cur_pos[1]
+        if k >= K_0 + 1 and k <= 8:
+            board = (k - 1 - K_0) / 2
+            sub = (k - 1 - K_0) % 2
+            print(f'goto board #{board} p{sub}')
+            cur_pos[0] = fiducial_cam[board][sub][0]
+            cur_pos[1] = fiducial_cam[board][sub][1]
+            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
+            cur_pos[3] = 0
         
         if k == K_SHF_M or k == K_M:
             cur_cam = 255 if k == K_M else 0
@@ -511,8 +511,8 @@ def pos_set():
             print('toggle pause, pause =', pause)
             continue
         
-        print(f'goto: {cur_pos[0]:.3f} {cur_pos[1]:.3f} {cur_pos[2]:.3f} {cur_pos[3]:.3f}')
-        print(f'delt: {cur_pos[0]-aux_pos[0]:.3f} {cur_pos[1]-aux_pos[1]:.3f} {cur_pos[2]-aux_pos[2]:.3f} {cur_pos[3]-aux_pos[3]:.3f}')
+        print(f'goto: {cur_pos[0]:.3f}, {cur_pos[1]:.3f}, {cur_pos[2]:.3f}, {cur_pos[3]:.3f}')
+        print(f'delt: {cur_pos[0]-aux_pos[0]:.3f}, {cur_pos[1]-aux_pos[1]:.3f}, {cur_pos[2]-aux_pos[2]:.3f}, {cur_pos[3]-aux_pos[3]:.3f}')
         goto_pos(cur_pos)
 
 

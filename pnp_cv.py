@@ -24,7 +24,8 @@ import numpy as np
 
 cv_dat = {
     'limit_angle': False,
-    'cur': None
+    'cur': None,
+    'idle': False
 }
 
 sock_pic = None
@@ -33,6 +34,9 @@ pic_ready = False
 
 
 def cv_get_pos(img):
+    if cv_dat['idle']:
+        return
+    
     # Convert image to grayscale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
      

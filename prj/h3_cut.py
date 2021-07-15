@@ -11,13 +11,19 @@ for ix in range(5):
             pos.append((p[0] + sub_delta[0] * ix, p[1] + sub_delta[1] * iy))
 
 
-pcb_base_z = -84.8-0.2
+#work_dft_pos = [226.845, 186.651, -84]
+#pcb_base_z = -87.8-0.2
+
+work_dft_pos = [226.845, 186.651, -83.1]
+pcb_base_z = -87.0-0.15
 
 fiducial_pcb = [ [7, -7], [55, -7] ]
 fiducial_cam = [
-    [235.615, 182.641],
-    [283.515, 182.941]
+    [210.104, 170.022],
+    [257.924, 169.531]
 ]
+
+fast_to = 0
 
 #print(pos)
 
