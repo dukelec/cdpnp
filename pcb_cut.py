@@ -123,7 +123,7 @@ DIV_DEG2STEP = 0.45
 pcb_base_z = -84.8-0.2 # may override by prj cfg
 
 work_dft_pos = [226.845, 186.651, -82]  # default work position
-grab_ofs = [-33.630, -36.780]           # grab offset to camera
+grab_ofs = [-33.13, -36.80]           # grab offset to camera
 
 #fiducial_pcb = [ [7, -7], [55, -7] ]
 #fiducial_cam = [ [235.615, 182.641], [283.515, 182.941] ]
@@ -177,7 +177,7 @@ def motor_enable():
     motor_min_speed(400)
 
 last_pos = None
-def goto_pos(pos, wait=False, s_speed=20000):
+def goto_pos(pos, wait=False, s_speed=10000):
     global last_pos
     if last_pos == None:
         last_pos = load_pos()

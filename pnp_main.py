@@ -240,9 +240,29 @@ def wait_stop():
                 return 0
         sleep(0.1)
 
+def enable_force():
+    retry_cnt = 0
+    while True:
+        sock.clear()
+        sock.sendto(b'\x20'+struct.pack("<H", 0x00cc) + struct.pack("<B", 1), (f'80:00:04', 0x5))
+        dat, src = sock.recvfrom(timeout=0.8)
+        if src == None:
+            print(f'error: force retry_cnt: {retry_cnt}')
+            retry_cnt += 1
+            if retry_cnt > 3:
+                print('error: poll retry > 3')
+                exit(-1)
+            continue
+        retry_cnt = 0
+        if dat[0] == 0x80:
+            print('force trigger enabled')
+            return 0
+        sleep(0.1)
+    
+
 
 last_pos = None
-def goto_pos(pos, wait=False, s_speed=20000):
+def goto_pos(pos, wait=False, s_speed=10000):
     global last_pos
     if last_pos == None:
         last_pos = load_pos()
@@ -378,7 +398,8 @@ def pickup_comp():
     if down_put:
         sleep(1)
         cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
-        goto_pos(cur_pos, wait=True, s_speed=1000)
+        enable_force()
+        goto_pos(cur_pos, wait=True, s_speed=200)
         sleep(0.5)
         set_pump(1)
         cur_pump = 1
@@ -401,7 +422,8 @@ def putdown_comp(p_x, p_y, p_a):
     if not redo and down_put:
         sleep(1)
         cur_pos[2] = pcb_base_z + get_comp_height(cur_comp)
-        goto_pos(cur_pos, wait=True, s_speed=1000)
+        enable_force()
+        goto_pos(cur_pos, wait=True, s_speed=200)
         sleep(0.5)
         set_pump(0)
         cur_pump = 0
