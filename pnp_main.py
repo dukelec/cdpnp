@@ -6,27 +6,30 @@
 #
 # Author: Duke Fong <d@d-l.io>
 
-"""CDNET debug tool
+"""CDPNP GUI tool
 
-This tool use CDBUS Bridge by default, communicate with any node on the RS485 bus.
-<- 
 """
 
-import sys, tty, os, termios
-import struct
+import sys, os, _thread, tty, termios
+import struct, re
 from time import sleep
-import _thread
-import re
+import copy
+import json5
+import asyncio, aiohttp, websockets
 import math
 import numpy as np
 from scipy.optimize import fsolve
+from serial.tools import list_ports
+from cd_ws import CDWebSocket, CDWebSocketNS
+from web_serve import ws_ns, start_web
+
 try:
     import readline
 except:
     from pyreadline import Readline
     readline = Readline()
 
-sys.path.append(os.path.join(os.path.dirname(__file__), './pycdnet'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'pycdnet'))
 
 from cdnet.utils.log import *
 from cdnet.utils.cd_args import CdArgs
@@ -51,6 +54,18 @@ elif args.get("--debug", "-d") != None:
     logger_init(logging.DEBUG)
 elif args.get("--info", "-i") != None:
     logger_init(logging.INFO)
+
+logging.getLogger('websockets').setLevel(logging.WARNING)
+logger = logging.getLogger(f'cdpnp')
+
+csa = {
+    'async_loop': None,
+    'dev': None,    # serial device
+    'net': 0x00,    # local net
+    'mac': 0x00,    # local mac
+    'proxy': None,  # cdbus frame proxy socket
+    'cfgs': []      # config list
+}
 
 dev = CDBusBridge(dev_str)
 CDNetIntf(dev, mac=0x00)
@@ -471,8 +486,28 @@ def work_thread():
     print('all finished...\n')
 
 
-_thread.start_new_thread(work_thread, ())
-pos_set()
+#_thread.start_new_thread(work_thread, ())
+#pos_set()
 
-print('exit...')
+#print('exit...')
+
+
+async def open_brower():
+    proc = await asyncio.create_subprocess_shell('/opt/google/chrome/chrome --app=http://localhost:8900')
+    await proc.communicate()
+    #proc = await asyncio.create_subprocess_shell('chromium --app=http://localhost:8900')
+    #await proc.communicate()
+    logger.info('open brower done.')
+
+
+if __name__ == "__main__":
+    start_web(None)
+    csa['proxy'] = CDWebSocket(ws_ns, 'proxy')
+    csa['async_loop'] = asyncio.get_event_loop();
+    #asyncio.get_event_loop().create_task(file_service())
+    #asyncio.get_event_loop().create_task(dev_service())
+    #asyncio.get_event_loop().create_task(cdbus_proxy_service())
+    #asyncio.get_event_loop().create_task(open_brower())
+    logger.info('Please open url: http://localhost:8900')
+    asyncio.get_event_loop().run_forever()
 

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--link rel="icon" type="image/png" href="./img/icon.png" /-->
+<title>CDPNP Tools - Index</title>
+
+<link rel="stylesheet" href="./libs/bulma-0.9.1.min.css">
+</head>
+<body>
+
+<section class="section">
+    <div class="container">
+        <h1 class="title is-size-4">Serial</h1>
+        <div class="columns">
+        
+            <div class="column">
+                <button class="button is-small" id="btn_load_csv">Load CSV</button>
+                <button class="button is-small" id="btn_update_csv">Update CSV</button>
+            </div>
+            
+        </div>
+        
+        move speed:
+        <select id="move_speed" value="x0">
+            <option value="x0">x0</option>
+            <option value="x1">x1</option>
+            <option value="x2">x2</option>
+            <option value="x3">x3</option>
+            <option value="x4">x4</option>
+        </select>
+            
+            <br>
+            cur_pos:
+            <br>
+            aux_pos:
+            <br>
+            
+            <button class="button is-small" id="btn_run"><-</button>
+            <button class="button is-small" id="btn_run">-></button>
+            <button class="button is-small" id="btn_run">^</button>
+            <button class="button is-small" id="btn_run">v</button>
+            <button class="button is-small" id="btn_run">up</button>
+            <button class="button is-small" id="btn_run">down</button>
+            <button class="button is-small" id="btn_run">cw</button>
+            <button class="button is-small" id="btn_run">ccw</button>
+            <br>
+            
+            
+            <br>
+            <label class="checkbox"><input type="checkbox" id="pump_en"> Enable Pump</label>
+            <label class="checkbox"><input type="checkbox" id="camera_en"> Enable Camera</label>
+            <label class="checkbox"><input type="checkbox" id="pause_en"> Pause</label>
+            <button class="button is-small" id="btn_redo">Redo</button>
+            <button class="button is-small" id="btn_skip">Skip</button>
+            <button class="button is-small" id="btn_run">Run</button>
+            
+            <br>
+            grab offset:
+            <input type="text" id="fiducial_pcb0" value="-33.900, -7.000">
+            <br>
+            comp_search:
+            <input type="text" id="fiducial_pcb0" value="50, 165, -85.5">
+            <input type="text" id="fiducial_pcb0" value="50, 165, -85.5">
+            <input type="text" id="fiducial_pcb0" value="">
+            <br>
+            comp_top_z:
+            <input type="text" id="fiducial_pcb0" value="-89.3">
+            <button class="button is-small" id="btn_detect0">update</button>
+            <br>
+            pcb_top_z:
+            <input type="text" id="fiducial_pcb0" value="-86.3">
+            <button class="button is-small" id="btn_detect1">update</button>
+            <br>
+            comp_base_z:
+            <input type="text" id="fiducial_pcb0" value="-89.3">
+            <button class="button is-small" id="btn_detect0">detect</button>
+            <br>
+            pcb_base_z:
+            <input type="text" id="fiducial_pcb0" value="-86.3">
+            <button class="button is-small" id="btn_detect1">detect</button>
+        
+        <div class="container">
+            fiducial pcb:
+            <input type="text" id="fiducial_pcb0" value="0.625, 22.175">
+            <input type="text" id="fiducial_pcb1" value="23.7, 4.75">
+            <br>
+            fiducial cam:
+            <input type="text" id="fiducial_pcb0" value="0.625, 22.175">
+            <button class="button is-small" id="btn_update">update</button>
+            <input type="text" id="fiducial_pcb1" value="23.7, 4.75">
+            <button class="button is-small" id="btn_update">update</button>
+            <br>
+            fiducial cam:
+            <input type="text" id="fiducial_pcb0" value="">
+            <button class="button is-small" id="btn_update">update</button>
+            <input type="text" id="fiducial_pcb1" value="">
+            <button class="button is-small" id="btn_update">update</button>
+            <br>
+            fiducial cam:
+            <input type="text" id="fiducial_pcb0" value="">
+            <button class="button is-small" id="btn_update">update</button>
+            <input type="text" id="fiducial_pcb1" value="">
+            <button class="button is-small" id="btn_update">update</button>
+        </div>
+    </div>
+
+    <br>
+    <div class="container">
+        <h1 class="title is-size-4">Pos list</h1>
+        
+        
+        <button class="button is-small" id="btn_drag">Drag</button>
+        <button class="button is-small" id="btn_goto">Goto</button>
+        
+        <div class="content">
+              <table>
+                  <thead>
+                      <tr>
+                          <td>Footprint</td> <td>OFS</td>
+                          <td>Value</td> <td>Reference</td>
+                          <td>X</td> <td>Y</td> <td>R</td>
+                      </tr>
+                  </thead>
+                  <tbody class="js-sortable-table" id="pos_list">
+                  </tbody>
+              </table>
+        </div>
+    </div>
+    
+</section>
+
+<input id="input_file" type="file" style="display:none;">
+</body>
+<script src="./libs/html5sortable-3dac3ba.min.js" defer></script>
+<script src="./libs/msgpack-ygoe-9045d01.min.js" defer></script>
+<script src="./libs/ansi_up-5.0.0.js" defer></script>
+<script type="module" src="./index.js"></script>
+</html>
