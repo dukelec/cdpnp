@@ -10,12 +10,7 @@ from time import sleep
 import _thread
 import re
 
-sys.path.append(os.path.join(os.path.dirname(__file__), './pycdnet'))
-
 from cdnet.utils.log import *
-from cdnet.utils.cd_args import CdArgs
-from cdnet.dev.cdbus_serial import CDBusSerial
-from cdnet.dev.cdbus_bridge import CDBusBridge
 from cdnet.dispatch import *
  
 import cv2 as cv

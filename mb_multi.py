@@ -19,6 +19,7 @@ import _thread
 import re
 import math
 import numpy as np
+import urllib.request
 from scipy.optimize import fsolve
 try:
     import readline
@@ -35,14 +36,12 @@ from cdnet.dev.cdbus_bridge import CDBusBridge
 from cdnet.dispatch import *
 
 from pnp_xyz import *
-from pnp_cv import pnp_cv_init, cv_dat
-cv_dat['idle'] = True
+
 
 args = CdArgs()
 dev_str = args.get("--dev", dft="ttyACM0")
-prj = args.get("--prj", "-p")
 
-if args.get("--help", "-h") != None or prj == None:
+if args.get("--help", "-h") != None:
     print(__doc__)
     exit()
 
@@ -98,53 +97,26 @@ def getkey():
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 
-pnp_cv_init()
 xyz_init()
-
 
 print('start...')
 
-# 10mm / 275 pixel
-DIV_MM2PIXEL = 10/275
-
 # not include component height
-pcb_base_z = -84.8-0.2 # may override by prj cfg
+pcb_base_z = -102
 
-work_dft_pos = [226.845, 186.651, -82]  # default work position
-grab_ofs = [-33.13, -36.80]           # grab offset to camera
+work_dft_pos = [45, 20, -50]  # default work position
+mb_width = 160
+mb_line = 6
+mb_speed = 10000 # 7000000us/200mm => 35000 us/mm
 
-#fiducial_pcb = [ [7, -7], [55, -7] ]
-#fiducial_cam = [ [235.615, 182.641], [283.515, 182.941] ]
+# 1inch = 25.4mm
+# 600dot/inch => 600dot/25.4mm => 23.622 dot/mm
+# 35000 us / 23.622 dot => 1481.666 us/dot
+#
+# space=-200&pos_cali=0&buzzer=1&strength=20&period_us=1482
+# http://192.168.88.1/cgi-bin/cmd?cmd=set_conf&conf=space%3D-200%26pos_cali%3D0%26buzzer%3D1%26strength%3D20%26period_us%3D1482
 
-pos = []
-
-# update configs from prj file
-with open(f'prj/{prj}.py') as prj_file:
-    prj_txt = prj_file.read()
-    exec(prj_txt)
-
-fiducial_xyz = [[fiducial_cam[0][0]+grab_ofs[0], fiducial_cam[0][1]+grab_ofs[1]],
-                [fiducial_cam[1][0]+grab_ofs[0], fiducial_cam[1][1]+grab_ofs[1]]]
-
-
-def equations(p):
-    s, a, d_x, d_y = p
-    F = np.empty((4))
-    for i in range(2):
-        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_xyz[i][0]
-        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_xyz[i][1]
-    return F
-
-def pcb2xyz(p, pcb):
-    s, a, d_x, d_y = p
-    step_x = (pcb[0] * math.cos(a) - pcb[1] * math.sin(a)) * s + d_x
-    step_y = (pcb[0] * math.sin(a) + pcb[1] * math.cos(a)) * s + d_y
-    return step_x, step_y
-
-coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
-print('coefficient:', coeff)
-print('equations(coeff):', equations(coeff))
-print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
+# http://192.168.88.1/cgi-bin/cmd?cmd=get_conf
 
 
 del_pow = 2 # + - by key
@@ -186,23 +158,17 @@ def pos_set():
         
         if k == K_H:
             print('set home')
-            set_home()
-            cur_pos = [0, 0, 0, 0]
-        
-        if k == K_S:
-            print('snap to cv_dat', cv_dat['cur'])
-            if cv_dat['cur']:
-                dx = (cv_dat['cur'][0] - 480/2) * DIV_MM2PIXEL
-                dy = (cv_dat['cur'][1] - 640/2) * DIV_MM2PIXEL
-                print('cv dx dy', dx, dy)
-                cur_pos[0] += dx
-                cur_pos[1] += dy
-                cur_pos[3] = cv_dat['cur'][2]
+            for i in range(4): # skip 5
+                print(f'motor set home: #{i+1}')
+                sock.sendto(b'\x20'+struct.pack("<H", 0x00b1) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
+                rx = sock.recvfrom(timeout=1)
+                print('motor set home: ' + rx[0].hex(), rx[1])
+            for i in range(4):
+                cur_pos[i] = 0
         
         if k == K_SHF_P:
             pcb_base_z = cur_pos[2]
             print('set pcb_base_z', pcb_base_z)
-        
         
         if k == K_INC or k == K_DEC:
             del_pow += (1 if k == K_INC else -1)
@@ -212,25 +178,6 @@ def pos_set():
         if k == K_0:
             print('update aux_pos!')
             aux_pos = [cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3]]
-        
-        if k == K_0 + 1:
-            print('goto p1')
-            cur_pos[0] = fiducial_cam[0][0]
-            cur_pos[1] = fiducial_cam[0][1]
-            cur_pos[2] = work_dft_pos[2]
-            cur_pos[3] = 0
-        if k == K_0 + 2:
-            print('goto p2')
-            cur_pos[0] = fiducial_cam[1][0]
-            cur_pos[1] = fiducial_cam[1][1]
-            cur_pos[2] = work_dft_pos[2]
-            cur_pos[3] = 0
-        
-        if k == K_SHF_M or k == K_M:
-            cur_cam = 255 if k == K_M else 0
-            print('set cam...', cur_cam)
-            rx = cd_reg_rw('80:00:10', 0x0036, struct.pack("<B", cur_cam))
-            print('set cam ret: ' + rx.hex())
         
         if k == K_SPACE:
             pause = not pause
@@ -249,21 +196,23 @@ pos_set()
 def work_thread():
     global pause, fast_to
     while True:
-        p_x, p_y = pcb2xyz(coeff, (pos[0][0], pos[0][1]))
-        cur_pos[0], cur_pos[1], cur_pos[2] = p_x-0.4, p_y, pcb_base_z + 3
+        p_x, p_y = work_dft_pos[0], work_dft_pos[1]
+        cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, pcb_base_z + 0 # +3
         goto_pos(cur_pos, wait=True)
         pause = True
         while pause:
             sleep(0.5)
         
         print('start cut...')
-        for p in pos:
+        print(f'reload configs:')
+        print(urllib.request.urlopen("http://192.168.88.1/cgi-bin/cmd?cmd=simulate&key=0").read())
+        print(f'reset data index to 0:')
+        print(urllib.request.urlopen("http://192.168.88.1/cgi-bin/cmd?cmd=simulate&key=3").read())
+        
+        for p in range(mb_line):
             print(f'--- {p}')
-            if fast_to > 0:
-                fast_to -= 1
-                pause = True
-                continue
-            p_x, p_y = pcb2xyz(coeff, (p[0], p[1]))
+            p_x, p_y = work_dft_pos[0], work_dft_pos[1]
+            p_y += 14.3 * p
             
             print(f'goto left top')
             cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, pcb_base_z + 3
@@ -273,18 +222,32 @@ def work_thread():
             
             print(f'goto left down')
             cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, pcb_base_z
-            goto_pos(cur_pos, wait=True, s_speed=5000)
+            goto_pos(cur_pos, wait=True)
             while pause:
                 sleep(0.5)
             
+            print(f'long press:')
+            print(urllib.request.urlopen("http://192.168.88.1/cgi-bin/cmd?cmd=get_info").read())
+            print(urllib.request.urlopen("http://192.168.88.1/cgi-bin/cmd?cmd=simulate&key=2").read())
+            sleep(2)
+            
+            print(f'short press:')
+            print(urllib.request.urlopen("http://192.168.88.1/cgi-bin/cmd?cmd=get_info").read())
+            print(urllib.request.urlopen("http://192.168.88.1/cgi-bin/cmd?cmd=simulate&key=1").read())
+            sleep(1)
+            
+            print(f'start print:')
+            print(urllib.request.urlopen("http://192.168.88.1/cgi-bin/cmd?cmd=get_info").read())
+            print(urllib.request.urlopen("http://192.168.88.1/cgi-bin/cmd?cmd=simulate&key=1").read())
+            
             print(f'goto right down')
-            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+cut_len_x, p_y+cut_len_y, pcb_base_z
-            goto_pos(cur_pos, wait=True, s_speed=100)
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+mb_width, p_y, pcb_base_z
+            goto_pos(cur_pos, wait=True, s_speed=mb_speed) # speed!
             while pause:
                 sleep(0.5)
             
             print(f'goto right up')
-            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+cut_len_x, p_y+cut_len_y, pcb_base_z + 3
+            cur_pos[0], cur_pos[1], cur_pos[2] = p_x+mb_width, p_y, pcb_base_z + 3
             goto_pos(cur_pos, wait=True)
             while pause:
                 sleep(0.5)

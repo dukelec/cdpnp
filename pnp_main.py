@@ -35,6 +35,7 @@ from cdnet.dev.cdbus_bridge import CDBusBridge
 from cdnet.dispatch import *
 
 from pnp_cv import pnp_cv_init, cv_dat
+from pnp_xyz import *
 
 args = CdArgs()
 dev_str = args.get("--dev", dft="ttyACM0")
@@ -53,8 +54,6 @@ elif args.get("--info", "-i") != None:
 
 dev = CDBusBridge(dev_str)
 CDNetIntf(dev, mac=0x00)
-sock = CDNetSocket(('', 0xcdcd))
-sock_dbg = CDNetSocket(('', 9))
 
 K_ESC = 27
 K_RET = 10
@@ -98,25 +97,14 @@ def getkey():
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 
-def dbg_echo():
-    while True:
-        rx = sock_dbg.recvfrom()
-        #print('\x1b[0;37m  ' + re.sub(br'[^\x20-\x7e]',br'.', rx[0][5:-1]).decode() + '\x1b[0m')
-        print('\x1b[0;37m  ' + re.sub(br'[^\x20-\x7e]',br'.', rx[0]).decode() + '\x1b[0m')
-
-_thread.start_new_thread(dbg_echo, ())
 pnp_cv_init()
+xyz_init()
 
 
 print('start...')
 
 # 10mm / 275 pixel
 DIV_MM2PIXEL = 10/275
-
-# 4mm / (50 * 16 (md: 2)) = 0.005mm per micro step
-# 360' / (50 * 64 (md: 4)) = 0.45' per micro step
-DIV_MM2STEP = 0.005
-DIV_DEG2STEP = 0.1125
 
 comp_height = {
     '0402': 0.2,
@@ -175,173 +163,6 @@ with open(f'prj/{prj}.csv', newline='') as csvfile:
 
 
 #print(pos)
-
-def set_pump(val):
-    pump = 2 if val != 0 else 1
-    print('set pump...', pump)
-    sock.clear()
-    sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", pump), ('80:00:11', 0x5))
-    rx = sock.recvfrom(timeout=1)
-    print('set pump ret: ' + rx[0].hex(), rx[1])
-    if pump == 1:
-        sleep(0.5)
-        pump = 0
-        print('set pump...', pump)
-        sock.clear()
-        sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", pump), ('80:00:11', 0x5))
-        rx = sock.recvfrom(timeout=1)
-        print('set pump ret: ' + rx[0].hex(), rx[1])
-
-
-def motor_enable():
-    for i in range(5):
-        print(f'motor enable: #{i+1}')
-        sock.clear()
-        sock.sendto(b'\x20'+struct.pack("<H", 0x00d6) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
-        rx = sock.recvfrom(timeout=1)
-        print('motor enable ret: ' + rx[0].hex(), rx[1])
-    for i in range(5):
-        print(f'motor set min speed: #{i+1}')
-        sock.clear()
-        sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", 400), (f'80:00:0{i+1}', 0x5))
-        rx = sock.recvfrom(timeout=1)
-        print('motor set min speed ret: ' + rx[0].hex(), rx[1])
-    '''
-    print(f'motor set #5')
-    sock.sendto(b'\x20'+struct.pack("<H", 0x00c8) + struct.pack("<I", 100), (f'80:00:05', 0x5))
-    rx = sock.recvfrom(timeout=1)
-    print('motor set #5 ret: ' + rx[0].hex(), rx[1])
-    '''
-    print(f'motor set #5')
-    sock.clear()
-    sock.sendto(b'\x20'+struct.pack("<H", 0x00c4) + struct.pack("<I", 100), (f'80:00:05', 0x5))
-    rx = sock.recvfrom(timeout=1)
-    print('motor set #5 ret: ' + rx[0].hex(), rx[1])
-
-
-def wait_stop():
-    retry_cnt = 0
-    tgt = 1
-    while True:
-        sock.clear()
-        sock.sendto(b'\x00'+struct.pack("<H", 0x00d7) + struct.pack("<B", 1), (f'80:00:0{tgt}', 0x5))
-        dat, src = sock.recvfrom(timeout=0.8)
-        if src == None:
-            print(f'error: retry_cnt: {retry_cnt}')
-            retry_cnt += 1
-            if retry_cnt > 3:
-                print('error: poll retry > 3')
-                exit(-1)
-            continue
-        retry_cnt = 0
-        if dat[0] == 0x80 and dat[1] == 0:
-            tgt += 1
-            if tgt > 5:
-                return 0
-        sleep(0.1)
-
-def enable_force():
-    retry_cnt = 0
-    while True:
-        sock.clear()
-        sock.sendto(b'\x20'+struct.pack("<H", 0x00cc) + struct.pack("<B", 1), (f'80:00:04', 0x5))
-        dat, src = sock.recvfrom(timeout=0.8)
-        if src == None:
-            print(f'error: force retry_cnt: {retry_cnt}')
-            retry_cnt += 1
-            if retry_cnt > 3:
-                print('error: poll retry > 3')
-                exit(-1)
-            continue
-        retry_cnt = 0
-        if dat[0] == 0x80:
-            print('force trigger enabled')
-            return 0
-        sleep(0.1)
-    
-
-
-last_pos = None
-def goto_pos(pos, wait=False, s_speed=10000):
-    global last_pos
-    if last_pos == None:
-        last_pos = load_pos()
-    delta = [pos[0]-last_pos[0], pos[1]-last_pos[1], pos[2]-last_pos[2]]
-    last_pos = [pos[0], pos[1], pos[2]]
-    retry_cnt = 0
-    done_flag = [0, 0, 0, 0, 0]
-    m_vector = max(math.sqrt(math.pow(delta[0], 2) + math.pow(delta[1], 2) + math.pow(delta[2], 2)), 0.01)
-    v_speed = [round(s_speed * abs(delta[0])/m_vector), round(s_speed * abs(delta[1])/m_vector), round(s_speed * abs(delta[2])/m_vector), round(s_speed / 100)]
-    b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
-    
-    while True:
-        sock.clear()
-        if not done_flag[2]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP))+b_speed[0], ('80:00:03', 0x6))
-        if (not done_flag[0]) or (not done_flag[1]):
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP))+b_speed[1], ('80:00:e0', 0x6))
-        if not done_flag[3]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed[2], ('80:00:04', 0x6))
-        if not done_flag[4]:
-            sock.sendto(b'\x20'+struct.pack("<i", round(pos[3]*-1/DIV_DEG2STEP))+b_speed[3], ('80:00:05', 0x6))
-        
-        for i in range(5 - (done_flag[0] + done_flag[1] + done_flag[2] + done_flag[3] + done_flag[4])):
-            dat, src = sock.recvfrom(timeout=0.8)
-            if src:
-                if src[0] == '80:00:01':
-                    done_flag[0] = 1
-                if src[0] == '80:00:02':
-                    done_flag[1] = 1
-                if src[0] == '80:00:03':
-                    done_flag[2] = 1
-                if src[0] == '80:00:04':
-                    done_flag[3] = 1
-                if src[0] == '80:00:05':
-                    done_flag[4] = 1
-        if done_flag[0] and done_flag[1] and done_flag[2] and done_flag[3] and done_flag[4]:
-            break
-        print(f'error: retry_cnt: {retry_cnt}, done_flag: f{done_flag}')
-        retry_cnt += 1
-        if retry_cnt > 3:
-            print(f'error: set retry > 3, done_flag: f{done_flag}')
-            exit(-1)
-    
-    if not wait:
-        return 0
-    wait_stop()
-
-
-
-def load_pos():
-    pos = [0, 0, 0, 0]
-    
-    print(f'motor read pos')
-    sock.clear()
-    
-    sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:03', 0x5))
-    dat, src = sock.recvfrom(timeout=0.5)
-    if dat and dat[0] == 0x80:
-        pos[0] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP
-    
-    sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:01', 0x5))
-    dat, src = sock.recvfrom(timeout=0.5)
-    if dat and dat[0] == 0x80:
-        pos[1] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP
-    
-    sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:04', 0x5))
-    dat, src = sock.recvfrom(timeout=0.5)
-    if dat and dat[0] == 0x80:
-        pos[2] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP * -1
-    
-    sock.sendto(b'\x00'+struct.pack("<H", 0x00bc) + struct.pack("<B", 4), (f'80:00:05', 0x5))
-    dat, src = sock.recvfrom(timeout=0.5)
-    if dat and dat[0] == 0x80:
-        pos[3] = struct.unpack("<i", dat[1:])[0] * DIV_DEG2STEP * -1
-    
-    return pos
-
-
-motor_enable()
 
 del_pow = 2 # + - by key
 #cur_pos = [0, 0, 0, 0] # x, y, z, r
@@ -432,7 +253,7 @@ def putdown_comp(p_x, p_y, p_a):
 
 
 def pos_set():
-    global del_pow, aux_pos, cur_pump, comp_base_z, pcb_base_z, down_put, pause, redo, skip
+    global del_pow, aux_pos, cur_pump, comp_base_z, pcb_base_z, down_put, pause, redo, skip, cur_pos
     while True:
         k = getkey()
         print(k)
@@ -461,13 +282,8 @@ def pos_set():
         
         if k == K_H:
             print('set home')
-            for i in range(5):
-                print(f'motor set home: #{i+1}')
-                sock.sendto(b'\x20'+struct.pack("<H", 0x00b1) + struct.pack("<B", 1), (f'80:00:0{i+1}', 0x5))
-                rx = sock.recvfrom(timeout=1)
-                print('motor set home: ' + rx[0].hex(), rx[1])
-            for i in range(4):
-                cur_pos[i] = 0
+            set_home()
+            cur_pos = [0, 0, 0, 0]
         
         if k == K_S:
             cam_comp_snap()
@@ -519,9 +335,8 @@ def pos_set():
         if k == K_SHF_M or k == K_M:
             cur_cam = 255 if k == K_M else 0
             print('set cam...', cur_cam)
-            sock.sendto(b'\x20'+struct.pack("<H", 0x0036) + struct.pack("<B", cur_cam), ('80:00:10', 0x5))
-            rx = sock.recvfrom(timeout=1)
-            print('set cam ret: ' + rx[0].hex(), rx[1])
+            rx = cd_reg_rw('80:00:10', 0x0036, struct.pack("<B", cur_cam))
+            print('set cam ret: ' + rx.hex())
         
         if k == K_P:
             cur_pump = int(not cur_pump)
