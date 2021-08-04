@@ -36,7 +36,6 @@ from cdnet.dispatch import *
 
 from pnp_xyz import *
 from pnp_cv import pnp_cv_init, cv_dat
-cv_dat['idle'] = True
 
 args = CdArgs()
 dev_str = args.get("--dev", dft="ttyACM0")
@@ -98,7 +97,7 @@ def getkey():
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 
-pnp_cv_init()
+pnp_cv_init(False)
 xyz_init()
 
 

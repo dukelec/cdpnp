@@ -4,11 +4,9 @@
 # The input is an image, and the output is an annotated image
 # with the angle of otientation for each object (0 to 180 degrees)
 
-import sys, os
-import struct
+import sys, os, _thread
+import struct, queue, re
 from time import sleep
-import _thread
-import re
 
 from cdnet.utils.log import *
 from cdnet.dispatch import *
@@ -20,16 +18,17 @@ import numpy as np
 cv_dat = {
     'limit_angle': False,
     'cur': None,
-    'idle': False
+    'img_queue': None,
+    
+    'detect': True,
+    'local': True,
+    
+    'sock_pic': None
 }
-
-sock_pic = None
-cur_pic = None
-pic_ready = False
 
 
 def cv_get_pos(img):
-    if cv_dat['idle']:
+    if not cv_dat['detect']:
         return
     
     # Convert image to grayscale
@@ -94,12 +93,11 @@ def cv_get_pos(img):
 
 
 def pic_rx():
-    global cur_pic, pic_ready
     rx_dat = None
     dat_cnt = 0
     
     while True:
-        rx = sock_pic.recvfrom()
+        rx = cv_dat['sock_pic'].recvfrom()
         #print('\x1b[0;37m  ' + re.sub(br'[^\x20-\x7e]',br'.', rx[0]).decode() + '\x1b[0m')
         
         hdr = rx[0][0]  # [5:4] FRAGMENT: 00: error, 01: first, 10: more, 11: last, [3:0]: cnt
@@ -124,7 +122,11 @@ def pic_rx():
                 height, width = img.shape[:2]
                 cv_get_pos(img)
                 cur_pic = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
-                pic_ready = True
+                if not cv_dat['img_queue'].full():
+                    if not cv_dat['local']:
+                        cur_pic = cv.imencode('.png', cur_pic)[1].tobytes()
+                    cv_dat['img_queue'].put_nowait(cur_pic)
+
             #else:
             #    print(f'pic, wrong cnt at end, local: {dat_cnt} != rx: {hdr & 0xf}, dat len: {len(dat)}')
         
@@ -138,15 +140,16 @@ def pic_rx():
 
 def cv_window():
     while True:
-        if not pic_ready:
-            sleep(0.1)
-            continue
+        cur_pic = cv_dat['img_queue'].get()
         cv.imshow('image', cur_pic)
         cv.waitKey(10)
 
-def pnp_cv_init():
-    global sock_pic
-    sock_pic = CDNetSocket(('', 0x10))
+def pnp_cv_init(detect=True, local=True):
+    cv_dat['detect'] = detect
+    cv_dat['local'] = local
+    cv_dat['img_queue'] = queue.Queue(10)
+    cv_dat['sock_pic'] = CDNetSocket(('', 0x10))
     _thread.start_new_thread(pic_rx, ())
-    _thread.start_new_thread(cv_window, ())
+    if cv_dat['local']:
+        _thread.start_new_thread(cv_window, ())
 
