@@ -368,8 +368,8 @@ def pos_set():
         goto_pos(cur_pos)
 
 
-print('free run...')
-pos_set()
+#print('free run...')
+#pos_set()
 
 coeffs = []
 for i in range(len(fiducial_cam)):
@@ -491,6 +491,45 @@ def work_thread():
 
 #print('exit...')
 
+async def dev_service():
+    sock = CDWebSocket(ws_ns, 'dev')
+    while True:
+        dat, src = await sock.recvfrom()
+        logger.debug(f'dev ser: {dat}')
+        
+        if dat['action'] == 'get_motor_pos':
+            logger.info('get_motor_pos')
+            p = load_pos()
+            await sock.sendto(p, src)
+        
+        elif dat['action'] == 'get_init_home':
+            logger.info('get_init_home')
+            await sock.sendto(xyz['init_home'], src)
+        
+        elif dat['action'] == 'set_motor_pos':
+            logger.info('set_motor_pos')
+            goto_pos(dat['pos'], dat['wait'])
+            await sock.sendto('succeeded', src)
+        
+        elif dat['action'] == 'set_home':
+            logger.info('set_home')
+            set_home()
+            await sock.sendto('succeeded', src)
+        
+        elif dat['action'] == 'set_pump':
+            logger.info('set_pump')
+            set_pump(dat['val'])
+            await sock.sendto('succeeded', src)
+        
+        elif dat['action'] == 'set_camera':
+            logger.info('set_camera')
+            rx = cd_reg_rw('80:00:10', 0x0036, struct.pack("<B", 255 if dat['val'] else 0))
+            print('set cam ret: ' + rx.hex())
+            await sock.sendto('succeeded', src)
+        
+        else:
+            await sock.sendto('err: dev: unknown cmd', src)
+
 
 async def open_brower():
     proc = await asyncio.create_subprocess_shell('/opt/google/chrome/chrome --app=http://localhost:8900')
@@ -504,10 +543,7 @@ if __name__ == "__main__":
     start_web(None)
     csa['proxy'] = CDWebSocket(ws_ns, 'proxy')
     csa['async_loop'] = asyncio.get_event_loop();
-    #asyncio.get_event_loop().create_task(file_service())
-    #asyncio.get_event_loop().create_task(dev_service())
-    #asyncio.get_event_loop().create_task(cdbus_proxy_service())
-    #asyncio.get_event_loop().create_task(open_brower())
+    asyncio.get_event_loop().create_task(dev_service())
     logger.info('Please open url: http://localhost:8900')
     asyncio.get_event_loop().run_forever()
 

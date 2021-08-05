@@ -6,16 +6,32 @@
 
 import { L } from './lang/lang.js'
 import { escape_html, date2num, timestamp, val2hex, dat2str, dat2hex, hex2dat,
-         read_file, download, readable_size, blob2dat, csv_parser } from './utils/helper.js';
+         read_file, download, readable_size, blob2dat, csv_parser, readable_float } from './utils/helper.js';
 //import { konva_zoom, konva_responsive } from './utils/konva_helper.js';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
+import { search_comp_parents, search_next_comp, search_current_comp, select_comp,
+         pos_to_page, pos_from_page, csv_to_pos } from './pos_list.js';
+import { csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './input_ctrl.js';
+
+let csa = {
+    shortcuts: false,
+    cur_pos: [0, 0, 0, 0],
+    aux_pos: [0, 0, 0, 0],
+    
+    grab_ofs: [-33.9, -7.0],
+    comp_search: [[50, 165], [50, 185], null],
+    comp_top_z: -85.5,
+    pcb_top_z: -84.5,
+    comp_base_z: -89.3,
+    pcb_base_z: -88.2,
+    fiducial_pcb: [[-26.375, 21.35], [-6.3, 4.75]],
+    fiducial_cam: [[[89.673, 175.000], [109.861, 158.607]], [[120.720, 175.347], [140.849, 158.856]], null],
+};
 
 let db = null;
 let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
-let dbg_sock = new CDWebSocket(ws_ns, 9);
-let cfgs = null;
 
 
 async function init_cfg_list() {
@@ -77,6 +93,18 @@ function init_ws() {
         console.log("ws onopen");
         ws_ns.connections['server'] = ws;
         
+        cmd_sock.flush();
+        await cmd_sock.sendto({'action': 'get_motor_pos'}, ['server', 'dev']);
+        let dat = await cmd_sock.recvfrom(500);
+        console.log('get_cur_pos ret', dat);
+        csa.cur_pos = csa.aux_pos = dat[0];
+        csa_to_page_pos();
+        
+        await cmd_sock.sendto({'action': 'get_init_home'}, ['server', 'dev']);
+        dat = await cmd_sock.recvfrom(500);
+        console.log('get_init_home ret', dat);
+        if (dat[0])
+            document.getElementById('btn_set_home').style.backgroundColor = '';
     }
     ws.onmessage = async function(evt) {
         let dat = await blob2dat(evt.data);
@@ -97,73 +125,6 @@ function init_ws() {
 }
 
 
-function pos_to_page(pos) {
-    let pos_list = document.getElementById('pos_list');
-    pos_list.innerHTML = '';
-    
-    for (let footprint in pos) {
-        let html_value = '';
-        for (let value in pos[footprint]) {
-            let html_comp = '';
-            for (let comp of pos[footprint][value]) {
-                html_comp += `
-                    <tr class='list_comp'>
-                        <td>${comp[0]}</td>
-                        <td>${comp[1]}</td>
-                        <td>${comp[2]}</td>
-                        <td>${comp[3]}</td>
-                    </tr>`;
-            }
-            html_value += `
-                <tr class='list_value'>
-                    <td>${value}</td>
-                    <td>
-                        <table>
-                            <tbody class="js-sortable-table">
-                                ${html_comp}
-                            </tbody>
-                        </table>
-                    </td>
-                </tr>`;
-        }
-        let html = `
-            <tr class='list_footprint'>
-                <td>${footprint}</td>
-                <td>--</td>
-                <td colspan="5">
-                    <table>
-                        <tbody class="js-sortable-table">
-                            ${html_value}
-                        </tbody>
-                    </table>
-                </td>
-            </tr>`;
-        pos_list.insertAdjacentHTML('beforeend', html);
-    }
-}
-
-function pos_from_page() {
-    let pos = {};
-    let pos_list = document.getElementById('pos_list');
-    let footprint_list = pos_list.getElementsByClassName('list_footprint');
-    for (let footprint_elm of footprint_list) {
-        let footprint = footprint_elm.querySelector('td').innerText;
-        pos[footprint] = {};
-        let value_list = footprint_elm.getElementsByClassName('list_value');
-        for (let value_elm of value_list) {
-            let value = value_elm.querySelector('td').innerText;
-            pos[footprint][value] = [];
-            let comp_list = value_elm.getElementsByClassName('list_comp');
-            for (let comp_elm of comp_list) {
-                let comp_tds = comp_elm.querySelectorAll('td');
-                pos[footprint][value].push([comp_tds[0].innerText, comp_tds[1].innerText, comp_tds[2].innerText, comp_tds[3].innerText]);
-            }
-        }
-    }
-    return pos;
-}
-
-
 document.getElementById('btn_load_csv').onclick = async function() {
     console.log('load_csv');
     
@@ -177,26 +138,8 @@ document.getElementById('btn_load_csv').onclick = async function() {
             let file = files[0];
             let data = await read_file(file);
             let data_str = new TextDecoder().decode(data);
-            let csv_list = csv_parser(data_str);
-            console.log('output dat:', csv_list);
-            
-            let pos = {};
-            for (let row of csv_list) {
-                if (row[0] == 'Ref' || !row[0].length)
-                    continue;
-                let row_ = [row[0], row[3].slice(0, -3), row[4].slice(0, -3), row[5].slice(0, -5)];
-                if (row[2] in pos) {
-                    if (row[1] in pos[row[2]])
-                        pos[row[2]][row[1]].push(row_);
-                    else
-                        pos[row[2]][row[1]] = [row_];
-                } else {
-                    pos[row[2]] = {};
-                    pos[row[2]][row[1]] = [row_];
-                }
-            }
-            
-            console.log('pos_to_page:', pos);
+            let pos = csv_to_pos(data_str);
+            console.log('load pos:', pos);
             pos_to_page(pos);
             sortable('.js-sortable-table');
         }
@@ -206,15 +149,17 @@ document.getElementById('btn_load_csv').onclick = async function() {
     input.click();
 };
 
-document.getElementById('btn_update_csv').onclick = async function() {
-    let p = pos_from_page();
-    console.log('pos_from_page', p);
-    pos_to_page(p);
-};
-
 window.addEventListener('load', async function() {
     console.log("load app");
     db = await new Idb();
     init_ws();
+    
+    let csa_pre = await db.get('tmp', 'csa');
+    if (csa_pre)
+        csa = csa_pre;
+    csa_to_page_input();
 });
 
+export {
+    csa, cmd_sock, db
+};
