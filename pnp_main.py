@@ -10,7 +10,7 @@
 
 """
 
-import sys, os, _thread, tty, termios
+import sys, os, _thread
 import struct, re
 from time import sleep
 import copy
@@ -42,9 +42,8 @@ from pnp_xyz import *
 
 args = CdArgs()
 dev_str = args.get("--dev", dft="ttyACM0")
-prj = args.get("--prj", "-p")
 
-if args.get("--help", "-h") != None or prj == None:
+if args.get("--help", "-h") != None:
     print(__doc__)
     exit()
 
@@ -70,78 +69,18 @@ csa = {
 dev = CDBusBridge(dev_str)
 CDNetIntf(dev, mac=0x00)
 
-K_ESC = 27
-K_RET = 10
-
-K_UP = 65
-K_DOWN = 66
-K_LEFT = 68
-K_RIGHT = 67
-K_PAGEUP = 53
-K_PAGEDOWN = 54
-K_R = 114
-k_SHF_R = 82
-K_P = 112
-K_H = 104
-
-K_W = 119
-K_S = 115
-K_ARROW_L = 44 # <
-K_ARROW_R = 46 # >
-K_SHF_S = 83   # save component z
-K_SHF_P = 80   # save pcb z
-K_L = 108      # limit angle
-K_M = 109      # enable monitor
-K_SHF_M = 77   # disable monitor
-K_D = 100      # toggle down put
-K_N = 110      # skip
-K_0 = 48
-K_INC = 61 # +
-K_DEC = 45 # -
-K_SPACE = 32
-
-def getkey():
-    old_settings = termios.tcgetattr(sys.stdin)
-    tty.setcbreak(sys.stdin.fileno())
-    try:
-        while True:
-            b = os.read(sys.stdin.fileno(), 3)
-            k = b[2] if len(b) == 3 else b[0]
-            return k
-    finally:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-
-
 pnp_cv_init()
 xyz_init()
-
-
 print('start...')
 
 # 10mm / 275 pixel
 DIV_MM2PIXEL = 10/275
 
-comp_height = {
-    '0402': 0.2,
-    '0402C_BIG': 0.4
-}
-fast_to = None # e.g.: 'U12'
 
-# not include component height
-comp_base_z = -89.3
-pcb_base_z = -86.3 # may override by prj cfg
-
-work_dft_pos = [50, 165, -85.5] # default work position
-grab_ofs = [-33.900, -7.000]    # grab offset to camera
-
-#fiducial_pcb = [ [0.625, 22.175], [23.7, 4.75] ]
-#fiducial_cam = [ [[105.423, 177.636], [128.672, 160.511]] ]
 board_idx = 0
-
-# update configs from prj file
-with open(f'prj/{prj}.py') as prj_file:
-    prj_txt = prj_file.read()
-    exec(prj_txt)
+coeffs = []
+fiducial_pcb = [ [0, 0], [1, 1] ]
+fiducial_cam = [ [[0, 0], [10, 10]] ]
 
 def equations(p):
     s, a, d_x, d_y = p
@@ -157,47 +96,22 @@ def pcb2xyz(p, pcb):
     step_y = (pcb[0] * math.sin(a) + pcb[1] * math.cos(a)) * s + d_y
     return step_x, step_y
 
-
-pos = {}
-
-import csv
-with open(f'prj/{prj}.csv', newline='') as csvfile:
-    spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
-    for row in spamreader:
-        if row[0] == 'Ref':
-            continue
-        
-        if row[2] in pos:
-            if row[1] in pos[row[2]]:
-                pos[row[2]][row[1]].append(row)
-            else:
-                pos[row[2]][row[1]] = [row]
-        else:
-            pos[row[2]] = {}
-            pos[row[2]][row[1]] = [row]
+def update_coeffs():
+    global board_idx, coeffs
+    coeffs = []
+    for i in range(len(fiducial_cam)):
+        board_idx = i
+        coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
+        print(f'coefficient #{i}:', coeff)
+        print('equations(coeff):', equations(coeff))
+        print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
+        coeffs.append(coeff)
+    print('coeffs:', coeffs)
 
 
-#print(pos)
-
-del_pow = 2 # + - by key
-#cur_pos = [0, 0, 0, 0] # x, y, z, r
 cur_pos = load_pos()
-aux_pos = [0, 0, 0, 0]
 cv_cur_r = 0
 cur_pump = 0
-down_put = True
-pause = False
-redo = False
-skip = False
-
-cur_comp = None
-
-def get_comp_height(comp=None):
-    if not comp or comp not in comp_height:
-        print(f'comp_height: default 0.2 ({comp})')
-        return 0.2
-    print(f'comp_height: {comp}: {comp_height[comp]}')
-    return comp_height[comp]
 
 
 def cam_comp_ws():
@@ -267,118 +181,6 @@ def putdown_comp(p_x, p_y, p_a):
         goto_pos(cur_pos, wait=True)
 
 
-def pos_set():
-    global del_pow, aux_pos, cur_pump, comp_base_z, pcb_base_z, down_put, pause, redo, skip, cur_pos
-    while True:
-        k = getkey()
-        print(k)
-        if k == K_ESC:
-            return 0
-        
-        if k == K_DOWN:
-            cur_pos[1] += pow(10, del_pow)/100
-        elif k == K_UP:
-            cur_pos[1] -= pow(10, del_pow)/100
-        elif k == K_LEFT:
-            cur_pos[0] -= pow(10, del_pow)/100
-        elif k == K_RIGHT:
-            cur_pos[0] += pow(10, del_pow)/100
-        elif k == K_PAGEDOWN:
-            cur_pos[2] -= pow(10, del_pow)/100
-        elif k == K_PAGEUP:
-            cur_pos[2] += pow(10, del_pow)/100
-        elif k == K_R:
-            cur_pos[3] += pow(10, del_pow)/10
-        elif k == k_SHF_R:
-            cur_pos[3] -= pow(10, del_pow)/10
-        
-        if k == K_W:
-            cam_comp_ws()
-        
-        if k == K_H:
-            print('set home')
-            set_home()
-            cur_pos = [0, 0, 0, 0]
-        
-        if k == K_S:
-            cam_comp_snap()
-        
-        if k == K_SHF_S:
-            comp_base_z = cur_pos[2]
-            print('set comp_base_z', comp_base_z)
-        if k == K_SHF_P:
-            pcb_base_z = cur_pos[2]
-            print('set pcb_base_z', pcb_base_z)
-        if k == K_L:
-            print('limit angle', not cv_dat['limit_angle'])
-            cv_dat['limit_angle'] = not cv_dat['limit_angle']
-            continue
-        if k == K_D:
-            print('set down_put:', not down_put)
-            down_put = not down_put
-            continue
-        
-        if k == K_ARROW_L:
-            pickup_comp()
-        if k == K_ARROW_R:
-            print('set redo')
-            redo = True
-            pause = False
-            continue
-        if k == K_N:
-            print('set skip')
-            skip = True
-            continue
-        
-        if k == K_INC or k == K_DEC:
-            del_pow += (1 if k == K_INC else -1)
-            del_pow = max(0, min(del_pow, 4))
-            print(f'del_pow: {del_pow}')
-        
-        if k == K_0:
-            print('update aux_pos!')
-            aux_pos = [cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3]]
-        if k >= K_0 + 1 and k <= 8:
-            board = (k - 1 - K_0) / 2
-            sub = (k - 1 - K_0) % 2
-            print(f'goto board #{board} p{sub}')
-            cur_pos[0] = fiducial_cam[board][sub][0]
-            cur_pos[1] = fiducial_cam[board][sub][1]
-            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-            cur_pos[3] = 0
-        
-        if k == K_SHF_M or k == K_M:
-            cur_cam = 255 if k == K_M else 0
-            print('set cam...', cur_cam)
-            rx = cd_reg_rw('80:00:10', 0x0036, struct.pack("<B", cur_cam))
-            print('set cam ret: ' + rx.hex())
-        
-        if k == K_P:
-            cur_pump = int(not cur_pump)
-            print('cur_pump:', cur_pump)
-            set_pump(cur_pump)
-        
-        if k == K_SPACE:
-            pause = not pause
-            print('toggle pause, pause =', pause)
-            continue
-        
-        print(f'goto: {cur_pos[0]:.3f}, {cur_pos[1]:.3f}, {cur_pos[2]:.3f}, {cur_pos[3]:.3f}')
-        print(f'delt: {cur_pos[0]-aux_pos[0]:.3f}, {cur_pos[1]-aux_pos[1]:.3f}, {cur_pos[2]-aux_pos[2]:.3f}, {cur_pos[3]-aux_pos[3]:.3f}')
-        goto_pos(cur_pos)
-
-
-#print('free run...')
-#pos_set()
-
-coeffs = []
-for i in range(len(fiducial_cam)):
-    board_idx = i
-    coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
-    print(f'coefficient #{i}:', coeff)
-    print('equations(coeff):', equations(coeff))
-    print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
-    coeffs.append(coeff)
 
 
 def work_thread():
@@ -492,6 +294,8 @@ def work_thread():
 #print('exit...')
 
 async def dev_service():
+    global coeffs, fiducial_pcb, fiducial_cam
+    
     sock = CDWebSocket(ws_ns, 'dev')
     while True:
         dat, src = await sock.recvfrom()
@@ -517,14 +321,45 @@ async def dev_service():
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'set_pump':
-            logger.info('set_pump')
+            logger.info(f"set_pump {dat['val']}")
             set_pump(dat['val'])
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'set_camera':
-            logger.info('set_camera')
+            logger.info(f"set_camera {dat['val']}")
             rx = cd_reg_rw('80:00:10', 0x0036, struct.pack("<B", 255 if dat['val'] else 0))
             print('set cam ret: ' + rx.hex())
+            await sock.sendto('succeeded', src)
+        
+        elif dat['action'] == 'limit_angle':
+            logger.info(f"limit_angle {dat['val']}")
+            cv_dat['limit_angle'] = dat['val']
+            await sock.sendto('succeeded', src)
+        
+        elif dat['action'] == 'update_coeffs':
+            logger.info(f"update_coeffs")
+            fiducial_pcb = dat['pcb']
+            fiducial_cam = dat['cam']
+            update_coeffs()
+            await sock.sendto('succeeded', src)
+        
+        elif dat['action'] == 'pcb2xyz':
+            logger.info(f"pcb2xyz")
+            p_xy = pcb2xyz(coeffs[dat['idx']], (dat['x'], dat['y']))
+            await sock.sendto(p_xy, src)
+        
+        elif dat['action'] == 'get_cv_cur':
+            logger.info(f"get_cv_cur")
+            await sock.sendto(cv_dat['cur'], src)
+        
+        elif dat['action'] == 'wait_stop':
+            logger.info(f"wait_stop")
+            wait_stop()
+            await sock.sendto('succeeded', src)
+        
+        elif dat['action'] == 'enable_force':
+            logger.info(f"enable_force")
+            enable_force()
             await sock.sendto('succeeded', src)
         
         else:

@@ -12,6 +12,7 @@ import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
 import { search_comp_parents, search_next_comp, search_current_comp, select_comp,
          pos_to_page, pos_from_page, csv_to_pos } from './pos_list.js';
+import { set_motor_pos, set_pump } from './dev_cmd.js';
 import { csa, cmd_sock, db } from './index.js';
 
 
@@ -131,40 +132,25 @@ window.btn_goto_xy = async function(name) {
     csa.cur_pos[0] = Number(xy_str.split(',')[0]);
     csa.cur_pos[1] = Number(xy_str.split(',')[1]);
     csa_to_page_pos();
-    
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_motor_pos', 'pos': csa.cur_pos, 'wait': false}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(500);
-    console.log('btn_goto_xy ret', dat);
+    await set_motor_pos();
 };
 window.btn_goto_z = async function(name) {
     let z = Number(document.getElementById(name).value);
     csa.cur_pos[2] = z;
     csa_to_page_pos();
-    
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_motor_pos', 'pos': csa.cur_pos, 'wait': false}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(500);
-    console.log('btn_goto_z ret', dat);
+    await set_motor_pos();
 };
 window.btn_grab_ofs = async function(dir=1) {
     csa.cur_pos[0] += dir * csa.grab_ofs[0];
     csa.cur_pos[1] += dir * csa.grab_ofs[1];
     csa_to_page_pos();
-    
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_motor_pos', 'pos': csa.cur_pos, 'wait': false}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(500);
-    console.log('btn_grab_ofs ret', dat);
+    await set_motor_pos();
 };
 
 
 document.getElementById('pump_en').onchange = async function() {
     let pump_en = document.getElementById('pump_en').checked;
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_pump', 'val': pump_en}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(500);
-    console.log(`set_pump ${pump_en} ret`, dat);
+    await set_pump(pump_en);
 };
 
 document.getElementById('camera_en').onchange = async function() {
@@ -172,7 +158,15 @@ document.getElementById('camera_en').onchange = async function() {
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'set_camera', 'val': camera_en}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
-    console.log(`camera_en ${pump_en} ret`, dat);
+    console.log(`camera_en ${camera_en} ret`, dat);
+};
+
+document.getElementById('limit_angle').onchange = async function() {
+    let limit_angle = document.getElementById('limit_angle').checked;
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'limit_angle', 'val': limit_angle}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(500);
+    console.log(`limit_angle ${limit_angle} ret`, dat);
 };
 
 document.getElementById('btn_set_home').onclick = async function() {
@@ -182,6 +176,7 @@ document.getElementById('btn_set_home').onclick = async function() {
     console.log('set_home ret', dat);
     csa.cur_pos = csa.aux_pos = [0, 0, 0, 0];
     csa_to_page_pos();
+    document.getElementById('btn_set_home').style.backgroundColor = '';
 };
 
 document.getElementById('btn_reset_aux').onclick = function() {
@@ -200,11 +195,7 @@ async function move_button(val)
     csa.cur_pos = [csa.cur_pos[0] + dx, csa.cur_pos[1] + dy, csa.cur_pos[2] + dz, csa.cur_pos[3] + dr];
     csa.aux_pos = [csa.aux_pos[0] + dx, csa.aux_pos[1] + dy, csa.aux_pos[2] + dz, csa.aux_pos[3] + dr];
     csa_to_page_pos();
-    
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_motor_pos', 'pos': csa.cur_pos, 'wait': false}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(500);
-    console.log('set_motor_pos ret', dat);
+    await set_motor_pos();
 }
 
 window.move_button = move_button;
@@ -214,6 +205,10 @@ window.addEventListener('keydown', async function(e) {
         return;
     e.preventDefault();
     console.log(e.keyCode);
+    if (e.keyCode == 32) { // space
+        document.getElementById('pause_en').checked = true;
+        return;
+    }
     let val = [0, 0, 0, 0];
     if (e.keyCode == 37) // left
         val[0] = -1;
@@ -239,5 +234,5 @@ document.getElementById('shortcuts').onclick = function() {
 };
 
 export {
-    csa_to_page_pos, csa_to_page_input, csa_from_page_input 
+    csa_to_page_pos, csa_to_page_input, csa_from_page_input
 };

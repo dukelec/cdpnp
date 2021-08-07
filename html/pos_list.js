@@ -4,8 +4,21 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { csv_parser, read_file } from './utils/helper.js';
+import { csv_parser, read_file, readable_float } from './utils/helper.js';
+import { csa } from './index.js';
 
+
+function get_comp_values(comp)
+{
+    let pos_list = document.getElementById('pos_list');    
+    let comp_list = pos_list.getElementsByClassName('list_comp');
+    for (let elm of comp_list) {
+        let subs = elm.querySelectorAll('td');
+        if (subs[0].innerText == comp)
+            return [Number(subs[1].innerText), Number(subs[2].innerText), Number(subs[3].innerText)];
+    }
+    return null;
+}
 
 function search_comp_parents(comp, set_color=false, color='')
 {
@@ -128,9 +141,9 @@ function pos_to_page(pos) {
                 html_comp += `
                     <tr class='list_comp' onclick=select_comp('${comp[0]}');>
                         <td>${comp[0]}</td>
-                        <td>${comp[1]}</td>
-                        <td>${comp[2]}</td>
-                        <td>${comp[3]}</td>
+                        <td>${readable_float(comp[1])}</td>
+                        <td>${readable_float(comp[2])}</td>
+                        <td>${readable_float(comp[3])}</td>
                     </tr>`;
             }
             html_value += `
@@ -175,7 +188,8 @@ function pos_from_page() {
             let comp_list = value_elm.getElementsByClassName('list_comp');
             for (let comp_elm of comp_list) {
                 let comp_tds = comp_elm.querySelectorAll('td');
-                pos[footprint][value].push([comp_tds[0].innerText, comp_tds[1].innerText, comp_tds[2].innerText, comp_tds[3].innerText]);
+                pos[footprint][value].push([comp_tds[0].innerText,
+                    Number(comp_tds[1].innerText), Number(comp_tds[2].innerText), Number(comp_tds[3].innerText)]);
             }
         }
     }
@@ -189,7 +203,12 @@ function csv_to_pos(csv)
     for (let row of csv_list) {
         if (row[0] == 'Ref' || !row[0].length)
             continue;
-        let row_ = [row[0], row[3].slice(0, -3), row[4].slice(0, -3), row[5].slice(0, -5)];
+        let row_ = [row[0], Number(row[3]), -Number(row[4]), Number(row[5])];
+        if (row[6] == 'bottom')
+            row_[3] = 180 - row_[3];
+        else if (row_[3] > 180.0)
+            row_[3] = -(360 - row_[3]);
+        
         if (row[2] in pos) {
             if (row[1] in pos[row[2]])
                 pos[row[2]][row[1]].push(row_);
@@ -223,7 +242,6 @@ document.getElementById('btn_load_csv').onclick = async function() {
             sortable('.js-sortable-table');
         }
         this.value = '';
-        document.getElementById('btn_load_csv').disabled = false;
     };
     input.click();
 };
@@ -233,6 +251,7 @@ function set_board(idx) {
     for (let i = 0; i < 3; i++)
         document.getElementById(`btn_board${i}`).style.backgroundColor = '';
     document.getElementById(`btn_board${idx}`).style.backgroundColor = '#D5F5E3';
+    document.getElementById(`cur_board`).innerText = `#${idx}`;
 }
 
 function get_board_safe() {
@@ -240,6 +259,7 @@ function get_board_safe() {
         if (document.getElementById(`btn_board${i}`).style.backgroundColor)
             return i;
     document.getElementById(`btn_board0`).style.backgroundColor = '#D5F5E3';
+    document.getElementById(`cur_board`).innerText = `#0`;
     return 0;
 }
 
@@ -285,8 +305,25 @@ function get_comp_safe() {
 }
 
 
+window.btn_select_search = function (idx) {
+    if (idx >= csa.comp_search.length)
+        return;
+    set_comp_search(idx);
+};
+
+window.btn_select_step = function (idx) {
+    set_step(idx);
+};
+
+window.btn_select_board = function (idx) {
+    if (idx >= csa.fiducial_cam.length)
+        return;
+    set_board(idx);
+};
+
+
 export {
     search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp,
-    pos_to_page, pos_from_page, csv_to_pos,
+    get_comp_values, pos_to_page, pos_from_page, csv_to_pos,
     set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe
 };

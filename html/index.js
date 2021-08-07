@@ -11,9 +11,10 @@ import { sleep, escape_html, date2num, timestamp, val2hex, dat2str, dat2hex, hex
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
 import { search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp,
-         pos_to_page, pos_from_page, csv_to_pos,
+         get_comp_values, pos_to_page, pos_from_page, csv_to_pos,
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
 import { csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './input_ctrl.js';
+import { set_motor_pos, set_pump, update_coeffs, pcb2xyz, z_keep_high } from './dev_cmd.js';
 
 let csa = {
     shortcuts: false,
@@ -35,12 +36,17 @@ let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
 
 
+
 document.getElementById('btn_run').onclick = async function() {
     let comp = get_comp_safe();
     if (!comp) {
         alert("list empty!");
         return;
     }
+    document.getElementById('btn_run').disabled = true;
+    document.getElementById('btn_stop').disabled = false;
+    csa.stop = false;
+    await update_coeffs();
     
     while (true) {
         let comp = get_comp_safe();
@@ -50,10 +56,25 @@ document.getElementById('btn_run').onclick = async function() {
         let step = get_step_safe();
         let search = get_comp_search();
         console.log(`comp: ${comp}, board: ${board}, step: ${step}, search: ${search}`);
-        await sleep(500);
+        if (csa.stop)
+            break;
+        if (document.getElementById('pause_en').checked) {
+            console.log(`enter wait`);
+            while (document.getElementById('pause_en').checked)
+                await sleep(100);
+            console.log(`exit wait`);
+            continue;
+        }
+        await sleep(1500); ////
+        
+        let comp_val = get_comp_values(comp);
+        let comp_xyz = await pcb2xyz(board, comp_val[0], comp_val[1]);
         
         if (step == 0) { // show_target
             console.log('show target');
+            await z_keep_high();
+            csa.cur_pos[0] = comp_xyz[0]; csa.cur_pos[1] = comp_xyz[1];
+            await set_motor_pos(true);
             set_step(1);
             continue;
         }
@@ -84,7 +105,8 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 5) { // putdown
             console.log('putdown');
-            set_step(0);
+            
+            set_step(Number(!document.getElementById('show_target').checked));
         }
         
         if (++board >= csa.fiducial_cam.length) {
@@ -98,6 +120,13 @@ document.getElementById('btn_run').onclick = async function() {
         }
     }
     console.log('all comp finished');
+    document.getElementById('btn_run').disabled = false;
+    document.getElementById('btn_stop').disabled = true;
+};
+
+document.getElementById('btn_stop').onclick = function() {
+    csa.stop = true;
+    document.getElementById('pause_en').checked = false;
 };
 
 

@@ -51,21 +51,23 @@
             </select> speed
             <br>
             <br>
-            <button class="button is-small" id="btn_step0">show target</button> >
-            <button class="button is-small" id="btn_step1">goto comp</button> >
-            <button class="button is-small" id="btn_step2">snap</button> >
-            <button class="button is-small" id="btn_step3">pickup</button> >
-            <button class="button is-small" id="btn_step4">goto pcb</button> >
-            <button class="button is-small" id="btn_step5">putdown</button>
+            <button class="button is-small" onclick="btn_select_step(0)" id="btn_step0">show target</button> >
+            <button class="button is-small" onclick="btn_select_step(1)" id="btn_step1">goto comp</button> >
+            <button class="button is-small" onclick="btn_select_step(2)" id="btn_step2">snap</button> >
+            <button class="button is-small" onclick="btn_select_step(3)" id="btn_step3">pickup</button> >
+            <button class="button is-small" onclick="btn_select_step(4)" id="btn_step4">goto pcb</button> >
+            <button class="button is-small" onclick="btn_select_step(5)" id="btn_step5">put down</button>
             <br>
             
             
             <br>
             <label class="checkbox"><input type="checkbox" id="pump_en"> Enable Pump</label>
             <label class="checkbox"><input type="checkbox" id="camera_en"> Enable Camera</label>
+            <label class="checkbox"><input type="checkbox" id="limit_angle"> Limit Angle</label>
             <label class="checkbox"><input type="checkbox" id="show_target" checked> Show Target</label>
+            <label class="checkbox"><input type="checkbox" id="putdown_en" checked> Put Down</label>
             <label class="checkbox"><input type="checkbox" id="pause_en"> Pause</label>
-            <button class="button is-small" id="btn_skip">Skip</button>
+            <button class="button is-small" id="btn_stop" disabled>Stop</button>
             <button class="button is-small" id="btn_run">Run</button>
             
             <br>
@@ -79,15 +81,15 @@
             <input type="text" id="comp_search0" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('comp_search0')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('comp_search0')">update</button>
-            <button class="button is-small" id="btn_comp_search0">select</button>
+            <button class="button is-small" onclick="btn_select_search(0)" id="btn_comp_search0">select</button>
             <input type="text" id="comp_search1" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('comp_search1')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('comp_search1')">update</button>
-            <button class="button is-small" id="btn_comp_search1">select</button>
+            <button class="button is-small" onclick="btn_select_search(1)" id="btn_comp_search1">select</button>
             <input type="text" id="comp_search2" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('comp_search2')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('comp_search2')">update</button>
-            <button class="button is-small" id="btn_comp_search2">select</button>
+            <button class="button is-small" onclick="btn_select_search(2)" id="btn_comp_search2">select</button>
             <br>
             comp_top_z:
             <input type="text" id="comp_top_z" onchange="input_change()">
@@ -121,7 +123,7 @@
             <input type="text" id="fiducial_cam0_1" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('fiducial_cam0_1')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('fiducial_cam0_1')">update</button>
-            <button class="button is-small" id="btn_board0">select</button>
+            <button class="button is-small" onclick="btn_select_board(0)" id="btn_board0">select</button>
             <br>
             fiducial cam #1:
             <input type="text" id="fiducial_cam1_0" onchange="input_change()">
@@ -130,7 +132,7 @@
             <input type="text" id="fiducial_cam1_1" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('fiducial_cam1_1')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('fiducial_cam1_1')">update</button>
-            <button class="button is-small" id="btn_board1">select</button>
+            <button class="button is-small" onclick="btn_select_board(1)" id="btn_board1">select</button>
             <br>
             fiducial cam #2:
             <input type="text" id="fiducial_cam2_0" onchange="input_change()">
@@ -139,7 +141,7 @@
             <input type="text" id="fiducial_cam2_1" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('fiducial_cam2_1')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('fiducial_cam2_1')">update</button>
-            <button class="button is-small" id="btn_board2">select</button>
+            <button class="button is-small" onclick="btn_select_board(2)" id="btn_board2">select</button>
         </div>
     </div>
 
@@ -150,7 +152,7 @@
         cur: <span id="cur_footprint">--</span> <span id="cur_value">--</span> <span id="cur_comp">--</span> <span id="cur_board">--</span>
         <br>
         
-        <div class="content">
+        <div class="content" style="font-size: 12px;">
               <table>
                   <thead>
                       <tr>
