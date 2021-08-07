@@ -31,7 +31,7 @@ function csa_to_page_input()
         `${readable_float(csa.grab_ofs[0])}, ${readable_float(csa.grab_ofs[1])}`;
     
     for (let i = 0; i < 3; i++) {
-        if (csa.comp_search[i] != null)
+        if (i < csa.comp_search.length)
             document.getElementById(`comp_search${i}`).value = 
                 `${readable_float(csa.comp_search[i][0])}, ${readable_float(csa.comp_search[i][1])}`;
         else
@@ -49,7 +49,7 @@ function csa_to_page_input()
         `${readable_float(csa.fiducial_pcb[1][0])}, ${readable_float(csa.fiducial_pcb[1][1])}`;
     
     for (let i = 0; i < 3; i++) {
-        if (csa.fiducial_cam[i] != null) {
+        if (i < csa.fiducial_cam.length) {
             document.getElementById(`fiducial_cam${i}_0`).value = 
                 `${readable_float(csa.fiducial_cam[i][0][0])}, ${readable_float(csa.fiducial_cam[i][0][1])}`;
             document.getElementById(`fiducial_cam${i}_1`).value = 
@@ -67,12 +67,15 @@ function csa_from_page_input()
     xy_str = document.getElementById('grab_ofs').value;
     csa.grab_ofs = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
     
-    for (let i = 0; i < 3; i++) {
+    csa.comp_search = [];
+    for (let i = 0; ; i++) {
+        if (!document.getElementById(`comp_search${i}`))
+            break;
         xy_str = document.getElementById(`comp_search${i}`).value;
         if (xy_str)
-            csa.comp_search[i] = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
+            csa.comp_search.push([Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])]);
         else
-            csa.comp_search[i] = null;
+            break;
     }
     
     csa.comp_top_z = Number(document.getElementById('comp_top_z').value);
@@ -85,16 +88,17 @@ function csa_from_page_input()
     xy_str = document.getElementById('fiducial_pcb1').value;
     csa.fiducial_pcb[1] = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
     
-    for (let i = 0; i < 3; i++) {
+    csa.fiducial_cam = [];
+    for (let i = 0; ; i++) {
+        if (!document.getElementById(`fiducial_cam${i}_0`))
+            break;
         xy_str = document.getElementById(`fiducial_cam${i}_0`).value;
         let xy_str2 = document.getElementById(`fiducial_cam${i}_1`).value;
-        if (xy_str && xy_str2) {
-            csa.fiducial_cam[i] = [null, null];
-            csa.fiducial_cam[i][0] = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
-            csa.fiducial_cam[i][1] = [Number(xy_str2.split(',')[0]), Number(xy_str2.split(',')[1])];
-        } else {
-            csa.fiducial_cam[i] = null;
-        }
+        if (xy_str && xy_str2)
+            csa.fiducial_cam.push([[ Number(xy_str.split(',')[0]),  Number(xy_str.split(',')[1])],
+                                   [Number(xy_str2.split(',')[0]), Number(xy_str2.split(',')[1])]]);
+        else
+            break;
     }
 }
 

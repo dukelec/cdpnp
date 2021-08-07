@@ -4,7 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { csv_parser } from './utils/helper.js';
+import { csv_parser, read_file } from './utils/helper.js';
 
 
 function search_comp_parents(comp, set_color=false, color='')
@@ -61,7 +61,7 @@ function search_next_comp(comp)
     for (let elm of comp_list) {
         let sub0 = elm.querySelector('td');
         if (comp_elm != null) {
-            comp_next = elm.innerText;
+            comp_next = elm.querySelector('td').innerText;
             break;
         }
         if (sub0.innerText == comp)
@@ -81,6 +81,15 @@ function search_current_comp()
             return sub0.innerText;
         }
     }
+    return null;
+}
+
+function search_first_comp()
+{
+    let pos_list = document.getElementById('pos_list');    
+    let comp_list = pos_list.getElementsByClassName('list_comp');
+    if (comp_list.length)
+        return comp_list[0].querySelector('td').innerText;
     return null;
 }
 
@@ -194,7 +203,90 @@ function csv_to_pos(csv)
     return pos;
 }
 
+
+document.getElementById('btn_load_csv').onclick = async function() {
+    console.log('load_csv');
+    
+    //let input = document.createElement('input');
+    //cpy(input, {type: 'file', accept: '*.cdg'}, ['type', 'accept']);
+    let input = document.getElementById('input_file');
+    input.accept = '.csv';
+    input.onchange = async function () {
+        var files = this.files;
+        if (files && files.length) {
+            let file = files[0];
+            let data = await read_file(file);
+            let data_str = new TextDecoder().decode(data);
+            let pos = csv_to_pos(data_str);
+            console.log('load pos:', pos);
+            pos_to_page(pos);
+            sortable('.js-sortable-table');
+        }
+        this.value = '';
+        document.getElementById('btn_load_csv').disabled = false;
+    };
+    input.click();
+};
+
+
+function set_board(idx) {
+    for (let i = 0; i < 3; i++)
+        document.getElementById(`btn_board${i}`).style.backgroundColor = '';
+    document.getElementById(`btn_board${idx}`).style.backgroundColor = '#D5F5E3';
+}
+
+function get_board_safe() {
+    for (let i = 0; i < 3; i++)
+        if (document.getElementById(`btn_board${i}`).style.backgroundColor)
+            return i;
+    document.getElementById(`btn_board0`).style.backgroundColor = '#D5F5E3';
+    return 0;
+}
+
+function set_step(idx) {
+    for (let i = 0; i < 6; i++)
+        document.getElementById(`btn_step${i}`).style.backgroundColor = '';
+    document.getElementById(`btn_step${idx}`).style.backgroundColor = '#D5F5E3';
+}
+
+function get_step_safe() {
+    for (let i = 0; i < 6; i++)
+        if (document.getElementById(`btn_step${i}`).style.backgroundColor)
+            return i;
+    let idx = Number(!document.getElementById('show_target').checked);
+    document.getElementById(`btn_step${idx}`).style.backgroundColor = '#D5F5E3';
+    return idx;
+}
+
+function set_comp_search(idx) {
+    for (let i = 0; i < 3; i++)
+        document.getElementById(`btn_comp_search${i}`).style.backgroundColor = '';
+    document.getElementById(`btn_comp_search${idx}`).style.backgroundColor = '#D5F5E3';
+}
+
+function get_comp_search() {
+    for (let i = 0; i < 3; i++)
+        if (document.getElementById(`btn_comp_search${i}`).style.backgroundColor)
+            return i;
+    document.getElementById(`btn_comp_search0`).style.backgroundColor = '#D5F5E3';
+    return 0;
+}
+
+
+function get_comp_safe() {
+    let comp = search_current_comp();
+    if (!comp) {
+        comp = search_first_comp();
+        if (!comp)
+            return null;
+        select_comp(comp);
+    }
+    return comp;
+}
+
+
 export {
-    search_comp_parents, search_next_comp, search_current_comp, select_comp,
-    pos_to_page, pos_from_page, csv_to_pos
+    search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp,
+    pos_to_page, pos_from_page, csv_to_pos,
+    set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe
 };

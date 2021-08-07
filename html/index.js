@@ -5,13 +5,14 @@
  */
 
 import { L } from './lang/lang.js'
-import { escape_html, date2num, timestamp, val2hex, dat2str, dat2hex, hex2dat,
+import { sleep, escape_html, date2num, timestamp, val2hex, dat2str, dat2hex, hex2dat,
          read_file, download, readable_size, blob2dat, csv_parser, readable_float } from './utils/helper.js';
 //import { konva_zoom, konva_responsive } from './utils/konva_helper.js';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
-import { search_comp_parents, search_next_comp, search_current_comp, select_comp,
-         pos_to_page, pos_from_page, csv_to_pos } from './pos_list.js';
+import { search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp,
+         pos_to_page, pos_from_page, csv_to_pos,
+         set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
 import { csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './input_ctrl.js';
 
 let csa = {
@@ -20,13 +21,13 @@ let csa = {
     aux_pos: [0, 0, 0, 0],
     
     grab_ofs: [-33.9, -7.0],
-    comp_search: [[50, 165], [50, 185], null],
+    comp_search: [[50, 165], [50, 185]],
     comp_top_z: -85.5,
     pcb_top_z: -84.5,
     comp_base_z: -89.3,
     pcb_base_z: -88.2,
     fiducial_pcb: [[-26.375, 21.35], [-6.3, 4.75]],
-    fiducial_cam: [[[89.673, 175.000], [109.861, 158.607]], [[120.720, 175.347], [140.849, 158.856]], null],
+    fiducial_cam: [[[89.673, 175.000], [109.861, 158.607]], [[120.720, 175.347], [140.849, 158.856]]],
 };
 
 let db = null;
@@ -34,55 +35,70 @@ let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
 
 
-async function init_cfg_list() {
-    let sel_ops = '<option value="">--</option>';
-    for (let op of cfgs)
-        sel_ops += `<option value="${op}">${op}</option>`;
-    let list = document.getElementById('cfg_list');
-    
-    let devs = await db.get('tmp', 'dev_list');
-    for (let i = 0; i < 10; i++) {
-        let tgt = (devs && devs[i]) ? devs[i].tgt : `80:00:${val2hex(i+1,2)}`;
-        let cfg = (devs && devs[i]) ? devs[i].cfg : '';
-        let name = (devs && devs[i]) ? devs[i].name : '';
-        let html = `
-            <input type="text" placeholder="Name Label" value="${name}" id="cfg${i}.name">
-            <input type="text" placeholder="CDNET IP" value="${tgt}" id="cfg${i}.tgt">
-            <select id="cfg${i}.cfg" value="${cfg}">${sel_ops}</select>
-            <button class="button is-small" id="cfg${i}.btn">Open Window</button> <br>
-        `;
-        
-        list.insertAdjacentHTML('beforeend', html);
-        document.getElementById(`cfg${i}.cfg`).value = `${cfg}`;
-        
-        document.getElementById(`cfg${i}.btn`).onclick = async () => {
-            let t = document.getElementById(`cfg${i}.tgt`).value;
-            let c = document.getElementById(`cfg${i}.cfg`).value;
-            let n = document.getElementById(`cfg${i}.name`).value;
-            console.log(`t: ${t}, c: ${c}`);
-            if (!t || !c || !n) {
-                alert('Empty not allowed');
-                return;
-            }
-            window.open(`ctrl.html?tgt=${t}&cfg=${c}&name=${n}`, "_blank");
-        };
-        
-        document.getElementById(`cfg${i}.name`).onchange =
-                document.getElementById(`cfg${i}.tgt`).onchange =
-                document.getElementById(`cfg${i}.cfg`).onchange = async () => {
-            
-            let devs = [];
-            for (let n = 0; n < 10; n++) {
-                devs.push({
-                    tgt: document.getElementById(`cfg${n}.tgt`).value,
-                    cfg: document.getElementById(`cfg${n}.cfg`).value,
-                    name: document.getElementById(`cfg${n}.name`).value,
-                });
-            }
-            await db.set('tmp', 'dev_list', devs);
-        };
+document.getElementById('btn_run').onclick = async function() {
+    let comp = get_comp_safe();
+    if (!comp) {
+        alert("list empty!");
+        return;
     }
-}
+    
+    while (true) {
+        let comp = get_comp_safe();
+        if (!comp)
+            break;
+        let board = get_board_safe();
+        let step = get_step_safe();
+        let search = get_comp_search();
+        console.log(`comp: ${comp}, board: ${board}, step: ${step}, search: ${search}`);
+        await sleep(500);
+        
+        if (step == 0) { // show_target
+            console.log('show target');
+            set_step(1);
+            continue;
+        }
+        
+        if (step == 1) { // goto_comp
+            console.log('show target');
+            set_step(2);
+            continue;
+        }
+        
+        if (step == 2) { // snap
+            console.log('show target');
+            set_step(3);
+            continue;
+        }
+        
+        if (step == 3) { // pickup
+            console.log('pickup');
+            set_step(4);
+            continue;
+        }
+        
+        if (step == 4) { // goto_pcb
+            console.log('goto_pcb');
+            set_step(5);
+            continue;
+        }
+        
+        if (step == 5) { // putdown
+            console.log('putdown');
+            set_step(0);
+        }
+        
+        if (++board >= csa.fiducial_cam.length) {
+            set_board(0);
+            let next = search_next_comp(comp);
+            select_comp(next);
+            if (!next)
+                break;
+        } else {
+            set_board(board);
+        }
+    }
+    console.log('all comp finished');
+};
 
 
 function init_ws() {
@@ -124,30 +140,6 @@ function init_ws() {
     }
 }
 
-
-document.getElementById('btn_load_csv').onclick = async function() {
-    console.log('load_csv');
-    
-    //let input = document.createElement('input');
-    //cpy(input, {type: 'file', accept: '*.cdg'}, ['type', 'accept']);
-    let input = document.getElementById('input_file');
-    input.accept = '.csv';
-    input.onchange = async function () {
-        var files = this.files;
-        if (files && files.length) {
-            let file = files[0];
-            let data = await read_file(file);
-            let data_str = new TextDecoder().decode(data);
-            let pos = csv_to_pos(data_str);
-            console.log('load pos:', pos);
-            pos_to_page(pos);
-            sortable('.js-sortable-table');
-        }
-        this.value = '';
-        document.getElementById('btn_load_csv').disabled = false;
-    };
-    input.click();
-};
 
 window.addEventListener('load', async function() {
     console.log("load app");

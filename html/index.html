@@ -51,12 +51,12 @@
             </select> speed
             <br>
             <br>
-            <button class="button is-small" id="btn_show_target">show target</button> >
-            <button class="button is-small" id="btn_goto_comp">goto comp</button> >
-            <button class="button is-small" id="btn_snap">snap</button> >
-            <button class="button is-small" id="btn_pickup">pickup</button> >
-            <button class="button is-small" id="btn_goto_pcb">goto pcb</button> >
-            <button class="button is-small" id="btn_putdown">putdown</button>
+            <button class="button is-small" id="btn_step0">show target</button> >
+            <button class="button is-small" id="btn_step1">goto comp</button> >
+            <button class="button is-small" id="btn_step2">snap</button> >
+            <button class="button is-small" id="btn_step3">pickup</button> >
+            <button class="button is-small" id="btn_step4">goto pcb</button> >
+            <button class="button is-small" id="btn_step5">putdown</button>
             <br>
             
             
@@ -79,12 +79,15 @@
             <input type="text" id="comp_search0" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('comp_search0')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('comp_search0')">update</button>
+            <button class="button is-small" id="btn_comp_search0">select</button>
             <input type="text" id="comp_search1" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('comp_search1')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('comp_search1')">update</button>
+            <button class="button is-small" id="btn_comp_search1">select</button>
             <input type="text" id="comp_search2" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('comp_search2')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('comp_search2')">update</button>
+            <button class="button is-small" id="btn_comp_search2">select</button>
             <br>
             comp_top_z:
             <input type="text" id="comp_top_z" onchange="input_change()">
@@ -118,6 +121,7 @@
             <input type="text" id="fiducial_cam0_1" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('fiducial_cam0_1')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('fiducial_cam0_1')">update</button>
+            <button class="button is-small" id="btn_board0">select</button>
             <br>
             fiducial cam #1:
             <input type="text" id="fiducial_cam1_0" onchange="input_change()">
@@ -126,6 +130,7 @@
             <input type="text" id="fiducial_cam1_1" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('fiducial_cam1_1')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('fiducial_cam1_1')">update</button>
+            <button class="button is-small" id="btn_board1">select</button>
             <br>
             fiducial cam #2:
             <input type="text" id="fiducial_cam2_0" onchange="input_change()">
@@ -134,6 +139,7 @@
             <input type="text" id="fiducial_cam2_1" onchange="input_change()">
             <button class="button is-small" onclick="btn_goto_xy('fiducial_cam2_1')">goto</button>
             <button class="button is-small" onclick="btn_update_xy('fiducial_cam2_1')">update</button>
+            <button class="button is-small" id="btn_board2">select</button>
         </div>
     </div>
 
@@ -141,7 +147,7 @@
     <div class="container">
         <h1 class="title is-size-4">Pos list</h1>
         
-        cur: <span id="cur_footprint">--</span> <span id="cur_value">--</span> <span id="cur_comp">--</span>
+        cur: <span id="cur_footprint">--</span> <span id="cur_value">--</span> <span id="cur_comp">--</span> <span id="cur_board">--</span>
         <br>
         
         <div class="content">
