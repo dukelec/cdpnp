@@ -57,24 +57,12 @@ elif args.get("--info", "-i") != None:
 logging.getLogger('websockets').setLevel(logging.WARNING)
 logger = logging.getLogger(f'cdpnp')
 
-csa = {
-    'async_loop': None,
-    'dev': None,    # serial device
-    'net': 0x00,    # local net
-    'mac': 0x00,    # local mac
-    'proxy': None,  # cdbus frame proxy socket
-    'cfgs': []      # config list
-}
-
 dev = CDBusBridge(dev_str)
 CDNetIntf(dev, mac=0x00)
 
 pnp_cv_init()
 xyz_init()
 print('start...')
-
-# 10mm / 275 pixel
-DIV_MM2PIXEL = 10/275
 
 
 board_idx = 0
@@ -109,190 +97,6 @@ def update_coeffs():
     print('coeffs:', coeffs)
 
 
-cur_pos = load_pos()
-cv_cur_r = 0
-cur_pump = 0
-
-
-def cam_comp_ws():
-    print('camera goto components workspace')
-    cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2] + (pcb_base_z - comp_base_z), 0
-    goto_pos(cur_pos, wait=True)
-    cur_pos[0], cur_pos[1], cur_pos[2], cur_pos[3] = work_dft_pos[0], work_dft_pos[1], work_dft_pos[2], 0
-    goto_pos(cur_pos, wait=True)
-
-def cam_comp_snap():
-    global cv_cur_r
-    for i in range(3):
-        print(f'camera snap to component {i}:', cv_dat['cur'])
-        if cv_dat['cur']:
-            dx = (cv_dat['cur'][0] - 480/2) * DIV_MM2PIXEL
-            dy = (cv_dat['cur'][1] - 640/2) * DIV_MM2PIXEL
-            print('cv dx dy', dx, dy)
-            cur_pos[0] += dx
-            cur_pos[1] += dy
-            cur_pos[3] = 0 #cv_dat['cur'][2]
-            cv_cur_r = cv_dat['cur'][2]
-            goto_pos(cur_pos, wait=True)
-        sleep(0.2)
-    if cv_dat['cur']:
-        return 0
-    return -1
-
-def pickup_comp():
-    global cur_pump
-    print('pickup focused comp')
-    cur_pos[0] += grab_ofs[0]
-    cur_pos[1] += grab_ofs[1]
-    goto_pos(cur_pos, wait=True)
-    if down_put:
-        sleep(1)
-        cur_pos[2] = comp_base_z + get_comp_height(cur_comp)
-        enable_force()
-        goto_pos(cur_pos, wait=True, s_speed=200)
-        sleep(0.5)
-        set_pump(1)
-        cur_pump = 1
-        sleep(0.5)
-        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-        goto_pos(cur_pos, wait=True, s_speed=1000)
-        cur_pos[3] = -cv_cur_r
-        goto_pos(cur_pos, wait=True)
-
-def putdown_comp(p_x, p_y, p_a):
-    global cur_pump
-    print('putdown comp to pcb')
-    cur_pos[0] = p_x + grab_ofs[0]
-    cur_pos[1] = p_y + grab_ofs[1]
-    cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-    cur_pos[3] = p_a - cv_cur_r
-    goto_pos(cur_pos, wait=True)
-    while pause:
-        sleep(0.1)
-    if not redo and down_put:
-        sleep(1)
-        cur_pos[2] = pcb_base_z + get_comp_height(cur_comp)
-        enable_force()
-        goto_pos(cur_pos, wait=True, s_speed=200)
-        sleep(0.5)
-        set_pump(0)
-        cur_pump = 0
-        cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-        goto_pos(cur_pos, wait=True)
-
-
-
-
-def work_thread():
-    global cur_comp, pause, redo, skip, fast_to, board_idx
-    print('show components...')
-    for footprint in pos:
-        cur_comp = footprint
-        for comp_val in pos[footprint]:
-            count = 0
-            print(f'\n-> {footprint} -> {comp_val}, {len(pos[footprint][comp_val])} / board, paused')
-            if not fast_to:
-                pause = True
-            while pause:
-                sleep(0.1)
-            for comp in pos[footprint][comp_val]:
-                count += 1
-                for i in range(len(fiducial_cam)):
-                    board_idx = i
-                    while True:
-                        redo = False
-                        skip = False
-                        print(f'--- board #{i}, {comp}, {count}/{len(pos[footprint][comp_val])}')
-                        if comp[0] == fast_to:
-                            fast_to = None
-                        if fast_to:
-                            break
-                        p_x, p_y = pcb2xyz(coeffs[i], (float(comp[3]), float(comp[4]) * -1))
-                        p_a = float(comp[5])
-                        if comp[6] == 'bottom':
-                            p_a = 180 - p_a
-                        elif p_a > 180:
-                            p_a = - (360 - p_a)
-                        
-                        if skip:
-                            break
-                        print(f'goto: ({p_x:.3f}, {p_y:.3f})')
-                        if cur_pos[2] < work_dft_pos[2] + (pcb_base_z - comp_base_z):
-                            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                            goto_pos(cur_pos, wait=True)
-                        cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                        goto_pos(cur_pos)
-                        if skip:
-                            break
-                        wait_stop()
-                        sleep(1)
-                        if skip:
-                            break
-                        while pause:
-                            sleep(0.1)
-                        if redo:
-                            continue
-                        
-                        cam_comp_ws()
-                        if skip:
-                            break
-                        sleep(1)
-                        while pause:
-                            sleep(0.1)
-                        if redo:
-                            continue
-                        
-                        if cam_comp_snap() < 0:
-                            print('snap empty, wait')
-                            pause = True
-                        if skip:
-                            break
-                        sleep(1)
-                        while pause:
-                            sleep(0.1)
-                        if redo:
-                            continue
-                        
-                        pickup_comp()
-                        if not down_put:
-                            print('pickup wait')
-                            pause = True
-                        if skip:
-                            break
-                        sleep(1)
-                        while pause:
-                            sleep(0.1)
-                        if redo:
-                            continue
-                        if not down_put:
-                            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z) + get_comp_height(cur_comp)
-                            goto_pos(cur_pos, wait=True)
-                        
-                        putdown_comp(p_x, p_y, p_a)
-                        if skip:
-                            break
-                        if not down_put:
-                            print('putdown wait')
-                            pause = True
-                        sleep(1)
-                        while pause:
-                            sleep(0.1)
-                        if redo:
-                            continue
-                        if not down_put:
-                            cur_pos[2] = work_dft_pos[2] + (pcb_base_z - comp_base_z)
-                            goto_pos(cur_pos, wait=True)
-                        break
-    
-    print('')
-    print('all finished...\n')
-
-
-#_thread.start_new_thread(work_thread, ())
-#pos_set()
-
-#print('exit...')
-
 async def dev_service():
     global coeffs, fiducial_pcb, fiducial_cam
     
@@ -312,7 +116,7 @@ async def dev_service():
         
         elif dat['action'] == 'set_motor_pos':
             logger.info('set_motor_pos')
-            goto_pos(dat['pos'], dat['wait'])
+            goto_pos(dat['pos'], dat['wait'], dat['speed'])
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'set_home':
@@ -376,8 +180,7 @@ async def open_brower():
 
 if __name__ == "__main__":
     start_web(None)
-    csa['proxy'] = CDWebSocket(ws_ns, 'proxy')
-    csa['async_loop'] = asyncio.get_event_loop();
+    async_loop = asyncio.get_event_loop();
     asyncio.get_event_loop().create_task(dev_service())
     logger.info('Please open url: http://localhost:8900')
     asyncio.get_event_loop().run_forever()

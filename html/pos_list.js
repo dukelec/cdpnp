@@ -5,6 +5,7 @@
  */
 
 import { csv_parser, read_file, readable_float } from './utils/helper.js';
+import { set_motor_pos, pcb2xyz, z_keep_high } from './dev_cmd.js';
 import { csa } from './index.js';
 
 
@@ -121,12 +122,22 @@ function select_comp(comp) {
         document.getElementById('cur_value').innerText = "--";
         document.getElementById('cur_comp').innerText = "--";
     }
-    
-    //console.log(`${comp} parents:`, parents);
-    //console.log(`${comp} next:`, search_next_comp(comp));
-    //console.log(`current:`, search_current_comp());
 }
-window.select_comp = select_comp;
+window.select_comp = async function(comp) {
+    select_comp(comp);
+    if (comp && (document.getElementById('pause_en').checked || document.getElementById('btn_stop').disabled)) {
+        let comp_val = get_comp_values(comp);
+        let board = get_board_safe();
+        let comp_xyz = await pcb2xyz(board, comp_val[0], comp_val[1]);
+        if (csa.cur_pos[2] != csa.pcb_top_z) {
+            csa.cur_pos[2] = csa.pcb_top_z;
+            await set_motor_pos(true);
+        }
+        csa.cur_pos[0] = comp_xyz[0];
+        csa.cur_pos[1] = comp_xyz[1];
+        await set_motor_pos();
+    }
+};
 
 
 function pos_to_page(pos) {

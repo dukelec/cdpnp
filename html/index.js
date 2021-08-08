@@ -14,7 +14,8 @@ import { search_comp_parents, search_next_comp, search_current_comp, search_firs
          get_comp_values, pos_to_page, pos_from_page, csv_to_pos,
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
 import { csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './input_ctrl.js';
-import { set_motor_pos, set_pump, update_coeffs, pcb2xyz, z_keep_high } from './dev_cmd.js';
+import { get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
+         z_keep_high, enable_force, get_cv_cur, cam_comp_snap } from './dev_cmd.js';
 
 let csa = {
     shortcuts: false,
@@ -22,7 +23,7 @@ let csa = {
     aux_pos: [0, 0, 0, 0],
     
     grab_ofs: [-33.9, -7.0],
-    comp_search: [[50, 165], [50, 185]],
+    comp_search: [[50, 165], [50, 145]],
     comp_top_z: -85.5,
     pcb_top_z: -84.5,
     comp_base_z: -89.3,
@@ -46,7 +47,6 @@ document.getElementById('btn_run').onclick = async function() {
     document.getElementById('btn_run').disabled = true;
     document.getElementById('btn_stop').disabled = false;
     csa.stop = false;
-    await update_coeffs();
     
     while (true) {
         let comp = get_comp_safe();
@@ -65,47 +65,96 @@ document.getElementById('btn_run').onclick = async function() {
             console.log(`exit wait`);
             continue;
         }
-        await sleep(1500); ////
         
         let comp_val = get_comp_values(comp);
         let comp_xyz = await pcb2xyz(board, comp_val[0], comp_val[1]);
         
         if (step == 0) { // show_target
-            console.log('show target');
+            console.log('fsm show target');
             await z_keep_high();
-            csa.cur_pos[0] = comp_xyz[0]; csa.cur_pos[1] = comp_xyz[1];
+            csa.cur_pos[0] = comp_xyz[0];
+            csa.cur_pos[1] = comp_xyz[1];
             await set_motor_pos(true);
+            await sleep(200);
             set_step(1);
             continue;
         }
         
         if (step == 1) { // goto_comp
-            console.log('show target');
+            console.log('fsm goto_comp');
+            await z_keep_high();
+            csa.cur_pos[0] = csa.comp_search[search][0];
+            csa.cur_pos[1] = csa.comp_search[search][1];
+            csa.cur_pos[3] = 0;
+            await set_motor_pos(true);
+            if (csa.cur_pos[2] != csa.comp_top_z) {
+                csa.cur_pos[2] = csa.comp_top_z;
+                await set_motor_pos(true);
+            }
+            await sleep(200);
             set_step(2);
             continue;
         }
         
         if (step == 2) { // snap
-            console.log('show target');
-            set_step(3);
+            console.log('fsm snap');
+            let ret = await cam_comp_snap();
+            if (ret < 0) {
+                if (++search >= csa.comp_search.length)
+                    search = 0;
+                set_comp_search(search);
+                set_step(1);
+            } else {
+                set_step(3);
+            }
             continue;
         }
         
         if (step == 3) { // pickup
-            console.log('pickup');
+            console.log('fsm pickup');
+            csa.cur_pos[0] += csa.grab_ofs[0]
+            csa.cur_pos[1] += csa.grab_ofs[1]
+            await set_motor_pos(true);
+            await enable_force();
+            csa.cur_pos[2] = csa.comp_base_z - 0.2;
+            await set_motor_pos(true, 200);
+            await set_pump(1);
+            await sleep(500);
+            await z_keep_high();
+            //csa.cur_pos[3] = -csa.cv_cur_r;
+            //await set_motor_pos(true, 200);
             set_step(4);
             continue;
         }
         
         if (step == 4) { // goto_pcb
-            console.log('goto_pcb');
+            console.log('fsm goto_pcb');
+            await z_keep_high();
+            csa.cur_pos[0] = comp_xyz[0] + csa.grab_ofs[0];
+            csa.cur_pos[1] = comp_xyz[1] + csa.grab_ofs[1];
+            csa.cur_pos[3] = comp_val[2] - csa.cv_cur_r;
+            await set_motor_pos(true);
             set_step(5);
             continue;
         }
         
         if (step == 5) { // putdown
-            console.log('putdown');
-            
+            console.log('fsm putdown');
+            if (csa.cur_pos[2] != csa.pcb_top_z) {
+                csa.cur_pos[2] = csa.pcb_top_z;
+                await set_motor_pos(true);
+            }
+            if (!document.getElementById('putdown_en').checked) {
+                document.getElementById('pause_en').checked = true;
+                while (document.getElementById('pause_en').checked)
+                    await sleep(100);
+            } else {
+                await enable_force();
+                csa.cur_pos[2] = csa.pcb_base_z - 0.2;
+                await set_motor_pos(true, 200);
+                await set_pump(0);
+                await z_keep_high();
+            }
             set_step(Number(!document.getElementById('show_target').checked));
         }
         
@@ -137,19 +186,9 @@ function init_ws() {
     ws.onopen = async function(evt) {
         console.log("ws onopen");
         ws_ns.connections['server'] = ws;
-        
-        cmd_sock.flush();
-        await cmd_sock.sendto({'action': 'get_motor_pos'}, ['server', 'dev']);
-        let dat = await cmd_sock.recvfrom(500);
-        console.log('get_cur_pos ret', dat);
-        csa.cur_pos = csa.aux_pos = dat[0];
-        csa_to_page_pos();
-        
-        await cmd_sock.sendto({'action': 'get_init_home'}, ['server', 'dev']);
-        dat = await cmd_sock.recvfrom(500);
-        console.log('get_init_home ret', dat);
-        if (dat[0])
-            document.getElementById('btn_set_home').style.backgroundColor = '';
+        await get_motor_pos();
+        await get_init_home();
+        await update_coeffs();
     }
     ws.onmessage = async function(evt) {
         let dat = await blob2dat(evt.data);

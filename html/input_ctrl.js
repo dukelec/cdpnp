@@ -12,7 +12,8 @@ import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
 import { search_comp_parents, search_next_comp, search_current_comp, select_comp,
          pos_to_page, pos_from_page, csv_to_pos } from './pos_list.js';
-import { set_motor_pos, set_pump } from './dev_cmd.js';
+import { get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
+         z_keep_high, enable_force, get_cv_cur, cam_comp_snap } from './dev_cmd.js';
 import { csa, cmd_sock, db } from './index.js';
 
 
@@ -105,6 +106,7 @@ function csa_from_page_input()
 
 async function input_change() {
     csa_from_page_input();
+    await update_coeffs();
     await db.set('tmp', 'csa', csa);
     console.log('saved');
 }
@@ -145,6 +147,14 @@ window.btn_grab_ofs = async function(dir=1) {
     csa.cur_pos[1] += dir * csa.grab_ofs[1];
     csa_to_page_pos();
     await set_motor_pos();
+};
+window.btn_detect_z = async function() {
+    console.log('detect bottom z...');
+    await enable_force();
+    csa.cur_pos[2] = -90;
+    await set_motor_pos(true, 200);
+    await get_motor_pos();
+    console.log('detect bottom z done');
 };
 
 
