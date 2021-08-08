@@ -6,15 +6,15 @@
 
 import { L } from './lang/lang.js'
 import { sleep, escape_html, date2num, timestamp, val2hex, dat2str, dat2hex, hex2dat,
-         read_file, download, readable_size, blob2dat, csv_parser, readable_float } from './utils/helper.js';
+         read_file, download, readable_size, blob2dat, csv_parser, readable_float, cpy } from './utils/helper.js';
 //import { konva_zoom, konva_responsive } from './utils/konva_helper.js';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
 import { search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp,
          get_comp_values, pos_to_page, pos_from_page, csv_to_pos,
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
-import { csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './input_ctrl.js';
-import { get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
+import { input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './input_ctrl.js';
+import { get_camera_cfg, get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
          z_keep_high, enable_force, get_cv_cur, cam_comp_snap } from './dev_cmd.js';
 
 let csa = {
@@ -32,6 +32,8 @@ let csa = {
     fiducial_cam: [[[89.673, 175.000], [109.861, 158.607]], [[120.720, 175.347], [140.849, 158.856]]],
 };
 
+let csa_need_save = ['grab_ofs', 'comp_search', 'comp_top_z', 'pcb_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
+
 let db = null;
 let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
@@ -47,6 +49,7 @@ document.getElementById('btn_run').onclick = async function() {
     document.getElementById('btn_run').disabled = true;
     document.getElementById('btn_stop').disabled = false;
     csa.stop = false;
+    let parents_pre = null;
     
     while (true) {
         let comp = get_comp_safe();
@@ -56,6 +59,13 @@ document.getElementById('btn_run').onclick = async function() {
         let step = get_step_safe();
         let search = get_comp_search();
         console.log(`comp: ${comp}, board: ${board}, step: ${step}, search: ${search}`);
+        
+        let parents = search_comp_parents(comp);
+        if (parents_pre && (parents_pre[0] != parents[0] || parents_pre[1] != parents[1]))
+            document.getElementById('pause_en').checked = true;
+        
+        console.log(`parents: ${parents_pre} -> ${parents}`);
+        
         if (csa.stop)
             break;
         if (document.getElementById('pause_en').checked) {
@@ -63,6 +73,7 @@ document.getElementById('btn_run').onclick = async function() {
             while (document.getElementById('pause_en').checked)
                 await sleep(100);
             console.log(`exit wait`);
+            parents_pre = null;
             continue;
         }
         
@@ -162,6 +173,7 @@ document.getElementById('btn_run').onclick = async function() {
             set_board(0);
             let next = search_next_comp(comp);
             select_comp(next);
+            parents_pre = parents;
             if (!next)
                 break;
         } else {
@@ -188,6 +200,7 @@ function init_ws() {
         ws_ns.connections['server'] = ws;
         await get_motor_pos();
         await get_init_home();
+        await get_camera_cfg();
         await update_coeffs();
     }
     ws.onmessage = async function(evt) {
@@ -216,10 +229,16 @@ window.addEventListener('load', async function() {
     
     let csa_pre = await db.get('tmp', 'csa');
     if (csa_pre)
-        csa = csa_pre;
+        cpy(csa, csa_pre, csa_need_save);
+    let pos = await db.get('tmp', 'list');
+    if (pos) {
+        pos_to_page(pos);
+        sortable('.js-sortable-table');
+    }
+    input_init();
     csa_to_page_input();
 });
 
 export {
-    csa, cmd_sock, db
+    csa, cmd_sock, db, csa_need_save
 };

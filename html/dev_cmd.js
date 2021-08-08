@@ -10,6 +10,14 @@ import { csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './inpu
 import { csa, cmd_sock } from './index.js';
 
 
+async function get_camera_cfg() {
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'get_camera_cfg'}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(500);
+    console.log('get_camera_cfg ret', dat);
+    document.getElementById('camera_en').checked = !!dat[0].enable;
+    document.getElementById('limit_angle').checked = !!dat[0].limit;
+}
 
 async function get_motor_pos() {
     cmd_sock.flush();
@@ -37,6 +45,7 @@ async function set_motor_pos(wait=false, speed=10000, pos=null) {
     await cmd_sock.sendto({'action': 'set_motor_pos', 'pos': csa.cur_pos, 'wait': wait, 'speed': speed}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(20000);
     console.log('set_motor_pos ret', dat);
+    csa_to_page_pos();
 }
 
 async function set_pump(val) {
@@ -110,5 +119,6 @@ async function cam_comp_snap() {
 
 
 export {
-    get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap
+    get_camera_cfg, get_init_home, get_motor_pos, set_motor_pos, set_pump,
+    update_coeffs, pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap
 };

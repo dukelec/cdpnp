@@ -6,7 +6,7 @@
 
 import { csv_parser, read_file, readable_float } from './utils/helper.js';
 import { set_motor_pos, pcb2xyz, z_keep_high } from './dev_cmd.js';
-import { csa } from './index.js';
+import { csa, db } from './index.js';
 
 
 function get_comp_values(comp)
@@ -251,6 +251,13 @@ document.getElementById('btn_load_csv').onclick = async function() {
             console.log('load pos:', pos);
             pos_to_page(pos);
             sortable('.js-sortable-table');
+            await db.set('tmp', 'list', pos);
+            for (let s of sortable('.js-sortable-table')) {
+                s.addEventListener('sortupdate', async function(e) {
+                    console.log('update list to db');
+                    await db.set('tmp', 'list', pos_from_page());
+                });
+            }
         }
         this.value = '';
     };
@@ -259,14 +266,14 @@ document.getElementById('btn_load_csv').onclick = async function() {
 
 
 function set_board(idx) {
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 10; i++)
         document.getElementById(`btn_board${i}`).style.backgroundColor = '';
     document.getElementById(`btn_board${idx}`).style.backgroundColor = '#D5F5E3';
     document.getElementById(`cur_board`).innerText = `#${idx}`;
 }
 
 function get_board_safe() {
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 10; i++)
         if (document.getElementById(`btn_board${i}`).style.backgroundColor)
             return i;
     document.getElementById(`btn_board0`).style.backgroundColor = '#D5F5E3';
@@ -290,13 +297,13 @@ function get_step_safe() {
 }
 
 function set_comp_search(idx) {
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 8; i++)
         document.getElementById(`btn_comp_search${i}`).style.backgroundColor = '';
     document.getElementById(`btn_comp_search${idx}`).style.backgroundColor = '#D5F5E3';
 }
 
 function get_comp_search() {
-    for (let i = 0; i < 3; i++)
+    for (let i = 0; i < 8; i++)
         if (document.getElementById(`btn_comp_search${i}`).style.backgroundColor)
             return i;
     document.getElementById(`btn_comp_search0`).style.backgroundColor = '#D5F5E3';

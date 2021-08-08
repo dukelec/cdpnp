@@ -230,6 +230,17 @@ async function blob2dat(blob) {
     return ret;
 }
 
+function deep_merge(target, source) {
+    Object.entries(source).forEach(([key, value]) => {
+        if (value && typeof value === 'object') {
+            deep_merge(target[key] = target[key] || {}, value);
+            return;
+        }
+        target[key] = value;
+    });
+    return target;
+}
+
 // https://stackoverflow.com/questions/1293147
 function csv_parser(str, delimiter ){
     delimiter = (delimiter || ",");
@@ -264,6 +275,6 @@ export {
     cpy, Queue,
     download,
     escape_html, readable_size, readable_float,
-    blob2dat,
+    blob2dat, deep_merge,
     csv_parser
 };

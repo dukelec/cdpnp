@@ -14,8 +14,29 @@ import { search_comp_parents, search_next_comp, search_current_comp, select_comp
          pos_to_page, pos_from_page, csv_to_pos } from './pos_list.js';
 import { get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
          z_keep_high, enable_force, get_cv_cur, cam_comp_snap } from './dev_cmd.js';
-import { csa, cmd_sock, db } from './index.js';
+import { csa, cmd_sock, db, csa_need_save } from './index.js';
 
+
+function auto_hide() {
+    let skip_hide = true;
+    for (let i = 0; i < 8; i++) {
+        if (i < csa.comp_search.length) {
+            document.getElementById(`search_grp${i}`).style.display = '';
+        } else {
+            document.getElementById(`search_grp${i}`).style.display = skip_hide ? '' : 'none';
+            skip_hide = false;
+        }
+    }
+    skip_hide = true;
+    for (let i = 0; i < 10; i++) {
+        if (i < csa.fiducial_cam.length) {
+            document.getElementById(`fiducial_grp${i}`).style.display = '';
+        } else {
+            document.getElementById(`fiducial_grp${i}`).style.display = skip_hide ? '' : 'none';
+            skip_hide = false;
+        }
+    }
+}
 
 function csa_to_page_pos()
 {
@@ -32,12 +53,14 @@ function csa_to_page_input()
     document.getElementById('grab_ofs').value =
         `${readable_float(csa.grab_ofs[0])}, ${readable_float(csa.grab_ofs[1])}`;
     
-    for (let i = 0; i < 3; i++) {
-        if (i < csa.comp_search.length)
+    let skip_hide = true;
+    for (let i = 0; i < 8; i++) {
+        if (i < csa.comp_search.length) {
             document.getElementById(`comp_search${i}`).value = 
                 `${readable_float(csa.comp_search[i][0])}, ${readable_float(csa.comp_search[i][1])}`;
-        else
+        } else {
             document.getElementById(`comp_search${i}`).value = '';
+        }
     }
     
     document.getElementById('comp_top_z').value = `${readable_float(csa.comp_top_z)}`;
@@ -50,7 +73,7 @@ function csa_to_page_input()
     document.getElementById('fiducial_pcb1').value =
         `${readable_float(csa.fiducial_pcb[1][0])}, ${readable_float(csa.fiducial_pcb[1][1])}`;
     
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 10; i++) {
         if (i < csa.fiducial_cam.length) {
             document.getElementById(`fiducial_cam${i}_0`).value = 
                 `${readable_float(csa.fiducial_cam[i][0][0])}, ${readable_float(csa.fiducial_cam[i][0][1])}`;
@@ -106,8 +129,11 @@ function csa_from_page_input()
 
 async function input_change() {
     csa_from_page_input();
+    auto_hide();
     await update_coeffs();
-    await db.set('tmp', 'csa', csa);
+    let save = {'cfg_ver': 1};
+    cpy(save, csa, csa_need_save);
+    await db.set('tmp', 'csa', save);
     console.log('saved');
 }
 window.input_change = input_change;
@@ -243,6 +269,82 @@ document.getElementById('shortcuts').onclick = function() {
     csa.shortcuts = document.getElementById('shortcuts').checked;
 };
 
+document.getElementById('btn_reset').onclick = async function() {
+    await db.set('tmp', 'csa', null);
+    alert('Refresh page...');
+    location.reload();
+};
+
+document.getElementById('btn_import').onclick = async function() {
+    //let input = document.createElement('input');
+    //cpy(input, {type: 'file', accept: '*.cdg'}, ['type', 'accept']);
+    let input = document.getElementById('input_file');
+    input.accept = '.json';
+    input.onchange = async function () {
+        var files = this.files;
+        if (files && files.length) {
+            let file = files[0];
+            let data = await read_file(file);
+            //let prj = msgpack.deserialize(data);
+            let data_str = new TextDecoder().decode(data);
+            let prj = JSON.parse(data_str);
+            if (!prj || !prj.version || !prj.version.startsWith('cdpnp')) {
+                alert(L('Format error'));
+                this.value = '';
+                return;
+            }
+            console.log('import dat:', prj);
+            await db.set('tmp', 'csa', prj.csa);
+            await db.set('tmp', 'list', prj.list);
+            alert('Import succeeded');
+            location.reload();
+        }
+        this.value = '';
+    };
+    input.click();
+};
+
+document.getElementById('btn_export').onclick = async function() {
+    let c = await db.get('tmp', 'csa');
+    let l = await db.get('tmp', 'list');
+    //await db.set('tmp', 'list', null);
+    let exp_dat = { version: 'cdpnp v0', csa: c, list: l};
+    console.info('export_data:', exp_dat);
+    //let file_dat = msgpack.serialize(exp_dat);
+    let file_dat = JSON.stringify(exp_dat, null, 4);
+    download(file_dat, 'cdpnp.json');
+};
+
+
+function input_init() {
+    let search = document.getElementById('input_search');
+    let fiducial = document.getElementById('input_fiducial');
+    for (let i = 0; i < 8; i++) {
+        search.insertAdjacentHTML('beforeend', `
+            <div id="search_grp${i}">
+                <span style="display: inline-block; min-width: 130px;">Comp search #${i}:</span>
+                <input type="text" id="comp_search${i}" onchange="input_change()">
+                <button class="button is-small" onclick="btn_goto_xy('comp_search${i}')">Goto</button>
+                <button class="button is-small" onclick="btn_update_xy('comp_search${i}')">Update</button>
+                <button class="button is-small" onclick="btn_select_search(${i})" id="btn_comp_search${i}">Select</button>
+            </div>`);
+    }
+    for (let i = 0; i < 10; i++) {
+        fiducial.insertAdjacentHTML('beforeend', `
+            <div id="fiducial_grp${i}">
+                <span style="display: inline-block; min-width: 130px;">Fiducial cam #${i}:</span>
+                <input type="text" id="fiducial_cam${i}_0" onchange="input_change()">
+                <button class="button is-small" onclick="btn_goto_xy('fiducial_cam${i}_0')">Goto</button>
+                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_0')">Update</button>
+                <input type="text" id="fiducial_cam${i}_1" onchange="input_change()">
+                <button class="button is-small" onclick="btn_goto_xy('fiducial_cam${i}_1')">Goto</button>
+                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_1')">Update</button>
+                <button class="button is-small" onclick="btn_select_board(${i})" id="btn_board${i}">Select</button>
+            </div>`);
+    }
+    auto_hide();
+}
+
 export {
-    csa_to_page_pos, csa_to_page_input, csa_from_page_input
+    input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input
 };

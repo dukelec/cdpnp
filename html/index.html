@@ -12,146 +12,99 @@
 
 <section class="section">
     <div class="container">
-        <h1 class="title is-size-4">Setting</h1>
-        <div class="columns">
+        <h1 class="title is-size-4">CDPnP</h1>
+        <button class="button is-small" id="btn_load_csv">Load CSV</button>
+        <button class="button is-small" id="btn_reset">Reset to default</button>
+        <button class="button is-small" id="btn_export">Export project</button>
+        <button class="button is-small" id="btn_import">Import project</button>
+        <br><br>
         
-            <div class="column">
-                <button class="button is-small" id="btn_load_csv">Load CSV</button>
-                <button class="button is-small" id="btn_export">Export Project</button>
-                <button class="button is-small" id="btn_import">Import Project</button>
-            </div>
-            
-        </div>
+        <span style="display: inline-block; min-width: 70px;">Cur pos:</span> <span id="cur_pos">--</span>
+        <br>
+        <span style="display: inline-block; min-width: 70px;">Aux pos:</span> <span id="aux_pos">--</span>
+        <br>
+        <button class="button is-small" id="btn_set_home" style="background-color: yellow;">Set home</button>
+        <button class="button is-small" id="btn_reset_aux">Reset aux</button>
+        <br><br>
         
-            
-            <br>
-            cur_pos: <span id="cur_pos">--</span>
-            <br>
-            aux_pos: <span id="aux_pos">--</span>
-            <br>
-            <button class="button is-small" id="btn_set_home" style="background-color: yellow;">set home</button>
-            <button class="button is-small" id="btn_reset_aux">reset aux</button>
-            <br><br>
-            
-            <button class="button is-small" onclick="move_button([-1, 0, 0, 0])"><-</button>
-            <button class="button is-small" onclick="move_button([ 1, 0, 0, 0])">-></button>
-            <button class="button is-small" onclick="move_button([0, -1, 0, 0])">^</button>
-            <button class="button is-small" onclick="move_button([0,  1, 0, 0])">v</button>
-            <button class="button is-small" onclick="move_button([0, 0,  1, 0])">up</button>
-            <button class="button is-small" onclick="move_button([0, 0, -1, 0])">down</button>
-            <button class="button is-small" onclick="move_button([0, 0, 0,  1])">cw</button>
-            <button class="button is-small" onclick="move_button([0, 0, 0, -1])">ccw</button>
-            <label class="checkbox"><input type="checkbox" id="shortcuts"> shortcuts, </label>
-            <select id="move_speed">
-                <option value="0">x0</option>
-                <option value="1">x1</option>
-                <option value="2" selected>x2</option>
-                <option value="3">x3</option>
-                <option value="4">x4</option>
-            </select> speed
-            <br>
-            <br>
-            <button class="button is-small" onclick="btn_select_step(0)" id="btn_step0">show target</button> >
-            <button class="button is-small" onclick="btn_select_step(1)" id="btn_step1">goto comp</button> >
-            <button class="button is-small" onclick="btn_select_step(2)" id="btn_step2">snap</button> >
-            <button class="button is-small" onclick="btn_select_step(3)" id="btn_step3">pickup</button> >
-            <button class="button is-small" onclick="btn_select_step(4)" id="btn_step4">goto pcb</button> >
-            <button class="button is-small" onclick="btn_select_step(5)" id="btn_step5">put down</button>
-            <br>
-            
-            
-            <br>
-            <label class="checkbox"><input type="checkbox" id="pump_en"> Enable Pump</label>
-            <label class="checkbox"><input type="checkbox" id="camera_en"> Enable Camera</label>
-            <label class="checkbox"><input type="checkbox" id="limit_angle"> Limit Angle</label>
-            <label class="checkbox"><input type="checkbox" id="show_target" checked> Show Target</label>
-            <label class="checkbox"><input type="checkbox" id="putdown_en" checked> Put Down</label>
-            <label class="checkbox"><input type="checkbox" id="pause_en"> Pause</label>
-            <button class="button is-small" id="btn_stop" disabled>Stop</button>
-            <button class="button is-small" id="btn_run">Run</button>
-            
-            <br>
-            grab offset:
-            <input type="text" id="grab_ofs" onchange="input_change()">
-            <button class="button is-small" onclick="btn_update_grab()">update (-aux)</button>
-            <button class="button is-small" onclick="btn_grab_ofs(1)"><-</button>
-            <button class="button is-small" onclick="btn_grab_ofs(-1)">-></button>
-            <br>
-            comp_search:
-            <input type="text" id="comp_search0" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('comp_search0')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('comp_search0')">update</button>
-            <button class="button is-small" onclick="btn_select_search(0)" id="btn_comp_search0">select</button>
-            <input type="text" id="comp_search1" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('comp_search1')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('comp_search1')">update</button>
-            <button class="button is-small" onclick="btn_select_search(1)" id="btn_comp_search1">select</button>
-            <input type="text" id="comp_search2" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('comp_search2')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('comp_search2')">update</button>
-            <button class="button is-small" onclick="btn_select_search(2)" id="btn_comp_search2">select</button>
-            <br>
-            comp_top_z:
-            <input type="text" id="comp_top_z" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_z('comp_top_z')">goto</button>
-            <button class="button is-small" onclick="btn_update_z('comp_top_z')">update</button>
-            <br>
-            pcb_top_z:
-            <input type="text" id="pcb_top_z" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_z('pcb_top_z')">goto</button>
-            <button class="button is-small" onclick="btn_update_z('pcb_top_z')">update</button>
-            <br>
-            comp_base_z:
-            <input type="text" id="comp_base_z" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_z('comp_base_z')">goto</button>
-            <button class="button is-small" onclick="btn_update_z('comp_base_z')">update</button>
-            <button class="button is-small" onclick="btn_detect_z()">detect</button>
-            <br>
-            pcb_base_z:
-            <input type="text" id="pcb_base_z" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_z('pcb_base_z')">goto</button>
-            <button class="button is-small" onclick="btn_update_z('pcb_base_z')">update</button>
-            <button class="button is-small" onclick="btn_detect_z()">detect</button>
+        <button class="button is-small" onclick="move_button([-1, 0, 0, 0])"><-</button>
+        <button class="button is-small" onclick="move_button([ 1, 0, 0, 0])">-></button>
+        <button class="button is-small" onclick="move_button([0, -1, 0, 0])">^</button>
+        <button class="button is-small" onclick="move_button([0,  1, 0, 0])">v</button>
+        <button class="button is-small" onclick="move_button([0, 0,  1, 0])">Up</button>
+        <button class="button is-small" onclick="move_button([0, 0, -1, 0])">Down</button>
+        <button class="button is-small" onclick="move_button([0, 0, 0,  1])">CW</button>
+        <button class="button is-small" onclick="move_button([0, 0, 0, -1])">CCW</button>
+        <label class="checkbox"><input type="checkbox" id="shortcuts"> Hotkeys, </label>
+        <select id="move_speed">
+            <option value="0">x0</option>
+            <option value="1">x1</option>
+            <option value="2" selected>x2</option>
+            <option value="3">x3</option>
+            <option value="4">x4</option>
+        </select> Speed
+        <br>
+        <br>
+        <button class="button is-small" onclick="btn_select_step(0)" id="btn_step0">Show target</button> >
+        <button class="button is-small" onclick="btn_select_step(1)" id="btn_step1">Goto comp</button> >
+        <button class="button is-small" onclick="btn_select_step(2)" id="btn_step2">Snap</button> >
+        <button class="button is-small" onclick="btn_select_step(3)" id="btn_step3">Pickup</button> >
+        <button class="button is-small" onclick="btn_select_step(4)" id="btn_step4">Goto pcb</button> >
+        <button class="button is-small" onclick="btn_select_step(5)" id="btn_step5">Put down</button>
+        <br>
         
-        <div class="container">
-            fiducial pcb:
+        
+        <br>
+        <label class="checkbox"><input type="checkbox" id="pump_en"> Enable pump</label>
+        <label class="checkbox"><input type="checkbox" id="camera_en"> Enable camera</label>
+        <label class="checkbox"><input type="checkbox" id="limit_angle"> Limit angle</label>
+        <label class="checkbox"><input type="checkbox" id="show_target" checked> Show target</label>
+        <label class="checkbox"><input type="checkbox" id="putdown_en" checked> Put down</label>
+        <label class="checkbox"><input type="checkbox" id="pause_en"> Pause</label>
+        <button class="button is-small" id="btn_stop" disabled>Stop</button>
+        <button class="button is-small" id="btn_run">Run</button>
+        
+        <br>
+        <span style="display: inline-block; min-width: 130px;">Grab offset:</span>
+        <input type="text" id="grab_ofs" onchange="input_change()">
+        <button class="button is-small" onclick="btn_update_grab()">Update (-aux)</button>
+        <button class="button is-small" onclick="btn_grab_ofs(1)"><-</button>
+        <button class="button is-small" onclick="btn_grab_ofs(-1)">-></button>
+        <div id="input_search"></div>
+        <span style="display: inline-block; min-width: 130px;">Comp top z:</span>
+        <input type="text" id="comp_top_z" onchange="input_change()">
+        <button class="button is-small" onclick="btn_goto_z('comp_top_z')">Goto</button>
+        <button class="button is-small" onclick="btn_update_z('comp_top_z')">Update</button>
+        <br>
+        <span style="display: inline-block; min-width: 130px;">PCB top z:</span>
+        <input type="text" id="pcb_top_z" onchange="input_change()">
+        <button class="button is-small" onclick="btn_goto_z('pcb_top_z')">Goto</button>
+        <button class="button is-small" onclick="btn_update_z('pcb_top_z')">Update</button>
+        <br>
+        <span style="display: inline-block; min-width: 130px;">Comp base z:</span>
+        <input type="text" id="comp_base_z" onchange="input_change()">
+        <button class="button is-small" onclick="btn_goto_z('comp_base_z')">Goto</button>
+        <button class="button is-small" onclick="btn_update_z('comp_base_z')">Update</button>
+        <button class="button is-small" onclick="btn_detect_z()">Detect</button>
+        <br>
+        <span style="display: inline-block; min-width: 130px;">PCB base z:</span>
+        <input type="text" id="pcb_base_z" onchange="input_change()">
+        <button class="button is-small" onclick="btn_goto_z('pcb_base_z')">Goto</button>
+        <button class="button is-small" onclick="btn_update_z('pcb_base_z')">Update</button>
+        <button class="button is-small" onclick="btn_detect_z()">Detect</button>
+    
+        <div id="input_fiducial">
+            <span style="display: inline-block; min-width: 130px; padding-bottom: 0.1em;">Fiducial pcb:</span>
             <input type="text" id="fiducial_pcb0" onchange="input_change()">
             <input type="text" id="fiducial_pcb1" onchange="input_change()">
-            <br>
-            fiducial cam #0:
-            <input type="text" id="fiducial_cam0_0" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('fiducial_cam0_0')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('fiducial_cam0_0')">update</button>
-            <input type="text" id="fiducial_cam0_1" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('fiducial_cam0_1')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('fiducial_cam0_1')">update</button>
-            <button class="button is-small" onclick="btn_select_board(0)" id="btn_board0">select</button>
-            <br>
-            fiducial cam #1:
-            <input type="text" id="fiducial_cam1_0" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('fiducial_cam1_0')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('fiducial_cam1_0')">update</button>
-            <input type="text" id="fiducial_cam1_1" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('fiducial_cam1_1')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('fiducial_cam1_1')">update</button>
-            <button class="button is-small" onclick="btn_select_board(1)" id="btn_board1">select</button>
-            <br>
-            fiducial cam #2:
-            <input type="text" id="fiducial_cam2_0" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('fiducial_cam2_0')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('fiducial_cam2_0')">update</button>
-            <input type="text" id="fiducial_cam2_1" onchange="input_change()">
-            <button class="button is-small" onclick="btn_goto_xy('fiducial_cam2_1')">goto</button>
-            <button class="button is-small" onclick="btn_update_xy('fiducial_cam2_1')">update</button>
-            <button class="button is-small" onclick="btn_select_board(2)" id="btn_board2">select</button>
         </div>
     </div>
 
     <br>
     <div class="container">
-        <h1 class="title is-size-4">Pos list</h1>
+        <h1 class="title is-size-4">Components</h1>
         
-        cur: <span id="cur_footprint">--</span> <span id="cur_value">--</span> <span id="cur_comp">--</span> <span id="cur_board">--</span>
+        Cur: <span id="cur_footprint">--</span> <span id="cur_value">--</span> <span id="cur_comp">--</span> <span id="cur_board">--</span>
         <br>
         
         <div class="content" style="font-size: 12px;">
