@@ -6,7 +6,7 @@
 
 import { L } from './lang/lang.js'
 import { escape_html, date2num, timestamp, val2hex, dat2str, dat2hex, hex2dat,
-         read_file, download, readable_size, blob2dat, csv_parser, readable_float } from './utils/helper.js';
+         read_file, download, readable_size, blob2dat, csv_parser, readable_float, cpy } from './utils/helper.js';
 //import { konva_zoom, konva_responsive } from './utils/konva_helper.js';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
@@ -197,13 +197,16 @@ document.getElementById('camera_en').onchange = async function() {
     console.log(`camera_en ${camera_en} ret`, dat);
 };
 
-document.getElementById('limit_angle').onchange = async function() {
+async function set_camera_cfg() {
     let limit_angle = document.getElementById('limit_angle').checked;
+    let cv_detect = document.getElementById('cv_detect').checked;
     cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'limit_angle', 'val': limit_angle}, ['server', 'dev']);
+    await cmd_sock.sendto({'action': 'set_camera_cfg', 'limit': limit_angle, 'detect': cv_detect}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
-    console.log(`limit_angle ${limit_angle} ret`, dat);
-};
+    console.log(`set_camera_cfg ${limit_angle}, ${cv_detect} ret`, dat);
+}
+document.getElementById('limit_angle').onchange = set_camera_cfg;
+document.getElementById('cv_detect').onchange = set_camera_cfg;
 
 document.getElementById('btn_set_home').onclick = async function() {
     cmd_sock.flush();
