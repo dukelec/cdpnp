@@ -37,7 +37,7 @@ async function get_init_home() {
         document.getElementById('btn_set_home').style.backgroundColor = '';
 }
 
-async function set_motor_pos(wait=false, speed=10000, pos=null) {
+async function set_motor_pos(wait=false, speed=260000, pos=null) {
     if (pos)
         csa.cur_pos = pos;
     console.log('set_motor_pos:', csa.cur_pos);
@@ -71,7 +71,7 @@ async function pcb2xyz(idx, x, y) {
     return dat ? dat[0] : null;
 }
 
-async function z_keep_high(speed=10000) {
+async function z_keep_high(speed=260000) {
     let min_z = Math.max(csa.pcb_top_z, csa.comp_top_z);
     if (csa.cur_pos[2] != min_z) {
         csa.cur_pos[2] = min_z;
@@ -111,7 +111,7 @@ async function cam_comp_snap() {
             csa.cv_cur_r = cv[2]
             await set_motor_pos(true);
         }
-        await sleep(200);
+        await sleep(600);
     }
     let cv = await get_cv_cur();
     return cv ? 0 : -1;

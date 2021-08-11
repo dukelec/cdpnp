@@ -178,7 +178,7 @@ window.btn_detect_z = async function() {
     console.log('detect bottom z...');
     await enable_force();
     csa.cur_pos[2] = -90;
-    await set_motor_pos(true, 200);
+    await set_motor_pos(true, 2000);
     await get_motor_pos();
     console.log('detect bottom z done');
 };

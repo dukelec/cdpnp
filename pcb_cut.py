@@ -272,13 +272,13 @@ def work_thread():
             
             print(f'goto left down')
             cur_pos[0], cur_pos[1], cur_pos[2] = p_x, p_y, pcb_base_z
-            goto_pos(cur_pos, wait=True, s_speed=5000)
+            goto_pos(cur_pos, wait=True, s_speed=25000)
             while pause:
                 sleep(0.5)
             
             print(f'goto right down')
             cur_pos[0], cur_pos[1], cur_pos[2] = p_x+cut_len_x, p_y+cut_len_y, pcb_base_z
-            goto_pos(cur_pos, wait=True, s_speed=100)
+            goto_pos(cur_pos, wait=True, s_speed=500)
             while pause:
                 sleep(0.5)
             

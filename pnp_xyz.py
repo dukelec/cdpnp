@@ -13,10 +13,10 @@ from time import sleep
 from cdnet.utils.log import *
 from cdnet.dispatch import *
 
-# 4mm / (50 * 16 (md: 2)) = 0.005mm per micro step
-# 360' / (50 * 64 (md: 4)) = 0.45' per micro step
-DIV_MM2STEP = 0.005
-DIV_DEG2STEP = 0.1125
+# 4mm / (50 * 512 (md: 7)) = ~ mm per micro step
+# 360' / (50 * 512 (md: 7)) = ~' per micro step
+DIV_MM2STEP = 0.00015625
+DIV_DEG2STEP = 0.0140625
 
 xyz = {
     'logger': None,
@@ -70,26 +70,33 @@ def set_pump(val):
 def enable_motor():
     for i in range(5):
         xyz['logger'].info(f'motor enable: #{i+1}')
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00d6, struct.pack("<B", 1))
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x0108, struct.pack("<B", 1))
         xyz['logger'].info('motor enable ret: ' + rx.hex())
-    '''
+        
+        xyz['logger'].info(f'motor set accel #{i+1}')
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c4, struct.pack("<I", 800000))
+        xyz['logger'].info('motor set ret: ' + rx.hex())
+        
+        xyz['logger'].info(f'motor set vref #{i+1}')
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00ae, struct.pack("<H", 600))
+        xyz['logger'].info('motor set vref ret: ' + rx.hex())
+    
     xyz['logger'].info(f'motor set accel #5')
-    rx = cd_reg_rw('80:00:05', 0x00c4, struct.pack("<I", 400))
-    xyz['logger'].info('motor set #5 ret: ' + rx.hex())
-    '''
+    rx = cd_reg_rw(f'80:00:05', 0x00c4, struct.pack("<I", 2000))
+    xyz['logger'].info('motor set ret: ' + rx.hex())
 
 
 def wait_stop():
     for i in range(5):
         while True:
-            rx = cd_reg_rw(f'80:00:0{i+1}', 0x00d7, read=1)
+            rx = cd_reg_rw(f'80:00:0{i+1}', 0x0109, read=1)
             if rx[0] == 0x80 and rx[1] == 0:
                 break
             sleep(0.1)
 
 
 def enable_force():
-    rx = cd_reg_rw('80:00:04', 0x00cc, struct.pack("<B", 1))
+    rx = cd_reg_rw('80:00:04', 0x006c, struct.pack("<B", 1))
     xyz['logger'].info(f'enable force ret: {rx[0]:02x}')
 
 
@@ -107,7 +114,7 @@ def load_pos():
     return pos
 
 
-def goto_pos(pos, wait=False, s_speed=10000):
+def goto_pos(pos, wait=False, s_speed=260000):
     delta = [pos[0]-xyz['last_pos'][0], pos[1]-xyz['last_pos'][1], pos[2]-xyz['last_pos'][2]]
     xyz['last_pos'] = [pos[0], pos[1], pos[2]]
     retry_cnt = 0
@@ -161,7 +168,7 @@ def xyz_init():
     
     all_enable = True
     for i in range(5):
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00d6, read=1)
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x0108, read=1)
         xyz['logger'].info('motor check enable ret: ' + rx.hex())
         if rx[1] != 1:
             all_enable = False

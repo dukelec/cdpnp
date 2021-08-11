@@ -86,7 +86,7 @@ document.getElementById('btn_run').onclick = async function() {
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
             await set_motor_pos(true);
-            await sleep(200);
+            await sleep(600);
             set_step(1);
             continue;
         }
@@ -102,7 +102,7 @@ document.getElementById('btn_run').onclick = async function() {
                 csa.cur_pos[2] = csa.comp_top_z;
                 await set_motor_pos(true);
             }
-            await sleep(200);
+            await sleep(800);
             set_step(2);
             continue;
         }
@@ -126,14 +126,15 @@ document.getElementById('btn_run').onclick = async function() {
             csa.cur_pos[0] += csa.grab_ofs[0]
             csa.cur_pos[1] += csa.grab_ofs[1]
             await set_motor_pos(true);
+            await sleep(800);
             await enable_force();
             csa.cur_pos[2] = csa.comp_base_z - 0.2;
-            await set_motor_pos(true, 200);
+            await set_motor_pos(true, 6000);
             await set_pump(1);
-            await sleep(500);
+            await sleep(600);
             await z_keep_high();
             //csa.cur_pos[3] = -csa.cv_cur_r;
-            //await set_motor_pos(true, 200);
+            //await set_motor_pos(true, 2000);
             set_step(4);
             continue;
         }
@@ -160,9 +161,10 @@ document.getElementById('btn_run').onclick = async function() {
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
             } else {
+                await sleep(800);
                 await enable_force();
                 csa.cur_pos[2] = csa.pcb_base_z - 0.2;
-                await set_motor_pos(true, 200);
+                await set_motor_pos(true, 6000);
                 await set_pump(0);
                 await z_keep_high();
             }
