@@ -14,7 +14,6 @@ import sys, os, _thread
 import struct, re
 from time import sleep
 import copy
-import json5
 import asyncio, aiohttp, websockets
 import math
 import numpy as np
