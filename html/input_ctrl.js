@@ -213,7 +213,7 @@ document.getElementById('btn_set_home').onclick = async function() {
     await cmd_sock.sendto({'action': 'set_home'}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
     console.log('set_home ret', dat);
-    csa.cur_pos = csa.aux_pos = [0, 0, 0, 0];
+    csa.old_pos = csa.cur_pos = csa.aux_pos = [0, 0, 0, 0];
     csa_to_page_pos();
     document.getElementById('btn_set_home').style.backgroundColor = '';
 };
@@ -232,7 +232,6 @@ async function move_button(val)
     let dz = val[2] * div;
     let dr = val[3] * div * 10;
     csa.cur_pos = [csa.cur_pos[0] + dx, csa.cur_pos[1] + dy, csa.cur_pos[2] + dz, csa.cur_pos[3] + dr];
-    csa.aux_pos = [csa.aux_pos[0] + dx, csa.aux_pos[1] + dy, csa.aux_pos[2] + dz, csa.aux_pos[3] + dr];
     csa_to_page_pos();
     await set_motor_pos();
 }
@@ -265,6 +264,8 @@ window.addEventListener('keydown', async function(e) {
         val[3] = -1;
     else if (e.keyCode == 190) // ">"
         val[3] = 1;
+    else
+        return;
     move_button(val);
 });
 

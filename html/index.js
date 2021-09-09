@@ -20,6 +20,7 @@ import { get_camera_cfg, get_init_home, get_motor_pos, set_motor_pos, set_pump, 
 let csa = {
     shortcuts: false,
     cur_pos: [0, 0, 0, 0],
+    old_pos: [0, 0, 0, 0],
     aux_pos: [0, 0, 0, 0],
     
     grab_ofs: [-33.9, -7.0],

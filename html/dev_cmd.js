@@ -10,6 +10,15 @@ import { csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './inpu
 import { csa, cmd_sock } from './index.js';
 
 
+function update_aux() {
+    let dx = csa.cur_pos[0] - csa.old_pos[0];
+    let dy = csa.cur_pos[1] - csa.old_pos[1];
+    let dz = csa.cur_pos[2] - csa.old_pos[2];
+    let dr = csa.cur_pos[3] - csa.old_pos[3];
+    csa.aux_pos = [csa.aux_pos[0] + dx, csa.aux_pos[1] + dy, csa.aux_pos[2] + dz, csa.aux_pos[3] + dr];
+    csa.old_pos = [csa.cur_pos[0], csa.cur_pos[1], csa.cur_pos[2], csa.cur_pos[3]];
+}
+
 async function get_camera_cfg() {
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'get_camera_cfg'}, ['server', 'dev']);
@@ -25,7 +34,8 @@ async function get_motor_pos() {
     await cmd_sock.sendto({'action': 'get_motor_pos'}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
     console.log('get_cur_pos ret', dat);
-    csa.cur_pos = csa.aux_pos = dat[0];
+    csa.cur_pos = dat[0];
+    update_aux();
     csa_to_page_pos();
 }
 
@@ -38,14 +48,13 @@ async function get_init_home() {
         document.getElementById('btn_set_home').style.backgroundColor = '';
 }
 
-async function set_motor_pos(wait=false, speed=260000, pos=null) {
-    if (pos)
-        csa.cur_pos = pos;
+async function set_motor_pos(wait=false, speed=260000) {
     console.log('set_motor_pos:', csa.cur_pos);
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'set_motor_pos', 'pos': csa.cur_pos, 'wait': wait, 'speed': speed}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(20000);
     console.log('set_motor_pos ret', dat);
+    update_aux();
     csa_to_page_pos();
 }
 
