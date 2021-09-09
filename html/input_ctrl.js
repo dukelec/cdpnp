@@ -4,16 +4,8 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './lang/lang.js'
-import { escape_html, date2num, timestamp, val2hex, dat2str, dat2hex, hex2dat,
-         read_file, download, readable_size, blob2dat, csv_parser, readable_float, cpy } from './utils/helper.js';
-//import { konva_zoom, konva_responsive } from './utils/konva_helper.js';
-import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
-import { Idb } from './utils/idb.js';
-import { search_comp_parents, search_next_comp, search_current_comp, select_comp,
-         pos_to_page, pos_from_page, csv_to_pos } from './pos_list.js';
-import { get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
-         z_keep_high, enable_force, get_cv_cur, cam_comp_snap } from './dev_cmd.js';
+import { read_file, download, readable_float, cpy } from './utils/helper.js';
+import { get_motor_pos, set_motor_pos, set_pump, update_coeffs, enable_force } from './dev_cmd.js';
 import { csa, cmd_sock, db, csa_need_save } from './index.js';
 
 

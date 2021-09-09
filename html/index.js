@@ -5,17 +5,14 @@
  */
 
 import { L } from './lang/lang.js'
-import { sleep, escape_html, date2num, timestamp, val2hex, dat2str, dat2hex, hex2dat,
-         read_file, download, readable_size, blob2dat, csv_parser, readable_float, cpy } from './utils/helper.js';
-//import { konva_zoom, konva_responsive } from './utils/konva_helper.js';
+import { sleep, blob2dat, cpy } from './utils/helper.js';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
-import { search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp,
-         get_comp_values, pos_to_page, pos_from_page, csv_to_pos,
+import { search_comp_parents, search_next_comp, select_comp, get_comp_values, pos_to_page,
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
-import { input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input  } from './input_ctrl.js';
+import { input_init, csa_to_page_input } from './input_ctrl.js';
 import { get_camera_cfg, get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
-         z_keep_high, enable_force, get_cv_cur, cam_comp_snap } from './dev_cmd.js';
+         z_keep_high, enable_force, cam_comp_snap } from './dev_cmd.js';
 
 let csa = {
     shortcuts: false,

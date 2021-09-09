@@ -5,7 +5,7 @@
  */
 
 import { csv_parser, read_file, readable_float } from './utils/helper.js';
-import { set_motor_pos, pcb2xyz, z_keep_high } from './dev_cmd.js';
+import { set_motor_pos, pcb2xyz } from './dev_cmd.js';
 import { csa, db } from './index.js';
 
 
