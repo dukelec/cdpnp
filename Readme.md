@@ -71,7 +71,9 @@ Python version >= 3.8
 `pip3 install pythoncrc websockets pyserial u-msgpack-python aiohttp`
 
 #### Usage:
-Run `main.py` or `start.sh`, then open url in your web browser: http://localhost:8900
+Run `pnp_main.py` or `start.sh`, then open url in your web browser: http://localhost:8900
+
+Test without hardware: `./pnp_main.py --debug --dev None`
 
 The protocols between mcu, python, and web page please refer to the [CDBUS_GUI](https://github.com/dukelec/cdbus_gui) project.
 
