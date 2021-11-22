@@ -76,7 +76,7 @@ async function pcb2xyz(idx, x, y) {
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'pcb2xyz', 'idx': idx, 'x': x, 'y': y}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(1000);
-    console.log('pcb2xyz ret', dat);
+    console.log('pcb2xyz ret', dat ? dat[0] : null);
     return dat ? dat[0] : null;
 }
 
@@ -117,7 +117,7 @@ async function cam_comp_snap() {
             csa.cur_pos[0] += dx
             csa.cur_pos[1] += dy
             csa.cur_pos[3] = 0
-            csa.cv_cur_r = cv[2]
+            csa.cv_cur_r = cv[2] // [-89, 90]
             await set_motor_pos(true);
         }
         await sleep(600);

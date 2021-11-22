@@ -142,7 +142,9 @@ document.getElementById('btn_run').onclick = async function() {
             await z_keep_high();
             csa.cur_pos[0] = comp_xyz[0] + csa.grab_ofs[0];
             csa.cur_pos[1] = comp_xyz[1] + csa.grab_ofs[1];
-            csa.cur_pos[3] = comp_val[2] - csa.cv_cur_r;
+            // limit angle range
+            let rad = (comp_val[2] - csa.cv_cur_r + comp_xyz[2]) * Math.PI / 180;
+            csa.cur_pos[3] = Math.atan2(Math.sin(rad), Math.cos(rad)) * 180 / Math.PI;
             await set_motor_pos(true);
             set_step(5);
             continue;

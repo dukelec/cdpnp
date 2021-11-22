@@ -82,7 +82,7 @@ def pcb2xyz(p, pcb):
     s, a, d_x, d_y = p
     step_x = (pcb[0] * math.cos(a) - pcb[1] * math.sin(a)) * s + d_x
     step_y = (pcb[0] * math.sin(a) + pcb[1] * math.cos(a)) * s + d_y
-    return step_x, step_y
+    return step_x, step_y, math.degrees(math.atan2(math.sin(-a), math.cos(-a))) # return limited-range angle
 
 def update_coeffs():
     global board_idx, coeffs
