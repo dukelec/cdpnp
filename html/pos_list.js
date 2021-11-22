@@ -183,6 +183,14 @@ function pos_to_page(pos) {
             </tr>`;
         pos_list.insertAdjacentHTML('beforeend', html);
     }
+    
+    sortable('.js-sortable-table');
+    for (let s of sortable('.js-sortable-table')) {
+        s.addEventListener('sortupdate', async function(e) {
+            console.log('update list to db');
+            await db.set('tmp', 'list', pos_from_page());
+        });
+    }
 }
 
 function pos_from_page() {
@@ -250,14 +258,7 @@ document.getElementById('btn_load_csv').onclick = async function() {
             let pos = csv_to_pos(data_str);
             console.log('load pos:', pos);
             pos_to_page(pos);
-            sortable('.js-sortable-table');
             await db.set('tmp', 'list', pos);
-            for (let s of sortable('.js-sortable-table')) {
-                s.addEventListener('sortupdate', async function(e) {
-                    console.log('update list to db');
-                    await db.set('tmp', 'list', pos_from_page());
-                });
-            }
         }
         this.value = '';
     };

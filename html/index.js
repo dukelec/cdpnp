@@ -236,10 +236,8 @@ window.addEventListener('load', async function() {
     if (csa_pre)
         cpy(csa, csa_pre, csa_need_save);
     let pos = await db.get('tmp', 'list');
-    if (pos) {
+    if (pos)
         pos_to_page(pos);
-        sortable('.js-sortable-table');
-    }
     input_init();
     csa_to_page_input();
 });
