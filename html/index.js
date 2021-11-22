@@ -15,7 +15,6 @@ import { get_camera_cfg, get_init_home, get_motor_pos, set_motor_pos, set_pump, 
          z_keep_high, enable_force, cam_comp_snap } from './dev_cmd.js';
 
 let csa = {
-    shortcuts: false,
     cur_pos: [0, 0, 0, 0],
     old_pos: [0, 0, 0, 0],
     aux_pos: [0, 0, 0, 0],

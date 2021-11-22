@@ -137,7 +137,7 @@ window.btn_update_xy = async function(name) {
     await input_change();
 };
 window.btn_update_grab = async function(name) {
-    csa.grab_ofs = [-csa.aux_pos[0], -csa.aux_pos[1]];
+    csa.grab_ofs = [csa.aux_pos[0], csa.aux_pos[1]];
     let xy = `${readable_float(csa.grab_ofs[0])}, ${readable_float(csa.grab_ofs[1])}`;
     document.getElementById('grab_ofs').value = xy;
     await input_change();
@@ -231,12 +231,17 @@ async function move_button(val)
 window.move_button = move_button;
 
 window.addEventListener('keydown', async function(e) {
-    if (!csa.shortcuts || e.keyCode == 116) // F5
+    if (document.activeElement.tagName != 'BODY')
         return;
-    e.preventDefault();
     console.log(e.keyCode);
     if (e.keyCode == 32) { // space
-        document.getElementById('pause_en').checked = true;
+        e.preventDefault();
+        document.getElementById('pause_en').checked = !document.getElementById('pause_en').checked;
+        return;
+    }
+    if (e.keyCode >= 48 && e.keyCode <= 52) {
+        e.preventDefault();
+        document.getElementById('move_speed').value = String.fromCharCode(e.keyCode);
         return;
     }
     let val = [0, 0, 0, 0];
@@ -258,12 +263,9 @@ window.addEventListener('keydown', async function(e) {
         val[3] = 1;
     else
         return;
+    e.preventDefault();
     move_button(val);
 });
-
-document.getElementById('shortcuts').onclick = function() {
-    csa.shortcuts = document.getElementById('shortcuts').checked;
-};
 
 document.getElementById('btn_reset').onclick = async function() {
     await db.set('tmp', 'csa', null);

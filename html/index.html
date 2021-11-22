@@ -35,7 +35,7 @@
         <button class="button is-small" onclick="move_button([0, 0, -1, 0])">Down</button>
         <button class="button is-small" onclick="move_button([0, 0, 0,  1])">CW</button>
         <button class="button is-small" onclick="move_button([0, 0, 0, -1])">CCW</button>
-        <label class="checkbox"><input type="checkbox" id="shortcuts"> Hotkeys, </label>
+        &nbsp;
         <select id="move_speed">
             <option value="0">x0</option>
             <option value="1">x1</option>
@@ -68,7 +68,7 @@
         <br>
         <span style="display: inline-block; min-width: 130px;">Grab offset:</span>
         <input type="text" id="grab_ofs" onchange="input_change()">
-        <button class="button is-small" onclick="btn_update_grab()">Update (-aux)</button>
+        <button class="button is-small" onclick="btn_update_grab()">Update (Aux)</button>
         <button class="button is-small" onclick="btn_grab_ofs(1)"><-</button>
         <button class="button is-small" onclick="btn_grab_ofs(-1)">-></button>
         <div id="input_search"></div>
