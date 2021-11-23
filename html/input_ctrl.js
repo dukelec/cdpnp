@@ -217,7 +217,7 @@ document.getElementById('btn_reset_aux').onclick = function() {
 
 async function move_button(val)
 {
-    let speed_pow = Number(document.getElementById('move_speed').value);
+    let speed_pow = Number(document.getElementById('move_speed').value - 1);
     let div = Math.pow(10, speed_pow) / 100;
     let dx = val[0] * div;
     let dy = val[1] * div;
@@ -239,7 +239,7 @@ window.addEventListener('keydown', async function(e) {
         document.getElementById('pause_en').checked = !document.getElementById('pause_en').checked;
         return;
     }
-    if (e.keyCode >= 48 && e.keyCode <= 52) {
+    if (e.keyCode >= 49 && e.keyCode <= 52) { // 1, 2, 3, 4
         e.preventDefault();
         document.getElementById('move_speed').value = String.fromCharCode(e.keyCode);
         return;

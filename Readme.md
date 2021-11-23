@@ -75,5 +75,7 @@ Run `pnp_main.py` or `start.sh`, then open url in your web browser: http://local
 
 Test without hardware: `./pnp_main.py --debug --dev None`
 
+App shortcuts: [doc/shortcuts.md](doc/shortcuts.md)
+
 The protocols between mcu, python, and web page please refer to the [CDBUS_GUI](https://github.com/dukelec/cdbus_gui) project.
 
