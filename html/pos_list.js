@@ -125,18 +125,20 @@ function get_comp_progress(comp)
 }
 
 
-function select_comp(comp, clear_height=true) {
-    let current = search_current_comp();
-    if (current)
-        search_comp_parents(current, true, "");
+function select_comp(comp) {
+    let pre_comp = search_current_comp();
+    let pre_parents = [null, null];
+    let cur_parents = [null, null];
+    if (pre_comp)
+        pre_parents = search_comp_parents(pre_comp, true, "");
     if (comp) {
-        let parents = search_comp_parents(comp, true, "#D5F5E3");
-        document.getElementById('cur_comp').innerText = `${parents[0]} ${parents[1]} ${comp}`;
+        cur_parents = search_comp_parents(comp, true, "#D5F5E3");
+        document.getElementById('cur_comp').innerText = `${cur_parents[0]} ${cur_parents[1]} ${comp}`;
         let progress = get_comp_progress(comp);
         document.getElementById('cur_progress').innerText = `${progress[0]} / ${progress[1]}`
         if (csa.fiducial_cam.length > 1) {
             let total_num = progress[1] * csa.fiducial_cam.length;
-            let total_cnt = progress[1] * get_board_safe() + progress[0];
+            let total_cnt = (progress[0] - 1) * csa.fiducial_cam.length + get_board_safe() + 1;
             document.getElementById('cur_progress').innerText += ` (total ${total_cnt} / ${total_num})`
         }
         
@@ -147,7 +149,7 @@ function select_comp(comp, clear_height=true) {
             if (next == null)
                 break;
             next_parents = search_comp_parents(next);
-            if (next_parents[0] != parents[0] || next_parents[1] != parents[1])
+            if (next_parents[0] != cur_parents[0] || next_parents[1] != cur_parents[1])
                 break;
         }
         if (next) {
@@ -165,7 +167,7 @@ function select_comp(comp, clear_height=true) {
         document.getElementById('cur_comp').innerText = "-- -- --";
         document.getElementById('cur_progress').innerText = "-- / --";
     }
-    if (clear_height) {
+    if (cur_parents[0] != pre_parents[0]) {
         csa.comp_height = null;
         document.getElementById('cur_height').innerText = "--";
     }
@@ -382,11 +384,11 @@ window.btn_select_step = function (idx) {
     set_step(idx);
 };
 
-window.btn_select_board = function (idx) {
+window.btn_select_board = async function (idx) {
     if (idx >= csa.fiducial_cam.length)
         return;
     set_board(idx);
-    select_comp(search_current_comp());
+    await window.select_comp(search_current_comp());
 };
 
 

@@ -64,8 +64,10 @@ document.getElementById('btn_run').onclick = async function() {
             csa.comp_height = null;
             document.getElementById('cur_height').innerText = `--`;
         }
-        if (parents_pre && (parents_pre[0] != parents[0] || parents_pre[1] != parents[1]))
+        if (parents_pre && (parents_pre[0] != parents[0] || parents_pre[1] != parents[1])) {
             document.getElementById('pause_en').checked = true;
+            await window.btn_select_board(board, false);
+        }
         console.log(`parents: ${parents_pre} -> ${parents}`);
         
         if (csa.stop)
@@ -189,12 +191,13 @@ document.getElementById('btn_run').onclick = async function() {
         if (++board >= csa.fiducial_cam.length) {
             set_board(0);
             let next = search_next_comp(comp);
-            select_comp(next, false); // not clear heigth
+            select_comp(next);
             parents_pre = parents;
             if (!next)
                 break;
         } else {
             set_board(board);
+            select_comp(comp); // update progress
         }
     }
     console.log('all comp finished');

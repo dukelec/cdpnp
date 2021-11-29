@@ -231,7 +231,7 @@ async function move_button(val)
 window.move_button = move_button;
 
 window.addEventListener('keydown', async function(e) {
-    if (document.activeElement.tagName != 'BODY')
+    if (document.activeElement.tagName != 'BODY' && document.activeElement.tagName != "BUTTON")
         return;
     console.log(e.keyCode);
     if (e.keyCode == 32) { // space
