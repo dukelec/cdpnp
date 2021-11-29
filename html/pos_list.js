@@ -107,6 +107,23 @@ function search_first_comp()
     return null;
 }
 
+function get_comp_progress(comp)
+{
+    let progress = [0, 0];
+    let pos = pos_from_page();    
+    let parents = search_comp_parents(comp);
+    let comps = pos[parents[0]][parents[1]];
+    for (let i = 0; i < comps.length; i++) {
+        if (comp == comps[i][0]) {
+            progress[0] = i + 1;
+            break;
+        }
+    }
+    progress[1] = comps.length;
+    console.log(pos);
+    return progress;
+}
+
 
 function select_comp(comp) {
     let current = search_current_comp();
@@ -114,14 +131,41 @@ function select_comp(comp) {
         search_comp_parents(current, true, "");
     if (comp) {
         let parents = search_comp_parents(comp, true, "#D5F5E3");
-        document.getElementById('cur_footprint').innerText = parents[0];
-        document.getElementById('cur_value').innerText = parents[1];
-        document.getElementById('cur_comp').innerText = comp;
+        document.getElementById('cur_comp').innerText = `${parents[0]} ${parents[1]} ${comp}`;
+        let progress = get_comp_progress(comp);
+        document.getElementById('cur_progress').innerText = `${progress[0]} / ${progress[1]}`
+        if (csa.fiducial_cam.length > 1) {
+            let total_num = progress[1] * csa.fiducial_cam.length;
+            let total_cnt = progress[1] * get_board_safe() + progress[0];
+            document.getElementById('cur_progress').innerText += ` (total ${total_cnt} / ${total_num})`
+        }
+        
+        let next = comp;
+        let next_parents;
+        while (true) {
+            next = search_next_comp(next);
+            if (next == null)
+                break;
+            next_parents = search_comp_parents(next);
+            if (next_parents[0] != parents[0] || next_parents[1] != parents[1])
+                break;
+        }
+        if (next) {
+            let progress = get_comp_progress(next);
+            let parents = search_comp_parents(next);
+            document.getElementById('next_comp').innerText = `${next_parents[0]} ${next_parents[1]}`;
+            document.getElementById('next_total').innerText = `${progress[1]}`;
+            if (csa.fiducial_cam.length > 1)
+                document.getElementById('next_total').innerText += ` (total ${progress[1] * csa.fiducial_cam.length})`;
+        } else {
+            document.getElementById('next_comp').innerText = "-- --";
+            document.getElementById('next_total').innerText = "--";
+        }
     } else {
-        document.getElementById('cur_footprint').innerText = "--";
-        document.getElementById('cur_value').innerText = "--";
-        document.getElementById('cur_comp').innerText = "--";
+        document.getElementById('cur_comp').innerText = "-- -- --";
+        document.getElementById('cur_progress').innerText = "-- / --";
     }
+    document.getElementById('cur_height').innerText = "--";
 }
 window.select_comp = async function(comp) {
     select_comp(comp);
@@ -189,6 +233,7 @@ function pos_to_page(pos) {
         s.addEventListener('sortupdate', async function(e) {
             console.log('update list to db');
             await db.set('tmp', 'list', pos_from_page());
+            select_comp(search_current_comp());
         });
     }
 }
@@ -338,6 +383,7 @@ window.btn_select_board = function (idx) {
     if (idx >= csa.fiducial_cam.length)
         return;
     set_board(idx);
+    select_comp(search_current_comp());
 };
 
 
