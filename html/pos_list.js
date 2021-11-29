@@ -125,7 +125,7 @@ function get_comp_progress(comp)
 }
 
 
-function select_comp(comp) {
+function select_comp(comp, clear_height=true) {
     let current = search_current_comp();
     if (current)
         search_comp_parents(current, true, "");
@@ -165,7 +165,10 @@ function select_comp(comp) {
         document.getElementById('cur_comp').innerText = "-- -- --";
         document.getElementById('cur_progress').innerText = "-- / --";
     }
-    document.getElementById('cur_height').innerText = "--";
+    if (clear_height) {
+        csa.comp_height = null;
+        document.getElementById('cur_height').innerText = "--";
+    }
 }
 window.select_comp = async function(comp) {
     select_comp(comp);

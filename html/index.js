@@ -27,6 +27,8 @@ let csa = {
     pcb_base_z: -88.2,
     fiducial_pcb: [[-26.375, 21.35], [-6.3, 4.75]],
     fiducial_cam: [[[89.673, 175.000], [109.861, 158.607]], [[120.720, 175.347], [140.849, 158.856]]],
+    
+    comp_height: null
 };
 
 let csa_need_save = ['grab_ofs', 'comp_search', 'comp_top_z', 'pcb_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
@@ -58,9 +60,12 @@ document.getElementById('btn_run').onclick = async function() {
         console.log(`comp: ${comp}, board: ${board}, step: ${step}, search: ${search}`);
         
         let parents = search_comp_parents(comp);
+        if (parents_pre && parents_pre[0] != parents[0]) {
+            csa.comp_height = null;
+            document.getElementById('cur_height').innerText = `--`;
+        }
         if (parents_pre && (parents_pre[0] != parents[0] || parents_pre[1] != parents[1]))
             document.getElementById('pause_en').checked = true;
-        
         console.log(`parents: ${parents_pre} -> ${parents}`);
         
         if (csa.stop)
@@ -122,12 +127,19 @@ document.getElementById('btn_run').onclick = async function() {
             console.log('fsm pickup');
             csa.cur_pos[0] += csa.grab_ofs[0]
             csa.cur_pos[1] += csa.grab_ofs[1]
+            if (csa.comp_height != null)
+                csa.cur_pos[2] = csa.comp_base_z + csa.comp_height + 1; // 1mm space
             await set_motor_pos(true);
             await sleep(800);
             await enable_force();
-            csa.cur_pos[2] = csa.comp_base_z - 0.2;
+            csa.cur_pos[2] = csa.comp_base_z - 1;
             await set_motor_pos(true, 6000);
             await set_pump(1);
+            if (csa.comp_height == null) {
+                await get_motor_pos();
+                csa.comp_height = parseFloat((csa.cur_pos[2] - csa.comp_base_z).toFixed(3));
+                document.getElementById('cur_height').innerText = `${csa.comp_height}`;
+            }
             await sleep(600);
             await z_keep_high();
             //csa.cur_pos[3] = -csa.cv_cur_r;
@@ -155,18 +167,18 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 5) { // putdown
             console.log('fsm putdown');
-            if (csa.cur_pos[2] != csa.pcb_top_z) {
-                csa.cur_pos[2] = csa.pcb_top_z;
-                await set_motor_pos(true);
-            }
             if (!document.getElementById('putdown_en').checked) {
                 document.getElementById('pause_en').checked = true;
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
             } else {
+                if (csa.comp_height != null) {
+                    csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
+                    await set_motor_pos(true);
+                }
                 await sleep(800);
                 await enable_force();
-                csa.cur_pos[2] = csa.pcb_base_z - 0.2;
+                csa.cur_pos[2] = csa.pcb_base_z - 1;
                 await set_motor_pos(true, 6000);
                 await set_pump(0);
                 await z_keep_high();
@@ -177,7 +189,7 @@ document.getElementById('btn_run').onclick = async function() {
         if (++board >= csa.fiducial_cam.length) {
             set_board(0);
             let next = search_next_comp(comp);
-            select_comp(next);
+            select_comp(next, false); // not clear heigth
             parents_pre = parents;
             if (!next)
                 break;
