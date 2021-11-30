@@ -172,7 +172,8 @@ function select_comp(comp) {
         document.getElementById('cur_height').innerText = "--";
     }
 }
-window.select_comp = async function(comp) {
+
+async function move_to_comp(comp) {
     select_comp(comp);
     if (comp && (document.getElementById('pause_en').checked || document.getElementById('btn_stop').disabled)) {
         let comp_val = get_comp_values(comp);
@@ -186,6 +187,11 @@ window.select_comp = async function(comp) {
         csa.cur_pos[1] = comp_xyz[1];
         await set_motor_pos();
     }
+}
+
+window.select_comp = async function(comp) {
+    document.getElementById('btn_stop').onclick();
+    await move_to_comp(comp);
 };
 
 
@@ -393,7 +399,7 @@ window.btn_select_board = async function (idx) {
 
 
 export {
-    search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp,
+    search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp, move_to_comp,
     get_comp_values, pos_to_page, pos_from_page, csv_to_pos,
     set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe
 };

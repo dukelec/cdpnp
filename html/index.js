@@ -8,7 +8,7 @@ import { L } from './lang/lang.js'
 import { sleep, blob2dat, cpy } from './utils/helper.js';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
-import { search_comp_parents, search_next_comp, select_comp, get_comp_values, pos_to_page,
+import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_comp_values, pos_to_page,
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
 import { input_init, csa_to_page_input } from './input_ctrl.js';
 import { get_camera_cfg, get_init_home, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
@@ -78,7 +78,8 @@ document.getElementById('btn_run').onclick = async function() {
         }
         if (parents_pre && (parents_pre[0] != parents[0] || parents_pre[1] != parents[1])) {
             document.getElementById('pause_en').checked = true;
-            await window.btn_select_board(board, false);
+            set_board(board);
+            await move_to_comp(comp);
         }
         console.log(`parents: ${parents_pre} -> ${parents}`);
         
@@ -221,6 +222,7 @@ document.getElementById('btn_run').onclick = async function() {
 document.getElementById('btn_stop').onclick = function() {
     csa.stop = true;
     document.getElementById('pause_en').checked = false;
+    set_step(1);
 };
 
 
