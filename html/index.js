@@ -19,8 +19,8 @@ let csa = {
     old_pos: [0, 0, 0, 0],
     aux_pos: [0, 0, 0, 0],
     
-    grab_ofs0:   [33.9, 7.0],
-    grab_ofs180: [33.9, 7.0],
+    grab_ofs0:   [34.9, 8.0],
+    grab_ofs180: [34.8, 7.9],
     comp_search: [[50, 165], [50, 145]],
     comp_top_z: -85.5,
     pcb_top_z: -84.5,
@@ -39,7 +39,7 @@ let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
 
 function cal_grab_ofs(angle) {
-    let rad = angle * Math.PI / 180;
+    let rad = -angle * Math.PI / 180;
     let delta = [csa.grab_ofs0[0] - csa.grab_ofs180[0], csa.grab_ofs0[1] - csa.grab_ofs180[1]];
     let ofs = [csa.grab_ofs0[0] - delta[0] / 2, csa.grab_ofs0[1] - delta[1] / 2];
     let err = [csa.grab_ofs0[0] - ofs[0], csa.grab_ofs0[1] - ofs[1]];
@@ -47,7 +47,7 @@ function cal_grab_ofs(angle) {
         Math.cos(rad) * err[0] - Math.sin(rad) * err[1],
         Math.sin(rad) * err[0] + Math.cos(rad) * err[1]
     ];
-    return [ofs[0] + err_at_angle[0], ofs[1] - err_at_angle[1]];
+    return [ofs[0] + err_at_angle[0], ofs[1] + err_at_angle[1]];
 }
 
 
