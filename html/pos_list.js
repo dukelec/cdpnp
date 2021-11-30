@@ -74,7 +74,7 @@ function search_next_comp(comp)
     let comp_list = pos_list.getElementsByClassName('list_comp');
     for (let elm of comp_list) {
         let sub0 = elm.querySelector('td');
-        if (comp_elm != null) {
+        if (comp_elm != null && elm.querySelector('td').innerText != comp) {
             comp_next = elm.querySelector('td').innerText;
             break;
         }
