@@ -25,6 +25,8 @@
         <br>
         <button class="button is-small" id="btn_set_home" style="background-color: yellow;">Set home</button>
         <button class="button is-small" id="btn_reset_aux">Reset aux</button>
+        &nbsp;|&nbsp;
+        <button class="button is-small" id="btn_go_home">Go home</button>
         <br><br>
         
         <button class="button is-small" onclick="move_button([-1, 0, 0, 0])"><-</button>
@@ -65,36 +67,44 @@
         <button class="button is-small" id="btn_run">Run</button>
         
         <br>
-        <span style="display: inline-block; min-width: 130px;">Grab offset:</span>
-        <input type="text" id="grab_ofs" onchange="input_change()">
-        <button class="button is-small" onclick="btn_update_grab()">Update (Aux)</button>
-        <button class="button is-small" onclick="btn_grab_ofs(1)"><-</button>
-        <button class="button is-small" onclick="btn_grab_ofs(-1)">-></button>
+        <span style="display: inline-block; min-width: 138px;">Grab offset (0°):</span>
+        <input type="text" id="grab_ofs0" onchange="input_change()">
+        <button class="button is-small" onclick="btn_update_grab(0)">Update (Aux)</button>
+        <button class="button is-small" onclick="btn_grab_ofs(0, 1)"><-</button>
+        <button class="button is-small" onclick="btn_grab_ofs(0, -1)">-></button> &nbsp;|&nbsp;
+        <button class="button is-small" onclick="btn_goto_r(0)">Go 0°</button>
+        <br>
+        <span style="display: inline-block; min-width: 138px;">Grab offset (180°):</span>
+        <input type="text" id="grab_ofs180" onchange="input_change()">
+        <button class="button is-small" onclick="btn_update_grab(180)">Update (Aux)</button>
+        <button class="button is-small" onclick="btn_grab_ofs(180, 1)"><-</button>
+        <button class="button is-small" onclick="btn_grab_ofs(180, -1)">-></button> &nbsp;|&nbsp;
+        <button class="button is-small" onclick="btn_goto_r(180)">Go 180°</button>
         <div id="input_search"></div>
-        <span style="display: inline-block; min-width: 130px;">Comp top z:</span>
+        <span style="display: inline-block; min-width: 138px;">Comp top z:</span>
         <input type="text" id="comp_top_z" onchange="input_change()">
         <button class="button is-small" onclick="btn_goto_z('comp_top_z')">Goto</button>
         <button class="button is-small" onclick="btn_update_z('comp_top_z')">Update</button>
         <br>
-        <span style="display: inline-block; min-width: 130px;">PCB top z:</span>
+        <span style="display: inline-block; min-width: 138px;">PCB top z:</span>
         <input type="text" id="pcb_top_z" onchange="input_change()">
         <button class="button is-small" onclick="btn_goto_z('pcb_top_z')">Goto</button>
         <button class="button is-small" onclick="btn_update_z('pcb_top_z')">Update</button>
         <br>
-        <span style="display: inline-block; min-width: 130px;">Comp base z:</span>
+        <span style="display: inline-block; min-width: 138px;">Comp base z:</span>
         <input type="text" id="comp_base_z" onchange="input_change()">
         <button class="button is-small" onclick="btn_goto_z('comp_base_z')">Goto</button>
         <button class="button is-small" onclick="btn_update_z('comp_base_z')">Update</button>
         <button class="button is-small" onclick="btn_detect_z()">Detect</button>
         <br>
-        <span style="display: inline-block; min-width: 130px;">PCB base z:</span>
+        <span style="display: inline-block; min-width: 138px;">PCB base z:</span>
         <input type="text" id="pcb_base_z" onchange="input_change()">
         <button class="button is-small" onclick="btn_goto_z('pcb_base_z')">Goto</button>
         <button class="button is-small" onclick="btn_update_z('pcb_base_z')">Update</button>
         <button class="button is-small" onclick="btn_detect_z()">Detect</button>
     
         <div id="input_fiducial">
-            <span style="display: inline-block; min-width: 130px; padding-bottom: 0.1em;">Fiducial pcb:</span>
+            <span style="display: inline-block; min-width: 138px; padding-bottom: 0.1em;">Fiducial pcb:</span>
             <input type="text" id="fiducial_pcb0" onchange="input_change()">
             <input type="text" id="fiducial_pcb1" onchange="input_change()">
         </div>

@@ -42,8 +42,10 @@ function csa_to_page_pos()
 
 function csa_to_page_input()
 {
-    document.getElementById('grab_ofs').value =
-        `${readable_float(csa.grab_ofs[0])}, ${readable_float(csa.grab_ofs[1])}`;
+    document.getElementById('grab_ofs0').value =
+        `${readable_float(csa.grab_ofs0[0])}, ${readable_float(csa.grab_ofs0[1])}`;
+    document.getElementById('grab_ofs180').value =
+        `${readable_float(csa.grab_ofs180[0])}, ${readable_float(csa.grab_ofs180[1])}`;
     
     let skip_hide = true;
     for (let i = 0; i < 8; i++) {
@@ -81,8 +83,10 @@ function csa_to_page_input()
 function csa_from_page_input()
 {
     let xy_str;
-    xy_str = document.getElementById('grab_ofs').value;
-    csa.grab_ofs = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
+    xy_str = document.getElementById('grab_ofs0').value;
+    csa.grab_ofs0 = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
+    xy_str = document.getElementById('grab_ofs180').value;
+    csa.grab_ofs180 = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
     
     csa.comp_search = [];
     for (let i = 0; ; i++) {
@@ -136,10 +140,14 @@ window.btn_update_xy = async function(name) {
     document.getElementById(name).value = xy;
     await input_change();
 };
-window.btn_update_grab = async function(name) {
-    csa.grab_ofs = [csa.aux_pos[0], csa.aux_pos[1]];
-    let xy = `${readable_float(csa.grab_ofs[0])}, ${readable_float(csa.grab_ofs[1])}`;
-    document.getElementById('grab_ofs').value = xy;
+window.btn_update_grab = async function(type) {
+    if (type) {
+        csa.grab_ofs180 = [csa.aux_pos[0], csa.aux_pos[1]];
+    } else {
+        csa.grab_ofs0 = [csa.aux_pos[0], csa.aux_pos[1]];
+    }
+    let xy = `${readable_float(csa.aux_pos[0])}, ${readable_float(csa.aux_pos[1])}`;
+    document.getElementById(`grab_ofs${type}`).value = xy;
     await input_change();
 };
 window.btn_update_z = async function(name) {
@@ -160,9 +168,15 @@ window.btn_goto_z = async function(name) {
     csa_to_page_pos();
     await set_motor_pos();
 };
-window.btn_grab_ofs = async function(dir=1) {
-    csa.cur_pos[0] += dir * csa.grab_ofs[0];
-    csa.cur_pos[1] += dir * csa.grab_ofs[1];
+window.btn_goto_r = async function(angle) {
+    csa.cur_pos[3] = angle;
+    csa_to_page_pos();
+    await set_motor_pos();
+};
+window.btn_grab_ofs = async function(type, dir=1) {
+    let grab_ofs = type ? csa.grab_ofs180 : csa.grab_ofs0;
+    csa.cur_pos[0] -= dir * grab_ofs[0];
+    csa.cur_pos[1] -= dir * grab_ofs[1];
     csa_to_page_pos();
     await set_motor_pos();
 };
@@ -213,6 +227,12 @@ document.getElementById('btn_set_home').onclick = async function() {
 document.getElementById('btn_reset_aux').onclick = function() {
     csa.aux_pos = [0, 0, 0, 0];
     csa_to_page_pos();
+};
+
+document.getElementById('btn_go_home').onclick = async function() {
+    csa.cur_pos = [0, 0, 0, 0];
+    csa_to_page_pos();
+    await set_motor_pos();
 };
 
 async function move_button(val)
@@ -320,7 +340,7 @@ function input_init() {
     for (let i = 0; i < 8; i++) {
         search.insertAdjacentHTML('beforeend', `
             <div id="search_grp${i}">
-                <span style="display: inline-block; min-width: 130px;">Comp search #${i}:</span>
+                <span style="display: inline-block; min-width: 138px;">Comp search #${i}:</span>
                 <input type="text" id="comp_search${i}" onchange="input_change()">
                 <button class="button is-small" onclick="btn_goto_xy('comp_search${i}')">Goto</button>
                 <button class="button is-small" onclick="btn_update_xy('comp_search${i}')">Update</button>
@@ -330,7 +350,7 @@ function input_init() {
     for (let i = 0; i < 10; i++) {
         fiducial.insertAdjacentHTML('beforeend', `
             <div id="fiducial_grp${i}">
-                <span style="display: inline-block; min-width: 130px;">Fiducial cam #${i}:</span>
+                <span style="display: inline-block; min-width: 138px;">Fiducial cam #${i}:</span>
                 <input type="text" id="fiducial_cam${i}_0" onchange="input_change()">
                 <button class="button is-small" onclick="btn_goto_xy('fiducial_cam${i}_0')">Goto</button>
                 <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_0')">Update</button>

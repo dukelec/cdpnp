@@ -19,7 +19,8 @@ let csa = {
     old_pos: [0, 0, 0, 0],
     aux_pos: [0, 0, 0, 0],
     
-    grab_ofs: [-33.9, -7.0],
+    grab_ofs0:   [33.9, 7.0],
+    grab_ofs180: [33.9, 7.0],
     comp_search: [[50, 165], [50, 145]],
     comp_top_z: -85.5,
     pcb_top_z: -84.5,
@@ -31,12 +32,23 @@ let csa = {
     comp_height: null
 };
 
-let csa_need_save = ['grab_ofs', 'comp_search', 'comp_top_z', 'pcb_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
+let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'comp_top_z', 'pcb_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
 
 let db = null;
 let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
 
+function cal_grab_ofs(angle) {
+    let rad = angle * Math.PI / 180;
+    let delta = [csa.grab_ofs0[0] - csa.grab_ofs180[0], csa.grab_ofs0[1] - csa.grab_ofs180[1]];
+    let ofs = [csa.grab_ofs0[0] - delta[0] / 2, csa.grab_ofs0[1] - delta[1] / 2];
+    let err = [csa.grab_ofs0[0] - ofs[0], csa.grab_ofs0[1] - ofs[1]];
+    let err_at_angle = [
+        Math.cos(rad) * err[0] - Math.sin(rad) * err[1],
+        Math.sin(rad) * err[0] + Math.cos(rad) * err[1]
+    ];
+    return [ofs[0] + err_at_angle[0], ofs[1] - err_at_angle[1]];
+}
 
 
 document.getElementById('btn_run').onclick = async function() {
@@ -127,8 +139,8 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 3) { // pickup
             console.log('fsm pickup');
-            csa.cur_pos[0] += csa.grab_ofs[0]
-            csa.cur_pos[1] += csa.grab_ofs[1]
+            csa.cur_pos[0] -= csa.grab_ofs0[0];
+            csa.cur_pos[1] -= csa.grab_ofs0[1];
             if (csa.comp_height != null)
                 csa.cur_pos[2] = csa.comp_base_z + csa.comp_height + 1; // 1mm space
             await set_motor_pos(true);
@@ -153,8 +165,6 @@ document.getElementById('btn_run').onclick = async function() {
         if (step == 4) { // goto_pcb
             console.log('fsm goto_pcb');
             await z_keep_high();
-            csa.cur_pos[0] = comp_xyz[0] + csa.grab_ofs[0];
-            csa.cur_pos[1] = comp_xyz[1] + csa.grab_ofs[1];
             // limit angle range
             let rad = (comp_val[2] - csa.cv_cur_r + comp_xyz[2]) * Math.PI / 180;
             csa.cur_pos[3] = Math.atan2(Math.sin(rad), Math.cos(rad)) * 180 / Math.PI;
@@ -162,6 +172,9 @@ document.getElementById('btn_run').onclick = async function() {
                 console.log('  rotate 180, before:', csa.cur_pos[3]);
                 csa.cur_pos[3] = csa.cur_pos[3] > 90 ? csa.cur_pos[3] - 180 : csa.cur_pos[3] + 180;
             }
+            let grab_ofs = cal_grab_ofs(csa.cur_pos[3]);
+            csa.cur_pos[0] = comp_xyz[0] - grab_ofs[0];
+            csa.cur_pos[1] = comp_xyz[1] - grab_ofs[1];
             await set_motor_pos(true);
             set_step(5);
             continue;
