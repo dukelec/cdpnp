@@ -120,7 +120,6 @@ function get_comp_progress(comp)
         }
     }
     progress[1] = comps.length;
-    console.log(pos);
     return progress;
 }
 
@@ -176,6 +175,7 @@ function select_comp(comp) {
 async function move_to_comp(comp) {
     select_comp(comp);
     if (comp && (document.getElementById('pause_en').checked || document.getElementById('btn_stop').disabled)) {
+        set_step(1); // step: goto_comp
         let comp_val = get_comp_values(comp);
         let board = get_board_safe();
         let comp_xyz = await pcb2xyz(board, comp_val[0], comp_val[1]);
@@ -188,11 +188,7 @@ async function move_to_comp(comp) {
         await set_motor_pos();
     }
 }
-
-window.select_comp = async function(comp) {
-    document.getElementById('btn_stop').onclick();
-    await move_to_comp(comp);
-};
+window.select_comp = move_to_comp;
 
 
 function pos_to_page(pos) {

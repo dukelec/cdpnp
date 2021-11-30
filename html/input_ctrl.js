@@ -251,12 +251,15 @@ async function move_button(val)
 window.move_button = move_button;
 
 window.addEventListener('keydown', async function(e) {
-    if (document.activeElement.tagName != 'BODY' && document.activeElement.tagName != "BUTTON")
+    if (document.activeElement.type == 'text')
         return;
     console.log(e.keyCode);
     if (e.keyCode == 32) { // space
         e.preventDefault();
-        document.getElementById('pause_en').checked = !document.getElementById('pause_en').checked;
+        if (document.getElementById('btn_stop').disabled)
+            document.getElementById('pause_en').checked = false;
+        else
+            document.getElementById('pause_en').checked = !document.getElementById('pause_en').checked;
         return;
     }
     if (e.keyCode >= 49 && e.keyCode <= 52) { // 1, 2, 3, 4

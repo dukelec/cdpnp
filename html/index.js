@@ -187,6 +187,9 @@ document.getElementById('btn_run').onclick = async function() {
                 document.getElementById('pause_en').checked = true;
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
+                // manual select comp during putdown pause
+                if (get_comp_safe() != comp || get_board_safe() != board)
+                    continue;
             } else {
                 if (csa.comp_height != null) {
                     csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
@@ -215,6 +218,7 @@ document.getElementById('btn_run').onclick = async function() {
         }
     }
     console.log('all comp finished');
+    csa.stop = true;
     document.getElementById('btn_run').disabled = false;
     document.getElementById('btn_stop').disabled = true;
 };
