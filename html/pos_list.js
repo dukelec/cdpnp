@@ -277,7 +277,7 @@ function csv_to_pos(csv)
         let row_ = [row[0], Number(row[3]), -Number(row[4]), Number(row[5])];
         if (row[6] == 'bottom')
             row_[3] = 180 - row_[3];
-        else if (row_[3] > 180.0)
+        if (row_[3] > 180.0)
             row_[3] = -(360 - row_[3]);
         
         if (row[2] in pos) {
