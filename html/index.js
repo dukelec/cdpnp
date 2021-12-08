@@ -221,6 +221,8 @@ document.getElementById('btn_run').onclick = async function() {
     csa.stop = true;
     document.getElementById('btn_run').disabled = false;
     document.getElementById('btn_stop').disabled = true;
+    csa.comp_height = null;
+    document.getElementById('cur_height').innerText = `--`;
 };
 
 document.getElementById('btn_stop').onclick = function() {
