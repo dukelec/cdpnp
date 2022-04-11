@@ -22,8 +22,7 @@ xyz = {
     'logger': None,
     'last_pos': None,
     'sock': None,
-    'sock_dbg': None,
-    'init_home': False
+    'sock_dbg': None
 }
 
 
@@ -112,7 +111,7 @@ def load_pos():
 
 def goto_pos(pos, wait=False, s_speed=260000):
     delta = [pos[0]-xyz['last_pos'][0], pos[1]-xyz['last_pos'][1], pos[2]-xyz['last_pos'][2]]
-    xyz['last_pos'] = [pos[0], pos[1], pos[2]]
+    xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
     m_vector = max(math.sqrt(math.pow(delta[0], 2) + math.pow(delta[1], 2) + math.pow(delta[2], 2)), 0.01)
@@ -147,12 +146,17 @@ def goto_pos(pos, wait=False, s_speed=260000):
     wait_stop()
 
 
-def set_home():
-    for i in range(5):
+def detect_origin():
+    xyz['logger'].info(f'detecting origin, please wait...')
+    goto_pos([2, 2, -2, 0], True, 100000)
+    goto_pos([-1000, -1000, 1000, 0], True, 50000)
+    for i in range(4):
+        xyz['logger'].info(f'motor set origin: #{i+1}')
         rx = cd_reg_rw(f'80:00:0{i+1}', 0x00b1, struct.pack("<B", 1))
-        xyz['logger'].info(f'motor set home #{i+1}: ' + rx.hex())
+        xyz['logger'].info('motor set origin ret: ' + rx.hex())
     xyz['last_pos'] = load_pos()
-    xyz['init_home'] = True
+    sleep(0.5)
+    goto_pos([2, 2, -2, 0], True)
 
 
 def xyz_init():
@@ -169,8 +173,7 @@ def xyz_init():
         if rx[1] != 1:
             all_enable = False
     
-    if all_enable:
-        xyz['init_home'] = True
-    else:
+    if not all_enable:
         enable_motor()
+        detect_origin()
 

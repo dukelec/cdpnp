@@ -38,15 +38,6 @@ async function get_motor_pos() {
     csa_to_page_pos();
 }
 
-async function get_init_home() {
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'get_init_home'}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(500);
-    console.log('get_init_home ret', dat);
-    if (dat[0])
-        document.getElementById('btn_set_home').style.backgroundColor = '';
-}
-
 async function set_motor_pos(wait=false, speed=260000) {
     console.log('set_motor_pos:', csa.cur_pos);
     cmd_sock.flush();
@@ -104,15 +95,15 @@ async function get_cv_cur() {
     return dat ? dat[0] : null;
 }
 
-// 10mm / 275 pixel
-let DIV_MM2PIXEL = 10/275;
+// 10mm / 344 pixel
+let DIV_MM2PIXEL = 10/344;
 
 async function cam_comp_snap() {
     for (let i = 0; i < 3; i++) {
         let cv = await get_cv_cur();
         if (cv) {
-            let dx = (cv[0] - 480/2) * DIV_MM2PIXEL
-            let dy = (cv[1] - 640/2) * DIV_MM2PIXEL
+            let dx = (cv[0] - 600/2) * DIV_MM2PIXEL
+            let dy = (cv[1] - 800/2) * DIV_MM2PIXEL
             console.log('cv dx dy', dx, dy)
             csa.cur_pos[0] += dx
             csa.cur_pos[1] += dy
@@ -128,6 +119,6 @@ async function cam_comp_snap() {
 
 
 export {
-    get_camera_cfg, get_init_home, get_motor_pos, set_motor_pos, set_pump,
+    get_camera_cfg, get_motor_pos, set_motor_pos, set_pump,
     update_coeffs, pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap
 };

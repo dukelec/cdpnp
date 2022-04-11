@@ -47,7 +47,7 @@ def cv_get_pos(img):
       area = cv.contourArea(c)
      
       # Ignore contours that are too small or too large
-      if area < 100 or 100000 < area:
+      if area < 125 or 125000 < area:
         continue
      
       # cv.minAreaRect returns:

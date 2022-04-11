@@ -214,25 +214,9 @@ async function set_camera_cfg() {
 document.getElementById('limit_angle').onchange = set_camera_cfg;
 document.getElementById('cv_detect').onchange = set_camera_cfg;
 
-document.getElementById('btn_set_home').onclick = async function() {
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_home'}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(500);
-    console.log('set_home ret', dat);
-    csa.old_pos = csa.cur_pos = csa.aux_pos = [0, 0, 0, 0];
-    csa_to_page_pos();
-    document.getElementById('btn_set_home').style.backgroundColor = '';
-};
-
 document.getElementById('btn_reset_aux').onclick = function() {
     csa.aux_pos = [0, 0, 0, 0];
     csa_to_page_pos();
-};
-
-document.getElementById('btn_go_home').onclick = async function() {
-    csa.cur_pos = [0, 0, 0, 0];
-    csa_to_page_pos();
-    await set_motor_pos();
 };
 
 async function move_button(val)
