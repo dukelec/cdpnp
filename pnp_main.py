@@ -125,21 +125,21 @@ async def dev_service():
         elif dat['action'] == 'set_camera':
             logger.info(f"set_camera {dat['val']}")
             if dev:
-                rx = cd_reg_rw('80:00:21', 0x0036, struct.pack("<B", 255 if dat['val'] else 0))
+                rx = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x0036, struct.pack("<B", 255 if dat['val'] else 0))
                 print('set cam ret: ' + rx.hex())
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'set_camera_cfg':
-            logger.info(f"set_camera_cfg limit: {dat['limit']}, detect: {dat['detect']}")
-            cv_dat['limit_angle'] = dat['limit']
+            logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}")
+            cv_dat['dev'] = dat['dev']
             cv_dat['detect'] = dat['detect']
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'get_camera_cfg':
             logger.info('get_camera_cfg')
-            rx = cd_reg_rw('80:00:21', 0x0036, read=1) if dev else bytes([0x80, 0x00])
+            rx = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x0036, read=1) if dev else bytes([0x80, 0x00])
             print('get_camera_cfg ret: ' + rx.hex())
-            await sock.sendto({'enable': rx[1], 'limit': cv_dat['limit_angle'], 'detect': cv_dat['detect']}, src)
+            await sock.sendto({'enable': rx[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect']}, src)
         
         elif dat['action'] == 'update_coeffs':
             logger.info(f"update_coeffs")

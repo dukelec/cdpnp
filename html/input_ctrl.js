@@ -195,24 +195,34 @@ document.getElementById('pump_en').onchange = async function() {
     await set_pump(pump_en);
 };
 
-document.getElementById('camera_en').onchange = async function() {
-    let camera_en = document.getElementById('camera_en').checked;
+async function set_camera_en(enable) {
     cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_camera', 'val': camera_en}, ['server', 'dev']);
+    await cmd_sock.sendto({'action': 'set_camera', 'val': enable}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
     console.log(`camera_en ${camera_en} ret`, dat);
 };
-
 async function set_camera_cfg() {
-    let limit_angle = document.getElementById('limit_angle').checked;
-    let cv_detect = document.getElementById('cv_detect').checked;
+    let dev = Number(document.getElementById('camera_dev').value);
+    let detect = document.getElementById('camera_detect').value;
     cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_camera_cfg', 'limit': limit_angle, 'detect': cv_detect}, ['server', 'dev']);
+    await cmd_sock.sendto({'action': 'set_camera_cfg', 'dev': dev, 'detect': detect}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
-    console.log(`set_camera_cfg ${limit_angle}, ${cv_detect} ret`, dat);
+    console.log(`set_camera_cfg ${dev}, ${detect} ret`, dat);
 }
-document.getElementById('limit_angle').onchange = set_camera_cfg;
-document.getElementById('cv_detect').onchange = set_camera_cfg;
+async function set_camera_dev() {
+    if (document.getElementById('camera_en').checked) {
+        await set_camera_en(false);
+        await set_camera_cfg();
+        await set_camera_en(true);
+    } else {
+        await set_camera_cfg();
+    }
+}
+document.getElementById('camera_en').onchange = async function() {
+    await set_camera_en(document.getElementById('camera_en').checked);
+};
+document.getElementById('camera_detect').onchange = set_camera_cfg;
+document.getElementById('camera_dev').onchange = set_camera_dev;
 
 document.getElementById('btn_reset_aux').onclick = function() {
     csa.aux_pos = [0, 0, 0, 0];

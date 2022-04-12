@@ -169,7 +169,7 @@ document.getElementById('btn_run').onclick = async function() {
             // limit angle range
             let rad = (comp_val[2] - csa.cv_cur_r + comp_xyz[2]) * Math.PI / 180;
             csa.cur_pos[3] = Math.atan2(Math.sin(rad), Math.cos(rad)) * 180 / Math.PI;
-            if (!document.getElementById('limit_angle').checked && Math.abs(csa.cur_pos[3]) > 90) {
+            if (document.getElementById('camera_detect').value == 'default' && Math.abs(csa.cur_pos[3]) > 90) {
                 console.log('  rotate 180, before:', csa.cur_pos[3]);
                 csa.cur_pos[3] = csa.cur_pos[3] > 90 ? csa.cur_pos[3] - 180 : csa.cur_pos[3] + 180;
             }

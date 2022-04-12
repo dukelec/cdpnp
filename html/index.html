@@ -54,9 +54,19 @@
         
         <br>
         <label class="checkbox"><input type="checkbox" id="pump_en"> Enable pump</label>
-        <label class="checkbox"><input type="checkbox" id="camera_en"> Enable camera</label>
-        <label class="checkbox"><input type="checkbox" id="cv_detect"> Detection</label>
-        <label class="checkbox"><input type="checkbox" id="limit_angle"> Limit angle</label>
+        &nbsp;
+        Camera
+        <select id="camera_dev">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+        </select>
+        <select id="camera_detect">
+            <option value="default" selected>Default</option>
+            <option value="limit_angle">Limit angle</option>
+            <option value="">None</option>
+        </select>
+        <label class="checkbox"><input type="checkbox" id="camera_en"> Enable</label>
+        &nbsp;
         <label class="checkbox"><input type="checkbox" id="show_target"> Show target</label>
         <label class="checkbox"><input type="checkbox" id="putdown_en" checked> Put down</label>
         <label class="checkbox"><input type="checkbox" id="pause_en"> Pause</label>

@@ -24,8 +24,8 @@ async function get_camera_cfg() {
     let dat = await cmd_sock.recvfrom(500);
     console.log('get_camera_cfg ret', dat);
     document.getElementById('camera_en').checked = !!dat[0].enable;
-    document.getElementById('limit_angle').checked = !!dat[0].limit;
-    document.getElementById('cv_detect').checked = !!dat[0].detect;
+    document.getElementById('camera_dev').value = dat[0].dev;
+    document.getElementById('camera_detect').value = dat[0].detect;
 }
 
 async function get_motor_pos() {

@@ -16,12 +16,13 @@ from math import atan2, cos, sin, sqrt, pi
 import numpy as np
 
 cv_dat = {
-    'limit_angle': False,
+    'dev': 1,
+    
     'cur': None,
     'img_queue': None,
     
-    'detect': True,
-    'local': True,
+    'detect': 'default',
+    'local': True,  # show opencv window
     
     'sock_pic': None
 }
@@ -67,7 +68,7 @@ def cv_get_pos(img):
       else:
         angle = -angle
       
-      if cv_dat['limit_angle']:
+      if cv_dat['detect'] == 'limit_angle':
         if angle < -45:
             angle += 90
         elif angle > 45:
@@ -78,7 +79,7 @@ def cv_get_pos(img):
       l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
       comps.append([center[0], center[1], angle, l_center])
       
-      label = str(angle) + (' !' if cv_dat['limit_angle'] else '')
+      label = str(angle) + (' !' if cv_dat['detect'] == 'limit_angle' else '')
       cv.drawContours(img,[box],0,(0,0,255),1)
       cv.putText(img, label, (center[0]+14, center[1]), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0,200,255), 1, cv.LINE_AA)
       cv.drawMarker(img, (center[0],center[1]), color=(0,255,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=10)
@@ -119,13 +120,16 @@ def pic_rx():
                 inp = np.asarray(bytearray(rx_dat), dtype=np.uint8)
                 img = cv.imdecode(inp, cv.IMREAD_COLOR)
                 img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
+                if cv_dat['dev'] == 2:
+                    img = cv.flip(img, 1)
                 height, width = img.shape[:2]
                 cv_get_pos(img)
-                cur_pic = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
+                if cv_dat['dev'] != 2:
+                    img = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
                 if not cv_dat['img_queue'].full():
                     if not cv_dat['local']:
-                        cur_pic = cv.imencode('.png', cur_pic)[1].tobytes()
-                    cv_dat['img_queue'].put_nowait(cur_pic)
+                        img = cv.imencode('.png', img)[1].tobytes()
+                    cv_dat['img_queue'].put_nowait(img)
 
             #else:
             #    print(f'pic, wrong cnt at end, local: {dat_cnt} != rx: {hdr & 0xf}, dat len: {len(dat)}')
@@ -144,7 +148,7 @@ def cv_window():
         cv.imshow('image', cur_pic)
         cv.waitKey(10)
 
-def pnp_cv_init(detect=True, local=True):
+def pnp_cv_init(detect='default', local=True):
     cv_dat['detect'] = detect
     cv_dat['local'] = local
     cv_dat['img_queue'] = queue.Queue(10)
