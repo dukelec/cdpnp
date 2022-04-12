@@ -21,18 +21,18 @@ let csa = {
     
     grab_ofs0:   [34.9, 8.0],
     grab_ofs180: [34.8, 7.9],
-    comp_search: [[50, 165], [50, 145]],
-    comp_top_z: -85.5,
-    pcb_top_z: -84.5,
-    comp_base_z: -89.3,
-    pcb_base_z: -88.2,
+    comp_search: [[48, 153], [48, 143]],
+    comp_top_z: -80,
+    comp_base_z: -85.85,
+    pcb_base_z: -83.6,
     fiducial_pcb: [[-26.375, 21.35], [-6.3, 4.75]],
     fiducial_cam: [[[89.673, 175.000], [109.861, 158.607]], [[120.720, 175.347], [140.849, 158.856]]],
     
     comp_height: null
 };
 
-let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'comp_top_z', 'pcb_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
+let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'comp_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
+let csa_need_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
 
 let db = null;
 let ws_ns = new CDWebSocketNS('/');
@@ -103,6 +103,10 @@ document.getElementById('btn_run').onclick = async function() {
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
             await set_motor_pos(true);
+            if (csa.cur_pos[2] != csa.pcb_top_z) {
+                csa.cur_pos[2] = csa.pcb_top_z;
+                await set_motor_pos(true);
+            }
             await sleep(600);
             set_step(1);
             continue;
@@ -166,7 +170,7 @@ document.getElementById('btn_run').onclick = async function() {
         if (step == 4) { // goto_pcb
             console.log('fsm goto_pcb');
             await z_keep_high();
-            // limit angle range
+            // optimize the rotation angle for faster speed
             let rad = (comp_val[2] - csa.cv_cur_r + comp_xyz[2]) * Math.PI / 180;
             csa.cur_pos[3] = Math.atan2(Math.sin(rad), Math.cos(rad)) * 180 / Math.PI;
             if (document.getElementById('camera_detect').value == 'default' && Math.abs(csa.cur_pos[3]) > 90) {
@@ -278,5 +282,5 @@ window.addEventListener('load', async function() {
 });
 
 export {
-    csa, cmd_sock, db, csa_need_save
+    csa, cmd_sock, db, csa_need_save, csa_need_export
 };

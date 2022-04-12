@@ -73,6 +73,8 @@ async function pcb2xyz(idx, x, y) {
 
 async function z_keep_high(speed=260000) {
     let min_z = Math.max(csa.pcb_top_z, csa.comp_top_z);
+    if (document.getElementById('pump_en').checked && csa.comp_height != null)
+        min_z += csa.comp_height;
     if (csa.cur_pos[2] != min_z) {
         csa.cur_pos[2] = min_z;
         await set_motor_pos(true, speed);

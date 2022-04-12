@@ -154,8 +154,8 @@ def detect_origin():
         xyz['logger'].info(f'motor set origin: #{i+1}')
         rx = cd_reg_rw(f'80:00:0{i+1}', 0x00b1, struct.pack("<B", 1))
         xyz['logger'].info('motor set origin ret: ' + rx.hex())
-    xyz['last_pos'] = load_pos()
     sleep(0.5)
+    xyz['last_pos'] = load_pos()
     goto_pos([2, 2, -2, 0], True)
 
 

@@ -6,7 +6,7 @@
 
 import { read_file, download, readable_float, cpy } from './utils/helper.js';
 import { get_motor_pos, set_motor_pos, set_pump, update_coeffs, enable_force } from './dev_cmd.js';
-import { csa, cmd_sock, db, csa_need_save } from './index.js';
+import { csa, cmd_sock, db, csa_need_save, csa_need_export } from './index.js';
 
 
 function auto_hide() {
@@ -58,9 +58,10 @@ function csa_to_page_input()
     }
     
     document.getElementById('comp_top_z').value = `${readable_float(csa.comp_top_z)}`;
-    document.getElementById('pcb_top_z').value = `${readable_float(csa.pcb_top_z)}`;
     document.getElementById('comp_base_z').value = `${readable_float(csa.comp_base_z)}`;
     document.getElementById('pcb_base_z').value = `${readable_float(csa.pcb_base_z)}`;
+    csa.pcb_top_z = csa.pcb_base_z + (csa.comp_top_z - csa.comp_base_z);
+    document.getElementById('cam_dz').innerText = readable_float(csa.comp_top_z - csa.comp_base_z);
     
     document.getElementById('fiducial_pcb0').value =
         `${readable_float(csa.fiducial_pcb[0][0])}, ${readable_float(csa.fiducial_pcb[0][1])}`;
@@ -100,9 +101,10 @@ function csa_from_page_input()
     }
     
     csa.comp_top_z = Number(document.getElementById('comp_top_z').value);
-    csa.pcb_top_z = Number(document.getElementById('pcb_top_z').value);
     csa.comp_base_z = Number(document.getElementById('comp_base_z').value);
     csa.pcb_base_z = Number(document.getElementById('pcb_base_z').value);
+    csa.pcb_top_z = csa.pcb_base_z + (csa.comp_top_z - csa.comp_base_z);
+    document.getElementById('cam_dz').innerText = readable_float(csa.comp_top_z - csa.comp_base_z);
     
     xy_str = document.getElementById('fiducial_pcb0').value;
     csa.fiducial_pcb[0] = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
@@ -141,12 +143,13 @@ window.btn_update_xy = async function(name) {
     await input_change();
 };
 window.btn_update_grab = async function(type) {
+    let abs_xy = [Math.abs(csa.aux_pos[0]), Math.abs(csa.aux_pos[1])];
     if (type) {
-        csa.grab_ofs180 = [csa.aux_pos[0], csa.aux_pos[1]];
+        csa.grab_ofs180 = [abs_xy[0], abs_xy[1]];
     } else {
-        csa.grab_ofs0 = [csa.aux_pos[0], csa.aux_pos[1]];
+        csa.grab_ofs0 = [abs_xy[0], abs_xy[1]];
     }
-    let xy = `${readable_float(csa.aux_pos[0])}, ${readable_float(csa.aux_pos[1])}`;
+    let xy = `${readable_float(abs_xy[0])}, ${readable_float(abs_xy[1])}`;
     document.getElementById(`grab_ofs${type}`).value = xy;
     await input_change();
 };
@@ -163,8 +166,15 @@ window.btn_goto_xy = async function(name) {
     await set_motor_pos();
 };
 window.btn_goto_z = async function(name) {
-    let z = Number(document.getElementById(name).value);
-    csa.cur_pos[2] = z;
+    if (name == 'inc_camera_dz') {
+        csa.cur_pos[2] = csa.cur_pos[2] + (csa.comp_top_z - csa.comp_base_z);
+    } else if (name == 'dec_camera_dz') {
+        csa.cur_pos[2] = csa.cur_pos[2] - (csa.comp_top_z - csa.comp_base_z);
+    } else if (name == 'pcb_top_z') {
+        csa.cur_pos[2] = csa.pcb_base_z + (csa.comp_top_z - csa.comp_base_z);
+    } else {
+        csa.cur_pos[2] = Number(document.getElementById(name).value);
+    }
     csa_to_page_pos();
     await set_motor_pos();
 };
@@ -309,7 +319,8 @@ document.getElementById('btn_import').onclick = async function() {
                 return;
             }
             console.log('import dat:', prj);
-            await db.set('tmp', 'csa', prj.csa);
+            cpy(csa, prj.csa, csa_need_export);
+            await db.set('tmp', 'csa', csa);
             await db.set('tmp', 'list', prj.list);
             alert('Import succeeded');
             location.reload();
@@ -323,7 +334,8 @@ document.getElementById('btn_export').onclick = async function() {
     let c = await db.get('tmp', 'csa');
     let l = await db.get('tmp', 'list');
     //await db.set('tmp', 'list', null);
-    let exp_dat = { version: 'cdpnp v0', csa: c, list: l};
+    let exp_dat = { version: 'cdpnp v0', csa: {}, list: l};
+    cpy(exp_dat.csa, csa, csa_need_export);
     console.info('export_data:', exp_dat);
     //let file_dat = msgpack.serialize(exp_dat);
     let file_dat = JSON.stringify(exp_dat, null, 4);
