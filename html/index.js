@@ -28,10 +28,12 @@ let csa = {
     fiducial_pcb: [[-26.375, 21.35], [-6.3, 4.75]],
     fiducial_cam: [[[89.673, 175.000], [109.861, 158.607]], [[120.720, 175.347], [140.849, 158.856]]],
     
+    user_pos: [], // [[name, [x, y, z]], [name, [x, y, z]]]
+    
     comp_height: null
 };
 
-let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'comp_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
+let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'comp_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos'];
 let csa_need_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
 
 let db = null;
@@ -227,6 +229,8 @@ document.getElementById('btn_run').onclick = async function() {
     document.getElementById('btn_stop').disabled = true;
     csa.comp_height = null;
     document.getElementById('cur_height').innerText = `--`;
+    csa.cur_pos[3] = 0;
+    await set_motor_pos();
 };
 
 document.getElementById('btn_stop').onclick = function() {

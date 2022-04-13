@@ -185,6 +185,7 @@ async function move_to_comp(comp) {
         }
         csa.cur_pos[0] = comp_xyz[0];
         csa.cur_pos[1] = comp_xyz[1];
+        csa.cur_pos[3] = 0;
         await set_motor_pos();
     }
 }

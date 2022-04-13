@@ -32,8 +32,8 @@
         <button class="button is-small" onclick="move_button([0,  1, 0, 0])">v</button>
         <button class="button is-small" onclick="move_button([0, 0,  1, 0])">Up</button>
         <button class="button is-small" onclick="move_button([0, 0, -1, 0])">Down</button>
-        <button class="button is-small" onclick="move_button([0, 0, 0,  1])">CW</button>
         <button class="button is-small" onclick="move_button([0, 0, 0, -1])">CCW</button>
+        <button class="button is-small" onclick="move_button([0, 0, 0,  1])">CW</button>
         &nbsp;
         <select id="move_speed">
             <option value="1">x1</option>
@@ -108,12 +108,12 @@
         <button class="button is-small" onclick="btn_goto_z('inc_camera_dz')">Cur + cam dz</button>
         <button class="button is-small" onclick="btn_goto_z('dec_camera_dz')">Cur - cam dz</button>
         
-    
         <div id="input_fiducial">
             <span style="display: inline-block; min-width: 138px; padding-bottom: 0.1em;">Fiducial pcb:</span>
             <input type="text" id="fiducial_pcb0" onchange="input_change()">
             <input type="text" id="fiducial_pcb1" onchange="input_change()">
         </div>
+        <div id="input_user"></div>
     </div>
 
     <br>

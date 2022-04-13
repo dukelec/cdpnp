@@ -28,6 +28,15 @@ function auto_hide() {
             skip_hide = false;
         }
     }
+    skip_hide = true;
+    for (let i = 0; i < 8; i++) {
+        if (i < csa.user_pos.length) {
+            document.getElementById(`user_grp${i}`).style.display = '';
+        } else {
+            document.getElementById(`user_grp${i}`).style.display = skip_hide ? '' : 'none';
+            skip_hide = false;
+        }
+    }
 }
 
 function csa_to_page_pos()
@@ -47,7 +56,6 @@ function csa_to_page_input()
     document.getElementById('grab_ofs180').value =
         `${readable_float(csa.grab_ofs180[0])}, ${readable_float(csa.grab_ofs180[1])}`;
     
-    let skip_hide = true;
     for (let i = 0; i < 8; i++) {
         if (i < csa.comp_search.length) {
             document.getElementById(`comp_search${i}`).value = 
@@ -77,6 +85,17 @@ function csa_to_page_input()
         } else {
             document.getElementById(`fiducial_cam${i}_0`).value = '';
             document.getElementById(`fiducial_cam${i}_1`).value = '';
+        }
+    }
+    
+    for (let i = 0; i < 8; i++) {
+        if (i < csa.user_pos.length) {
+            document.getElementById(`user_pos${i}`).value = 
+                `${readable_float(csa.user_pos[i][1][0])}, ${readable_float(csa.user_pos[i][1][1])}, ${readable_float(csa.user_pos[i][1][2])}`;
+            document.getElementById(`user_name${i}`).value = csa.user_pos[i][0];
+        } else {
+            document.getElementById(`user_pos${i}`).value = '';
+            document.getElementById(`user_name${i}`).value = '';
         }
     }
 }
@@ -123,6 +142,18 @@ function csa_from_page_input()
         else
             break;
     }
+    
+    csa.user_pos = [];
+    for (let i = 0; ; i++) {
+        if (!document.getElementById(`user_pos${i}`))
+            break;
+        let xyz_str = document.getElementById(`user_pos${i}`).value;
+        let name_str = document.getElementById(`user_name${i}`).value;
+        if (xyz_str)
+            csa.user_pos.push([name_str, [Number(xyz_str.split(',')[0]), Number(xyz_str.split(',')[1]), Number(xyz_str.split(',')[2])]]);
+        else
+            break;
+    }
 }
 
 async function input_change() {
@@ -140,6 +171,11 @@ window.input_change = input_change;
 window.btn_update_xy = async function(name) {
     let xy = `${readable_float(csa.cur_pos[0])}, ${readable_float(csa.cur_pos[1])}`;
     document.getElementById(name).value = xy;
+    await input_change();
+};
+window.btn_update_xyz = async function(name) {
+    let xyz = `${readable_float(csa.cur_pos[0])}, ${readable_float(csa.cur_pos[1])}, ${readable_float(csa.cur_pos[2])}`;
+    document.getElementById(name).value = xyz;
     await input_change();
 };
 window.btn_update_grab = async function(type) {
@@ -160,10 +196,32 @@ window.btn_update_z = async function(name) {
 };
 window.btn_goto_xy = async function(name) {
     let xy_str = document.getElementById(name).value;
+    let z = name.startsWith('comp_search') ? csa.comp_top_z : csa.pcb_top_z;
+    if (csa.cur_pos[2] < z) {
+        csa.cur_pos[2] = z;
+        await set_motor_pos(true);
+    }
     csa.cur_pos[0] = Number(xy_str.split(',')[0]);
     csa.cur_pos[1] = Number(xy_str.split(',')[1]);
-    csa_to_page_pos();
-    await set_motor_pos();
+    csa.cur_pos[2] = z;
+    csa.cur_pos[3] = 0;
+    await set_motor_pos(true);
+};
+window.btn_goto_xyz = async function(name) {
+    let xyz_str = document.getElementById(name).value;
+    let z = Number(xyz_str.split(',')[2]);
+    let z_middle = Math.min(z + (csa.comp_top_z - csa.comp_base_z), -2);
+    if (csa.cur_pos[2] < z_middle) {
+        csa.cur_pos[2] = z_middle;
+        await set_motor_pos(true);
+    }
+    csa.cur_pos[0] = Number(xyz_str.split(',')[0]);
+    csa.cur_pos[1] = Number(xyz_str.split(',')[1]);
+    csa.cur_pos[2] = z_middle;
+    csa.cur_pos[3] = 0;
+    await set_motor_pos(true);
+    csa.cur_pos[2] = z;
+    await set_motor_pos(true);
 };
 window.btn_goto_z = async function(name) {
     if (name == 'inc_camera_dz') {
@@ -175,19 +233,16 @@ window.btn_goto_z = async function(name) {
     } else {
         csa.cur_pos[2] = Number(document.getElementById(name).value);
     }
-    csa_to_page_pos();
     await set_motor_pos();
 };
 window.btn_goto_r = async function(angle) {
     csa.cur_pos[3] = angle;
-    csa_to_page_pos();
     await set_motor_pos();
 };
 window.btn_grab_ofs = async function(type, dir=1) {
     let grab_ofs = type ? csa.grab_ofs180 : csa.grab_ofs0;
     csa.cur_pos[0] -= dir * grab_ofs[0];
     csa.cur_pos[1] -= dir * grab_ofs[1];
-    csa_to_page_pos();
     await set_motor_pos();
 };
 window.btn_detect_z = async function() {
@@ -248,7 +303,6 @@ async function move_button(val)
     let dz = val[2] * div;
     let dr = val[3] * div * 10;
     csa.cur_pos = [csa.cur_pos[0] + dx, csa.cur_pos[1] + dy, csa.cur_pos[2] + dz, csa.cur_pos[3] + dr];
-    csa_to_page_pos();
     await set_motor_pos();
 }
 
@@ -346,6 +400,7 @@ document.getElementById('btn_export').onclick = async function() {
 function input_init() {
     let search = document.getElementById('input_search');
     let fiducial = document.getElementById('input_fiducial');
+    let user = document.getElementById('input_user');
     for (let i = 0; i < 8; i++) {
         search.insertAdjacentHTML('beforeend', `
             <div id="search_grp${i}">
@@ -367,6 +422,16 @@ function input_init() {
                 <button class="button is-small" onclick="btn_goto_xy('fiducial_cam${i}_1')">Goto</button>
                 <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_1')">Update</button>
                 <button class="button is-small" onclick="btn_select_board(${i})" id="btn_board${i}">Select</button>
+            </div>`);
+    }
+    for (let i = 0; i < 8; i++) {
+        fiducial.insertAdjacentHTML('beforeend', `
+            <div id="user_grp${i}">
+                <span style="display: inline-block; min-width: 138px;">User pos #${i}:</span>
+                <input type="text" id="user_name${i}" onchange="input_change()" placeholder="name">
+                <input type="text" id="user_pos${i}" onchange="input_change()">
+                <button class="button is-small" onclick="btn_goto_xyz('user_pos${i}')">Goto</button>
+                <button class="button is-small" onclick="btn_update_xyz('user_pos${i}')">Update</button>
             </div>`);
     }
     auto_hide();
