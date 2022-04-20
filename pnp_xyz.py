@@ -76,6 +76,10 @@ def enable_motor():
         rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c4, struct.pack("<I", 800000 if i != 4 else 20000))
         xyz['logger'].info('motor set ret: ' + rx.hex())
         
+        xyz['logger'].info(f'motor set emergency accel #{i+1}')
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c8, struct.pack("<I", 80000000))
+        xyz['logger'].info('motor set ret: ' + rx.hex())
+        
         xyz['logger'].info(f'motor set vref #{i+1}')
         rx = cd_reg_rw(f'80:00:0{i+1}', 0x00ae, struct.pack("<H", 600 if i != 4 else 300))
         xyz['logger'].info('motor set vref ret: ' + rx.hex())

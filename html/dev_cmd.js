@@ -112,6 +112,8 @@ async function cam_comp_snap() {
             csa.cur_pos[3] = 0
             csa.cv_cur_r = cv[2] // [-89, 90]
             await set_motor_pos(true);
+        } else {
+            csa.cv_cur_r = null;
         }
         await sleep(600);
     }
