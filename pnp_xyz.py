@@ -77,7 +77,7 @@ def enable_motor():
         xyz['logger'].info('motor set ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set emergency accel #{i+1}')
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c8, struct.pack("<I", 80000000))
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c8, struct.pack("<I", 80000000 if i != 4 else 2000000))
         xyz['logger'].info('motor set ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set vref #{i+1}')
@@ -131,7 +131,7 @@ def goto_pos(pos, wait=False, s_speed=260000):
         if not done_flag[3]:
             xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed[2], ('80:00:04', 0x6))
         if not done_flag[4]:
-            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[3]*-1/DIV_DEG2STEP))+b_speed[3], ('80:00:05', 0x6))
+            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[3]/DIV_DEG2STEP))+b_speed[3], ('80:00:05', 0x6))
         
         for i in range(5 - (done_flag[0] + done_flag[1] + done_flag[2] + done_flag[3] + done_flag[4])):
             dat, src = xyz['sock'].recvfrom(timeout=0.8)
@@ -152,15 +152,25 @@ def goto_pos(pos, wait=False, s_speed=260000):
 
 def detect_origin():
     xyz['logger'].info(f'detecting origin, please wait...')
-    goto_pos([2, 2, -2, 0], True, 100000)
-    goto_pos([-1000, -1000, 1000, 0], True, 50000)
-    for i in range(4):
+    goto_pos([2, 2, -2, 30], True, 100000)
+    goto_pos([-1000, -1000, 1000, -500], True, 50000)
+    for i in range(5):
         xyz['logger'].info(f'motor set origin: #{i+1}')
         rx = cd_reg_rw(f'80:00:0{i+1}', 0x00b1, struct.pack("<B", 1))
         xyz['logger'].info('motor set origin ret: ' + rx.hex())
+    
+    xyz['logger'].info(f'motor disable limit switch: #5')
+    rx = cd_reg_rw(f'80:00:05', 0x00b5, struct.pack("<B", 0))
+    xyz['logger'].info('motor disable limit switch ret: ' + rx.hex())
     sleep(0.5)
     xyz['last_pos'] = load_pos()
-    goto_pos([2, 2, -2, 0], True)
+    goto_pos([2, 2, -2, 7.2*17], True) # 360/50=7.2, 7.2*17=122.4
+    
+    xyz['logger'].info(f'motor set origin: #5')
+    rx = cd_reg_rw(f'80:00:05', 0x00b1, struct.pack("<B", 1))
+    xyz['logger'].info('motor set origin ret: ' + rx.hex())
+    sleep(0.5)
+    xyz['last_pos'] = load_pos()
 
 
 def xyz_init():

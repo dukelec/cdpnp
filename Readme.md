@@ -11,17 +11,18 @@ This semi-automatic machine is simple to configure, just import the KiCad genera
 place one or more PCBs, use the camera to mark any two reference points on each PCB and you are ready to go.
 The components basically do not need to be configured in advance. 
 
-For ICs with dense pins, especially BGA packages,
-it is advisable to check the position manually before placing them down, either with a keyboard or a joystick.
+For ICs with very dense pins, especially for BGA packages,
+it is recommended to check the position manually before putting them down and use the keyboard to adjust the position and angle.
 If you place them directly by hand, it is not easy to align them and they are prone to hand shake.
+
+[Discussions](https://github.com/dukelec/cd_pnp/discussions) for this project have been enabled, so feel free to join our discussions and get more information posted.
 
 
 ### Hardware
 
-The hardware is modular in design. A CDBUS (RS-485) bus is used to connect all modules to the PC, including the camera. (10 Mbps by default.)
+The hardware is modular in design. A CDBUS (RS-485) bus is used to connect all modules to the PC, including two cameras. (10 Mbps by default.)
 
 The machine has four degrees of freedom: X, Y, Z, R (rotate), and is controlled by multiple stepper motor controllers.
-(May be upgraded to FOC servo motors in the future.)
 
 The Y-axis is controlled by two motor controllers, synchronised by multicasting.
 
