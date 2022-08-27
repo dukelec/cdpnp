@@ -21,10 +21,10 @@ let csa = {
     
     grab_ofs0:   [34.9, 8.0],
     grab_ofs180: [34.8, 7.9],
-    comp_search: [[48, 153], [48, 143]],
-    comp_top_z: -80,
-    comp_base_z: -85.85,
-    pcb_base_z: -83.6,
+    comp_search: [[55, 142], [55, 132]],
+    cam_dz: 6,
+    comp_base_z: -89.1,
+    pcb_base_z: -87.7,
     fiducial_pcb: [[-26.375, 21.35], [-6.3, 4.75]],
     fiducial_cam: [[[89.673, 175.000], [109.861, 158.607]], [[120.720, 175.347], [140.849, 158.856]]],
     
@@ -33,7 +33,7 @@ let csa = {
     comp_height: null
 };
 
-let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'comp_top_z', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos'];
+let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos'];
 let csa_need_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
 
 let db = null;

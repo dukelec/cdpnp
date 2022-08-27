@@ -89,23 +89,21 @@
         <button class="button is-small" onclick="btn_grab_ofs(180, -1)">-></button> &nbsp;|&nbsp;
         <button class="button is-small" onclick="btn_goto_r(180)">Go 180°</button>
         <div id="input_search"></div>
-        <span style="display: inline-block; min-width: 138px;">Comp top z:</span>
-        <input type="text" id="comp_top_z" onchange="input_change()">
-        <button class="button is-small" onclick="btn_goto_z('comp_top_z')">Goto</button>
-        <button class="button is-small" onclick="btn_update_z('comp_top_z')">Update</button> &nbsp;|&nbsp;
-        (camera delta z = comp top - base = <span id="cam_dz">--</span>)
+        <span style="display: inline-block; min-width: 138px;">Camera delta z:</span>
+        <input type="text" id="comp_cam_dz" onchange="input_change()">
         <br>
         <span style="display: inline-block; min-width: 138px;">Comp base z:</span>
         <input type="text" id="comp_base_z" onchange="input_change()">
         <button class="button is-small" onclick="btn_goto_z('comp_base_z')">Goto</button>
         <button class="button is-small" onclick="btn_update_z('comp_base_z')">Update</button> &nbsp;|&nbsp;
+        <button class="button is-small" onclick="btn_goto_z('comp_top_z')">Comp base + cam dz</button> &nbsp;|&nbsp;
         <button class="button is-small" onclick="btn_detect_z()">Detect bottom</button>
         <br>
         <span style="display: inline-block; min-width: 138px;">PCB base z:</span>
         <input type="text" id="pcb_base_z" onchange="input_change()">
         <button class="button is-small" onclick="btn_goto_z('pcb_base_z')">Goto</button>
         <button class="button is-small" onclick="btn_update_z('pcb_base_z')">Update</button> &nbsp;|&nbsp;
-        <button class="button is-small" onclick="btn_goto_z('pcb_top_z')">PCB base + cam dz</button>
+        <button class="button is-small" onclick="btn_goto_z('pcb_top_z')">PCB base + cam dz</button> &nbsp;|&nbsp;
         <button class="button is-small" onclick="btn_goto_z('inc_camera_dz')">Cur + cam dz</button>
         <button class="button is-small" onclick="btn_goto_z('dec_camera_dz')">Cur - cam dz</button>
         

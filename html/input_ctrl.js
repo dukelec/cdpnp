@@ -65,11 +65,11 @@ function csa_to_page_input()
         }
     }
     
-    document.getElementById('comp_top_z').value = `${readable_float(csa.comp_top_z)}`;
+    document.getElementById('comp_cam_dz').value = `${readable_float(csa.cam_dz)}`;
     document.getElementById('comp_base_z').value = `${readable_float(csa.comp_base_z)}`;
     document.getElementById('pcb_base_z').value = `${readable_float(csa.pcb_base_z)}`;
-    csa.pcb_top_z = csa.pcb_base_z + (csa.comp_top_z - csa.comp_base_z);
-    document.getElementById('cam_dz').innerText = readable_float(csa.comp_top_z - csa.comp_base_z);
+    csa.pcb_top_z = csa.pcb_base_z + csa.cam_dz;
+    csa.comp_top_z = csa.comp_base_z + csa.cam_dz;
     
     document.getElementById('fiducial_pcb0').value =
         `${readable_float(csa.fiducial_pcb[0][0])}, ${readable_float(csa.fiducial_pcb[0][1])}`;
@@ -119,11 +119,11 @@ function csa_from_page_input()
             break;
     }
     
-    csa.comp_top_z = Number(document.getElementById('comp_top_z').value);
+    csa.cam_dz = Number(document.getElementById('comp_cam_dz').value);
     csa.comp_base_z = Number(document.getElementById('comp_base_z').value);
     csa.pcb_base_z = Number(document.getElementById('pcb_base_z').value);
-    csa.pcb_top_z = csa.pcb_base_z + (csa.comp_top_z - csa.comp_base_z);
-    document.getElementById('cam_dz').innerText = readable_float(csa.comp_top_z - csa.comp_base_z);
+    csa.pcb_top_z = csa.pcb_base_z + csa.cam_dz;
+    csa.comp_top_z = csa.comp_base_z + csa.cam_dz;
     
     xy_str = document.getElementById('fiducial_pcb0').value;
     csa.fiducial_pcb[0] = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
@@ -210,7 +210,7 @@ window.btn_goto_xy = async function(name) {
 window.btn_goto_xyz = async function(name) {
     let xyz_str = document.getElementById(name).value;
     let z = Number(xyz_str.split(',')[2]);
-    let z_middle = Math.min(z + (csa.comp_top_z - csa.comp_base_z), -2);
+    let z_middle = Math.min(z + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
         csa.cur_pos[2] = z_middle;
         await set_motor_pos(true);
@@ -225,11 +225,13 @@ window.btn_goto_xyz = async function(name) {
 };
 window.btn_goto_z = async function(name) {
     if (name == 'inc_camera_dz') {
-        csa.cur_pos[2] = csa.cur_pos[2] + (csa.comp_top_z - csa.comp_base_z);
+        csa.cur_pos[2] = csa.cur_pos[2] + csa.cam_dz;
     } else if (name == 'dec_camera_dz') {
-        csa.cur_pos[2] = csa.cur_pos[2] - (csa.comp_top_z - csa.comp_base_z);
+        csa.cur_pos[2] = csa.cur_pos[2] - csa.cam_dz;
     } else if (name == 'pcb_top_z') {
-        csa.cur_pos[2] = csa.pcb_base_z + (csa.comp_top_z - csa.comp_base_z);
+        csa.cur_pos[2] = csa.pcb_base_z + csa.cam_dz;
+    } else if (name == 'comp_top_z') {
+        csa.cur_pos[2] = csa.pcb_base_z + csa.cam_dz;
     } else {
         csa.cur_pos[2] = Number(document.getElementById(name).value);
     }
@@ -248,7 +250,7 @@ window.btn_grab_ofs = async function(type, dir=1) {
 window.btn_detect_z = async function() {
     console.log('detect bottom z...');
     await enable_force();
-    csa.cur_pos[2] = -90;
+    csa.cur_pos[2] = -92;
     await set_motor_pos(true, 2000);
     await get_motor_pos();
     console.log('detect bottom z done');
