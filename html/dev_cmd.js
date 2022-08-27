@@ -24,6 +24,7 @@ async function get_camera_cfg() {
     let dat = await cmd_sock.recvfrom(500);
     console.log('get_camera_cfg ret', dat);
     document.getElementById('camera_en').checked = !!dat[0].enable;
+    document.getElementById('camera_light').checked = !!dat[0].light;
     document.getElementById('camera_dev').value = dat[0].dev;
     document.getElementById('camera_detect').value = dat[0].detect;
 }

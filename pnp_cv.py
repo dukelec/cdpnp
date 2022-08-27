@@ -119,7 +119,8 @@ def pic_rx():
                 #print('pic received!')
                 inp = np.asarray(bytearray(rx_dat), dtype=np.uint8)
                 img = cv.imdecode(inp, cv.IMREAD_COLOR)
-                img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
+                if cv_dat['dev'] == 1:
+                    img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
                 if cv_dat['dev'] == 2:
                     img = cv.flip(img, 1)
                 height, width = img.shape[:2]

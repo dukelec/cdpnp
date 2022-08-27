@@ -130,16 +130,20 @@ async def dev_service():
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'set_camera_cfg':
-            logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}")
+            logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}, light: {dat['light']}")
             cv_dat['dev'] = dat['dev']
             cv_dat['detect'] = dat['detect']
+            rx = cd_reg_rw(f"80:00:22", 0x0040, struct.pack("<b", 1 if dat['light'] else 0))
+            print('set cam_light ret: ' + rx.hex())
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'get_camera_cfg':
             logger.info('get_camera_cfg')
-            rx = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x0036, read=1) if dev else bytes([0x80, 0x00])
-            print('get_camera_cfg ret: ' + rx.hex())
-            await sock.sendto({'enable': rx[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect']}, src)
+            rx1 = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x0036, read=1) if dev else bytes([0x80, 0x00])
+            print('get_camera_cfg ret: ' + rx1.hex())
+            rx2 = cd_reg_rw(f"80:00:22", 0x0040, read=1)
+            print('get_camera_light ret: ' + rx2.hex())
+            await sock.sendto({'enable': rx1[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect'], 'light': rx2[1]}, src)
         
         elif dat['action'] == 'update_coeffs':
             logger.info(f"update_coeffs")
