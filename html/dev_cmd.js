@@ -45,7 +45,7 @@ async function set_motor_pos(wait=false, speed=260000) {
     csa_to_page_pos();
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'set_motor_pos', 'pos': csa.cur_pos, 'wait': wait, 'speed': speed}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(20000);
+    let dat = await cmd_sock.recvfrom(wait ? 300000 : 2000);
     console.log('set_motor_pos ret', dat);
 }
 

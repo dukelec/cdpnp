@@ -73,8 +73,7 @@ async def serve(ws, path):
     logger.info(f'ws: disconnect, path: {path}')
 
 
-def start_web(addr='localhost', port=8900):
-    start_server = websockets.serve(serve, addr, port, create_protocol=FileServer)
-    asyncio.get_event_loop().run_until_complete(start_server)
-    #asyncio.get_event_loop().run_forever()
+async def start_web(addr='localhost', port=8900):                                                                                           
+    server = await websockets.serve(serve, addr, port, create_protocol=FileServer)
+    await server.wait_closed()
 

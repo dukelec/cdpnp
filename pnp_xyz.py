@@ -120,6 +120,7 @@ def goto_pos(pos, wait=False, s_speed=260000):
     done_flag = [0, 0, 0, 0, 0]
     m_vector = max(math.sqrt(math.pow(delta[0], 2) + math.pow(delta[1], 2) + math.pow(delta[2], 2)), 0.01)
     v_speed = [round(s_speed * abs(delta[0])/m_vector), round(s_speed * abs(delta[1])/m_vector), round(s_speed * abs(delta[2])/m_vector), round(s_speed / 5)]
+    v_speed = [max(v_speed[0], 1000), max(v_speed[1], 1000), max(v_speed[2], 1000), max(v_speed[3], 1000)] # avoid zero speed
     b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
     
     while True:

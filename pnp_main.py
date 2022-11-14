@@ -186,9 +186,9 @@ async def open_brower():
 
 
 if __name__ == "__main__":
-    start_web(None)
-    async_loop = asyncio.get_event_loop();
-    asyncio.get_event_loop().create_task(dev_service())
+    loop = asyncio.new_event_loop()
+    loop.create_task(start_web())
+    loop.create_task(dev_service())
     logger.info('Please open url: http://localhost:8900')
-    asyncio.get_event_loop().run_forever()
+    loop.run_forever()
 
