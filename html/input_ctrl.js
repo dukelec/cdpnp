@@ -197,27 +197,28 @@ window.btn_update_z = async function(name) {
 window.btn_goto_xy = async function(name) {
     let xy_str = document.getElementById(name).value;
     let z = name.startsWith('comp_search') ? csa.comp_top_z : csa.pcb_top_z;
-    if (csa.cur_pos[2] < z) {
-        csa.cur_pos[2] = z;
+    let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
+    if (csa.cur_pos[2] < z_middle) {
+        csa.cur_pos[2] = z_middle;
         await set_motor_pos(true);
     }
     csa.cur_pos[0] = Number(xy_str.split(',')[0]);
     csa.cur_pos[1] = Number(xy_str.split(',')[1]);
-    csa.cur_pos[2] = z;
     csa.cur_pos[3] = 0;
+    await set_motor_pos(true);
+    csa.cur_pos[2] = z;
     await set_motor_pos(true);
 };
 window.btn_goto_xyz = async function(name) {
     let xyz_str = document.getElementById(name).value;
     let z = Number(xyz_str.split(',')[2]);
-    let z_middle = Math.min(z + csa.cam_dz, -2);
+    let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
         csa.cur_pos[2] = z_middle;
         await set_motor_pos(true);
     }
     csa.cur_pos[0] = Number(xyz_str.split(',')[0]);
     csa.cur_pos[1] = Number(xyz_str.split(',')[1]);
-    csa.cur_pos[2] = z_middle;
     csa.cur_pos[3] = 0;
     await set_motor_pos(true);
     csa.cur_pos[2] = z;
@@ -242,9 +243,15 @@ window.btn_goto_r = async function(angle) {
     await set_motor_pos();
 };
 window.btn_grab_ofs = async function(type, dir=1) {
+    let origin_z = csa.cur_pos[2];
+    csa.cur_pos[2] = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
+    await set_motor_pos(true);
     let grab_ofs = type ? csa.grab_ofs180 : csa.grab_ofs0;
     csa.cur_pos[0] -= dir * grab_ofs[0];
     csa.cur_pos[1] -= dir * grab_ofs[1];
+    csa.cur_pos[3] = type ? 180 : 0;
+    await set_motor_pos(true);
+    csa.cur_pos[2] = origin_z;
     await set_motor_pos();
 };
 window.btn_detect_z = async function() {

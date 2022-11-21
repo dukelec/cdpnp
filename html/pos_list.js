@@ -180,16 +180,27 @@ async function move_to_comp(comp) {
         let board = get_board_safe();
         let comp_xyz = await pcb2xyz(board, comp_val[0], comp_val[1]);
         if (csa.cur_pos[2] != csa.pcb_top_z) {
-            csa.cur_pos[2] = csa.pcb_top_z;
+            let z = csa.pcb_top_z;
+            let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
+            if (csa.cur_pos[2] < z_middle) {
+                csa.cur_pos[2] = z_middle;
+                await set_motor_pos(true);
+            }
+            csa.cur_pos[0] = comp_xyz[0];
+            csa.cur_pos[1] = comp_xyz[1];
+            csa.cur_pos[3] = 0;
             await set_motor_pos(true);
+            csa.cur_pos[2] = z;
+            await set_motor_pos(true);
+        } else {
+            csa.cur_pos[0] = comp_xyz[0];
+            csa.cur_pos[1] = comp_xyz[1];
+            csa.cur_pos[3] = 0;
+            await set_motor_pos();
         }
-        csa.cur_pos[0] = comp_xyz[0];
-        csa.cur_pos[1] = comp_xyz[1];
-        csa.cur_pos[3] = 0;
-        await set_motor_pos();
     }
 }
-window.select_comp = move_to_comp;
+window.move_to_comp = move_to_comp;
 
 
 function pos_to_page(pos) {
@@ -202,7 +213,7 @@ function pos_to_page(pos) {
             let html_comp = '';
             for (let comp of pos[footprint][value]) {
                 html_comp += `
-                    <tr class='list_comp' onclick=select_comp('${comp[0]}');>
+                    <tr class='list_comp' onclick=move_to_comp('${comp[0]}');>
                         <td>${comp[0]}</td>
                         <td>${readable_float(comp[1])}</td>
                         <td>${readable_float(comp[2])}</td>

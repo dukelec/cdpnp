@@ -64,6 +64,12 @@ document.getElementById('btn_run').onclick = async function() {
     csa.stop = false;
     let parents_pre = null;
     
+    let z_middle = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
+    if (csa.cur_pos[2] < z_middle) {
+        csa.cur_pos[2] = z_middle;
+        await set_motor_pos(true);
+    }
+    
     while (true) {
         let comp = get_comp_safe();
         if (!comp)

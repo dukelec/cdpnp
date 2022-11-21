@@ -41,6 +41,9 @@ async function get_motor_pos() {
 
 async function set_motor_pos(wait=false, speed=260000) {
     console.log('set_motor_pos:', csa.cur_pos);
+    csa.cur_pos[0] = Math.min(Math.max(csa.cur_pos[0], 2), 300)
+    csa.cur_pos[1] = Math.min(Math.max(csa.cur_pos[1], 2), 249)
+    csa.cur_pos[2] = Math.min(Math.max(csa.cur_pos[2], -92), -2)
     update_aux();
     csa_to_page_pos();
     cmd_sock.flush();
