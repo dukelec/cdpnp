@@ -14,6 +14,9 @@ from cdnet.dispatch import *
 import cv2 as cv
 from math import atan2, cos, sin, sqrt, pi
 import numpy as np
+from pathlib import Path
+
+cur_path = Path(__file__).parent.absolute()
 
 cv_dat = {
     'dev': 1,
@@ -23,6 +26,9 @@ cv_dat = {
     
     'detect': 'default',
     'local': True,  # show opencv window
+    
+    'bg_img': None, # background image
+    'bg_capture': False,
     
     'sock_pic': None
 }
@@ -36,8 +42,10 @@ def cv_get_pos(img):
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
      
     # Convert image to binary
-    _, bw = cv.threshold(gray, 50, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
-     
+    _, bw = cv.threshold(gray, 125, 255, cv.THRESH_BINARY)
+    #cv.imwrite(f'{cur_path}/tmp/gray.png', gray) # for debug
+    #cv.imwrite(f'{cur_path}/tmp/bw.png', bw)
+    
     # Find all the contours in the thresholded image
     contours, _ = cv.findContours(bw, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
     
@@ -119,10 +127,18 @@ def pic_rx():
                 #print('pic received!')
                 inp = np.asarray(bytearray(rx_dat), dtype=np.uint8)
                 img = cv.imdecode(inp, cv.IMREAD_COLOR)
-                if cv_dat['dev'] == 1:
-                    img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
                 if cv_dat['dev'] == 2:
                     img = cv.flip(img, 1)
+                if cv_dat['dev'] == 1:
+                    img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
+                    if cv_dat['bg_capture']:
+                        cv_dat['bg_capture'] = False
+                        print(f'save bg_img to: {cur_path}/tmp/')
+                        blur = cv.medianBlur(img, 15)
+                        cv_dat['bg_img'] = np.invert(blur)
+                        cv.imwrite(f'{cur_path}/tmp/bg_invert.png', cv_dat['bg_img'])
+                    if cv_dat['bg_img'] is not None:
+                        img = cv.addWeighted(img, 0.8, cv_dat['bg_img'], 0.6, 0)
                 height, width = img.shape[:2]
                 cv_get_pos(img)
                 if cv_dat['dev'] != 2:
@@ -154,6 +170,9 @@ def pnp_cv_init(detect='default', local=True):
     cv_dat['local'] = local
     cv_dat['img_queue'] = queue.Queue(10)
     cv_dat['sock_pic'] = CDNetSocket(('', 0x10))
+    if os.path.exists(f'{cur_path}/tmp/bg_invert.png'):
+        print(f'load bg_img from: {cur_path}/tmp/bg_invert.png ...')
+        cv_dat['bg_img'] = cv.imread(f'{cur_path}/tmp/bg_invert.png')
     _thread.start_new_thread(pic_rx, ())
     if cv_dat['local']:
         _thread.start_new_thread(cv_window, ())

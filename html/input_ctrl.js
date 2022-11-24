@@ -300,6 +300,23 @@ document.getElementById('camera_light').onchange = set_camera_cfg
 document.getElementById('camera_detect').onchange = set_camera_cfg;
 document.getElementById('camera_dev').onchange = set_camera_dev;
 
+async function camera_update_bg()
+{
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'update_camera_bg'}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(500);
+    console.log(`update_camera_bg ret`, dat);
+}
+async function camera_remove_bg()
+{
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'remove_camera_bg'}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(500);
+    console.log(`remove_camera_bg ret`, dat);
+}
+window.camera_update_bg = camera_update_bg;
+window.camera_remove_bg = camera_remove_bg;
+
 document.getElementById('btn_reset_aux').onclick = function() {
     csa.aux_pos = [0, 0, 0, 0];
     csa_to_page_pos();
@@ -316,7 +333,6 @@ async function move_button(val)
     csa.cur_pos = [csa.cur_pos[0] + dx, csa.cur_pos[1] + dy, csa.cur_pos[2] + dz, csa.cur_pos[3] + dr];
     await set_motor_pos();
 }
-
 window.move_button = move_button;
 
 window.addEventListener('keydown', async function(e) {

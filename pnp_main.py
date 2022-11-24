@@ -36,7 +36,7 @@ from cdnet.dev.cdbus_serial import CDBusSerial
 from cdnet.dev.cdbus_bridge import CDBusBridge
 from cdnet.dispatch import *
 
-from pnp_cv import pnp_cv_init, cv_dat
+from pnp_cv import pnp_cv_init, cv_dat, cur_path
 from pnp_xyz import *
 
 args = CdArgs()
@@ -144,6 +144,18 @@ async def dev_service():
             rx2 = cd_reg_rw(f"80:00:22", 0x0040, read=1)
             print('get_camera_light ret: ' + rx2.hex())
             await sock.sendto({'enable': rx1[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect'], 'light': rx2[1]}, src)
+        
+        elif dat['action'] == 'update_camera_bg':
+            logger.info(f"update_camera_bg...")
+            cv_dat['bg_capture'] = True
+            await sock.sendto('succeeded', src)
+        
+        elif dat['action'] == 'remove_camera_bg':
+            logger.info(f"remove_camera_bg...")
+            cv_dat['bg_img'] = None
+            if os.path.exists(f'{cur_path}/tmp/bg_invert.png'):
+                os.remove(f'{cur_path}/tmp/bg_invert.png')
+            await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'update_coeffs':
             logger.info(f"update_coeffs")
