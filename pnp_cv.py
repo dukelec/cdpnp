@@ -40,6 +40,10 @@ def cv_get_pos(img):
     
     # Convert image to grayscale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    
+    # Closing small gaps
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (7, 7))
+    gray = cv.morphologyEx(gray, cv.MORPH_OPEN, kernel)
      
     # Convert image to binary
     _, bw = cv.threshold(gray, 125, 255, cv.THRESH_BINARY)
