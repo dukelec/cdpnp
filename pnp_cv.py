@@ -120,6 +120,10 @@ def pic_rx():
             rx_dat = dat
             dat_cnt = 0
         
+        elif rx_dat is None:
+            #print(f'skip incomplete image data, hdr: {hdr:02x}')
+            continue
+        
         elif (hdr & 0xf0) == 0x60: # more
             if dat_cnt == (hdr & 0xf):
                 rx_dat += dat
