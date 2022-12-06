@@ -69,7 +69,7 @@ In practice, only components with same value can be placed at any one time.
 
 #### Dependence:
 Python version >= 3.8  
-`pip3 install pythoncrc websockets pyserial u-msgpack-python aiohttp opencv-python`
+`pip3 install pythoncrc websockets pyserial u-msgpack-python aiohttp opencv-python scipy`
 
 #### Usage:
 Run `pnp_main.py` or `start.sh`, then open url in your web browser: http://localhost:8900

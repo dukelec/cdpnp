@@ -284,9 +284,9 @@ function csv_to_pos(csv)
     let csv_list = csv_parser(csv);
     let pos = {};
     for (let row of csv_list) {
-        if (row[0] == 'Ref' || !row[0].length)
+        if (!isFinite(row[5]) || !row[0].length)
             continue;
-        let row_ = [row[0], Number(row[3]), -Number(row[4]), Number(row[5])];
+        let row_ = [row[0], Number(row[3].replace('mm', '')), -Number(row[4].replace('mm', '')), Number(row[5])];
         if (row[6] == 'bottom')
             row_[3] = 180 - row_[3];
         if (row_[3] > 180.0)

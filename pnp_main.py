@@ -22,12 +22,6 @@ from serial.tools import list_ports
 from cd_ws import CDWebSocket, CDWebSocketNS
 from web_serve import ws_ns, start_web
 
-try:
-    import readline
-except:
-    from pyreadline import Readline
-    readline = Readline()
-
 sys.path.append(os.path.join(os.path.dirname(__file__), 'pycdnet'))
 
 from cdnet.utils.log import *
@@ -141,7 +135,7 @@ async def dev_service():
             logger.info('get_camera_cfg')
             rx1 = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x0036, read=1) if dev else bytes([0x80, 0x00])
             print('get_camera_cfg ret: ' + rx1.hex())
-            rx2 = cd_reg_rw(f"80:00:22", 0x0040, read=1)
+            rx2 = cd_reg_rw(f"80:00:22", 0x0040, read=1) if dev else bytes([0x80, 0x00])
             print('get_camera_light ret: ' + rx2.hex())
             await sock.sendto({'enable': rx1[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect'], 'light': rx2[1]}, src)
         
