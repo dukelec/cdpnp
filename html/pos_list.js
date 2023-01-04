@@ -214,15 +214,15 @@ function pos_to_page(pos) {
             for (let comp of pos[footprint][value]) {
                 html_comp += `
                     <tr class='list_comp' onclick=move_to_comp('${comp[0]}');>
-                        <td>${comp[0]}</td>
-                        <td>${readable_float(comp[1])}</td>
-                        <td>${readable_float(comp[2])}</td>
-                        <td>${readable_float(comp[3])}</td>
+                        <td style="width: 10em;">${comp[0]}</td>
+                        <td style="width: 7em;">${readable_float(comp[1])}</td>
+                        <td style="width: 7em;">${readable_float(comp[2])}</td>
+                        <td style="width: 7em;">${readable_float(comp[3])}</td>
                     </tr>`;
             }
             html_value += `
                 <tr class='list_value'>
-                    <td>${value}</td>
+                    <td style="width: 20em;">${value}</td>
                     <td>
                         <table>
                             <tbody class="js-sortable-table">
