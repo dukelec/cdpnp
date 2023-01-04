@@ -29,8 +29,7 @@ xyz = {
 def dbg_echo():
     while True:
         rx = xyz['sock_dbg'].recvfrom()
-        #xyz['logger'].info('\x1b[0;37m  ' + re.sub(br'[^\x20-\x7e]',br'.', rx[0][5:-1]).decode() + '\x1b[0m')
-        xyz['logger'].info('\x1b[0;37m  ' + re.sub(br'[^\x20-\x7e]',br'.', rx[0]).decode() + '\x1b[0m')
+        xyz['logger'].info(f'#{rx[1][0][-2:]}  \x1b[0;37m' + rx[0][1:-1].decode() + '\x1b[0m')
 
 
 # for unicast only
@@ -118,11 +117,10 @@ def goto_pos(pos, wait=False, s_speed=260000):
     xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
-    m_vector = max(math.sqrt(math.pow(delta[0], 2) + math.pow(delta[1], 2) + math.pow(delta[2], 2)), 0.01)
-    v_speed = [round(s_speed * abs(delta[0])/m_vector), round(s_speed * abs(delta[1])/m_vector), round(s_speed * abs(delta[2])/m_vector), round(s_speed / 5)]
+    dlt_max = max(abs(delta[0]), abs(delta[1]), abs(delta[2]), 0.01)
+    v_speed = [round(s_speed * abs(delta[0])/dlt_max), round(s_speed * abs(delta[1])/dlt_max), round(s_speed * abs(delta[2])/dlt_max), round(s_speed / 10)]
     v_speed = [max(v_speed[0], 1000), max(v_speed[1], 1000), max(v_speed[2], 1000), max(v_speed[3], 1000)] # avoid zero speed
     b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
-    
     while True:
         xyz['sock'].clear()
         if not done_flag[2]:
