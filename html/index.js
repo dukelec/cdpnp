@@ -5,7 +5,7 @@
  */
 
 import { L } from './lang/lang.js'
-import { sleep, blob2dat, cpy } from './utils/helper.js';
+import { sleep, blob2dat, cpy, deep_merge } from './utils/helper.js';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
 import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_comp_values, pos_to_page,
@@ -14,7 +14,7 @@ import { input_init, csa_to_page_input } from './input_ctrl.js';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
          z_keep_high, enable_force, cam_comp_snap } from './dev_cmd.js';
 
-let csa = {
+let csa_dft = {
     cur_pos: [0, 0, 0, 0],
     old_pos: [0, 0, 0, 0],
     aux_pos: [0, 0, 0, 0],
@@ -36,8 +36,12 @@ let csa = {
     comp_height: null
 };
 
+let csa = {};
+deep_merge(csa, csa_dft);
+
 let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos'];
-let csa_need_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
+let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
+let csa_cfg_export = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
 
 let db = null;
 let ws_ns = new CDWebSocketNS('/');
@@ -297,5 +301,5 @@ window.addEventListener('load', async function() {
 });
 
 export {
-    csa, cmd_sock, db, csa_need_save, csa_need_export
+    csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export
 };

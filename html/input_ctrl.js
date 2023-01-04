@@ -6,7 +6,7 @@
 
 import { read_file, download, readable_float, cpy } from './utils/helper.js';
 import { get_motor_pos, set_motor_pos, set_pump, update_coeffs, enable_force } from './dev_cmd.js';
-import { csa, cmd_sock, db, csa_need_save, csa_need_export } from './index.js';
+import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export } from './index.js';
 
 
 function auto_hide() {
@@ -375,15 +375,16 @@ window.addEventListener('keydown', async function(e) {
     move_button(val);
 });
 
-document.getElementById('btn_reset').onclick = async function() {
-    await db.set('tmp', 'csa', null);
+document.getElementById('btn_reset_cfg').onclick = async function() {
+    cpy(csa, csa_dft, csa_cfg_export);
+    await db.set('tmp', 'csa', csa);
     alert('Refresh page...');
     location.reload();
 };
 
-document.getElementById('btn_import').onclick = async function() {
+document.getElementById('btn_import_cfg').onclick = async function() {
     //let input = document.createElement('input');
-    //cpy(input, {type: 'file', accept: '*.cdg'}, ['type', 'accept']);
+    //cpy(input, {type: 'file', accept: '*.json'}, ['type', 'accept']);
     let input = document.getElementById('input_file');
     input.accept = '.json';
     input.onchange = async function () {
@@ -391,19 +392,17 @@ document.getElementById('btn_import').onclick = async function() {
         if (files && files.length) {
             let file = files[0];
             let data = await read_file(file);
-            //let prj = msgpack.deserialize(data);
             let data_str = new TextDecoder().decode(data);
-            let prj = JSON.parse(data_str);
-            if (!prj || !prj.version || !prj.version.startsWith('cdpnp')) {
+            let cfg = JSON.parse(data_str);
+            if (!cfg || !cfg.version || !cfg.version.startsWith('cdpnp.cfg')) {
                 alert(L('Format error'));
                 this.value = '';
                 return;
             }
-            console.log('import dat:', prj);
-            cpy(csa, prj.csa, csa_need_export);
+            console.log('import cfg dat:', cfg);
+            cpy(csa, cfg.csa, csa_cfg_export);
             await db.set('tmp', 'csa', csa);
-            await db.set('tmp', 'list', prj.list);
-            alert('Import succeeded');
+            alert('Import config succeeded');
             location.reload();
         }
         this.value = '';
@@ -411,16 +410,52 @@ document.getElementById('btn_import').onclick = async function() {
     input.click();
 };
 
-document.getElementById('btn_export').onclick = async function() {
+document.getElementById('btn_export_cfg').onclick = async function() {
+    let c = await db.get('tmp', 'csa');
+    let exp_dat = { version: 'cdpnp.cfg v0', csa: {}};
+    cpy(exp_dat.csa, csa, csa_cfg_export);
+    console.info('export cfg data:', exp_dat);
+    let file_dat = JSON.stringify(exp_dat, null, 4);
+    download(file_dat, 'cdpnp.cfg.json');
+};
+
+document.getElementById('btn_import_prj').onclick = async function() {
+    //let input = document.createElement('input');
+    //cpy(input, {type: 'file', accept: '*.json'}, ['type', 'accept']);
+    let input = document.getElementById('input_file');
+    input.accept = '.json';
+    input.onchange = async function () {
+        var files = this.files;
+        if (files && files.length) {
+            let file = files[0];
+            let data = await read_file(file);
+            let data_str = new TextDecoder().decode(data);
+            let prj = JSON.parse(data_str);
+            if (!prj || !prj.version || !prj.version.startsWith('cdpnp.prj')) {
+                alert(L('Format error'));
+                this.value = '';
+                return;
+            }
+            console.log('import prj dat:', prj);
+            cpy(csa, prj.csa, csa_prj_export);
+            await db.set('tmp', 'csa', csa);
+            await db.set('tmp', 'list', prj.list);
+            alert('Import project succeeded');
+            location.reload();
+        }
+        this.value = '';
+    };
+    input.click();
+};
+
+document.getElementById('btn_export_prj').onclick = async function() {
     let c = await db.get('tmp', 'csa');
     let l = await db.get('tmp', 'list');
-    //await db.set('tmp', 'list', null);
-    let exp_dat = { version: 'cdpnp v0', csa: {}, list: l};
-    cpy(exp_dat.csa, csa, csa_need_export);
-    console.info('export_data:', exp_dat);
-    //let file_dat = msgpack.serialize(exp_dat);
+    let exp_dat = { version: 'cdpnp.prj v0', csa: {}, list: l};
+    cpy(exp_dat.csa, csa, csa_prj_export);
+    console.info('export prj data:', exp_dat);
     let file_dat = JSON.stringify(exp_dat, null, 4);
-    download(file_dat, 'cdpnp.json');
+    download(file_dat, 'cdpnp.prj.json');
 };
 
 
