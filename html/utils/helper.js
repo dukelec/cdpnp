@@ -230,15 +230,18 @@ async function blob2dat(blob) {
     return ret;
 }
 
-function deep_merge(target, source) {
-    Object.entries(source).forEach(([key, value]) => {
-        if (value && typeof value === 'object') {
-            deep_merge(target[key] = target[key] || {}, value);
-            return;
+function deep_merge(target, ...sources) {
+    for (let source of sources) {
+        for (let k in source) {
+            let vs = source[k], vt = target[k]
+            if (Object(vs) == vs && Object(vt) === vt) {
+                target[k] = deep_merge(vt, vs)
+                continue;
+            }
+            target[k] = source[k];
         }
-        target[key] = value;
-    });
-    return target;
+    }
+    return target
 }
 
 // https://stackoverflow.com/questions/1293147
