@@ -209,6 +209,8 @@ document.getElementById('btn_run').onclick = async function() {
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
                 // manual select comp during putdown pause
+                await set_pump(0);
+                await z_keep_high();
                 if (get_comp_safe() != comp || get_board_safe() != board)
                     continue;
             } else {

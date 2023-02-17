@@ -287,7 +287,7 @@ function csv_to_pos(csv)
         if (!isFinite(row[5]) || !row[0].length)
             continue;
         let row_ = [row[0], Number(row[3].replace('mm', '')), -Number(row[4].replace('mm', '')), Number(row[5])];
-        if (row[6] == 'bottom')
+        if (row[6].toLowerCase().startsWith('b')) // bottom layer
             row_[3] = 180 - row_[3];
         if (row_[3] > 180.0)
             row_[3] = -(360 - row_[3]);

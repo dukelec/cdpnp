@@ -33,13 +33,14 @@ The machine automatically picks up component from a pre-defined search areas and
 Whenever the machine has finished with the same value of components,
 it will automatically pause and wait for the user to change the components in the search area.
 
-<img src="doc/hardware.jpg">  
+<img src="doc/hardware.jpg">
+
+<img src="doc/work.jpg">
 
 The stepper motor controllers and camera mentioned above are all open source projects.
 Available at: https://github.com/dukelec/cdbus_gui
 
-In the future, it is possible to consider adding more cameras, parts to automatically change the nozzle,
-and parts to automatically flip the resistors and other components.
+In the future, it will be possible to add devices for automatic nozzle replacement, and for automatic reversal of resistors and other components.
 
 
 ### User Interface
