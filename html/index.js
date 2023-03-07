@@ -33,7 +33,8 @@ let csa_dft = {
         ['Idle', [132.0, 62.0, -45.0]]
     ],
     
-    comp_height: null
+    comp_height: null,
+    grap_err: null
 };
 
 let csa = {};
@@ -47,11 +48,16 @@ let db = null;
 let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
 
-function cal_grab_ofs(angle) {
-    let rad = -angle * Math.PI / 180;
+function cal_grab_ofs_center() {
     let delta = [csa.grab_ofs0[0] - csa.grab_ofs180[0], csa.grab_ofs0[1] - csa.grab_ofs180[1]];
-    let ofs = [csa.grab_ofs0[0] - delta[0] / 2, csa.grab_ofs0[1] - delta[1] / 2];
-    let err = [csa.grab_ofs0[0] - ofs[0], csa.grab_ofs0[1] - ofs[1]];
+    return [csa.grab_ofs0[0] - delta[0] / 2, csa.grab_ofs0[1] - delta[1] / 2];
+}
+
+function cal_grab_ofs(angle, err=null) {
+    let rad = -angle * Math.PI / 180;
+    let ofs = cal_grab_ofs_center();
+    if (err == null)
+        err = [csa.grab_ofs0[0] - ofs[0], csa.grab_ofs0[1] - ofs[1]];
     let err_at_angle = [
         Math.cos(rad) * err[0] - Math.sin(rad) * err[1],
         Math.sin(rad) * err[0] + Math.cos(rad) * err[1]
@@ -65,6 +71,16 @@ document.getElementById('btn_run').onclick = async function() {
     if (!comp) {
         alert("list empty!");
         return;
+    }
+    if (!document.getElementById('camera_detect').value) {
+        alert("please set camera vision detect method!");
+        return;
+    }
+    if (document.getElementById('camera_dev').value != '1' || !document.getElementById('camera_en').checked) {
+        console.log("auto enable camera before run task");
+        document.getElementById('camera_dev').value = 1;
+        document.getElementById('camera_en').checked = true;
+        await document.getElementById('camera_dev').onchange();
     }
     document.getElementById('btn_run').disabled = true;
     document.getElementById('btn_stop').disabled = false;
@@ -176,8 +192,57 @@ document.getElementById('btn_run').onclick = async function() {
             }
             await sleep(600);
             await z_keep_high();
-            //csa.cur_pos[3] = -csa.cv_cur_r;
-            //await set_motor_pos(true, 2000);
+            csa.grap_err = null;
+            
+            if (document.getElementById('check2_en').checked) {
+                let detect_bk = document.getElementById('camera_detect').value;
+                document.getElementById('camera_dev').value = 2;
+                document.getElementById('camera_light').checked = true;
+                document.getElementById('camera_detect').value = "";
+                await document.getElementById('camera_dev').onchange();
+                
+                csa.cur_pos[3] = comp_val[2] - csa.cv_cur_r;
+                let grab_ofs = cal_grab_ofs(csa.cur_pos[3]);
+                
+                let xyz_str = document.getElementById('user_pos0').value;
+                let xyz_val = [Number(xyz_str.split(',')[0]), Number(xyz_str.split(',')[1]), Number(xyz_str.split(',')[2])];
+                let z_middle = Math.min(Math.max(xyz_val[2], csa.cur_pos[2]) + csa.cam_dz + csa.comp_height, -2);
+                if (csa.cur_pos[2] < z_middle) {
+                    csa.cur_pos[2] = z_middle;
+                    await set_motor_pos(true);
+                }
+                csa.cur_pos[0] = xyz_val[0] - grab_ofs[0];
+                csa.cur_pos[1] = xyz_val[1] - grab_ofs[1];
+                await set_motor_pos(true);
+                csa.cur_pos[2] = xyz_val[2] - csa.cam_dz + csa.comp_height;
+                await set_motor_pos(true);
+                
+                //document.getElementById('btn_reset_aux').onclick();
+                document.getElementById('pause_en').checked = true;
+                while (document.getElementById('pause_en').checked)
+                    await sleep(100);
+                // manual movement here
+                
+                let ofs_center = cal_grab_ofs_center();
+                let grap_center = [csa.cur_pos[0] + ofs_center[0], csa.cur_pos[1] + ofs_center[1]];
+                let err = [xyz_val[0] - grap_center[0], xyz_val[1] - grap_center[1]];
+                
+                let rad = csa.cur_pos[3] * Math.PI / 180;
+                let err_at_angle0 = [
+                    Math.cos(rad) * err[0] - Math.sin(rad) * err[1],
+                    Math.sin(rad) * err[0] + Math.cos(rad) * err[1]
+                ];
+                csa.grap_err = err_at_angle0;
+                csa.cv_cur_r = comp_val[2] - csa.cur_pos[3];
+                
+                csa.cur_pos[2] = z_middle;
+                await set_motor_pos(true);
+                document.getElementById('camera_dev').value = 1;
+                document.getElementById('camera_detect').value = detect_bk;
+                document.getElementById('camera_light').checked = false;
+                await document.getElementById('camera_dev').onchange();
+            }
+            
             set_step(4);
             continue;
         }
@@ -189,12 +254,13 @@ document.getElementById('btn_run').onclick = async function() {
             if (csa.cv_cur_r != null) {
                 let rad = (comp_val[2] - csa.cv_cur_r + comp_xyz[2]) * Math.PI / 180;
                 csa.cur_pos[3] = Math.atan2(Math.sin(rad), Math.cos(rad)) * 180 / Math.PI;
-                if (document.getElementById('camera_detect').value == 'default' && Math.abs(csa.cur_pos[3]) > 90) {
+                if (document.getElementById('camera_detect').value == 'default' &&
+                        Math.abs(csa.cur_pos[3]) > 90 && !document.getElementById('check2_en').checked) {
                     console.log('  rotate 180, before:', csa.cur_pos[3]);
                     csa.cur_pos[3] = csa.cur_pos[3] > 90 ? csa.cur_pos[3] - 180 : csa.cur_pos[3] + 180;
                 }
             }
-            let grab_ofs = cal_grab_ofs(csa.cur_pos[3]);
+            let grab_ofs = cal_grab_ofs(csa.cur_pos[3], document.getElementById('check2_en').checked ? csa.grap_err : null);
             csa.cur_pos[0] = comp_xyz[0] - grab_ofs[0];
             csa.cur_pos[1] = comp_xyz[1] - grab_ofs[1];
             await set_motor_pos(true);
@@ -204,6 +270,12 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 5) { // putdown
             console.log('fsm putdown');
+            if (csa.comp_height != null) {
+                csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
+                //if (!document.getElementById('putdown_en').checked)
+                //    csa.cur_pos[2] += 1; // add more space
+                await set_motor_pos(true);
+            }
             if (!document.getElementById('putdown_en').checked) {
                 document.getElementById('pause_en').checked = true;
                 while (document.getElementById('pause_en').checked)
@@ -214,10 +286,6 @@ document.getElementById('btn_run').onclick = async function() {
                 if (get_comp_safe() != comp || get_board_safe() != board)
                     continue;
             } else {
-                if (csa.comp_height != null) {
-                    csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
-                    await set_motor_pos(true);
-                }
                 await sleep(800);
                 await enable_force();
                 csa.cur_pos[2] = csa.pcb_base_z - 1;
@@ -245,6 +313,7 @@ document.getElementById('btn_run').onclick = async function() {
     document.getElementById('btn_run').disabled = false;
     document.getElementById('btn_stop').disabled = true;
     csa.comp_height = null;
+    csa.grap_err = null;
     document.getElementById('cur_height').innerText = `--`;
     csa.cur_pos[3] = 0;
     await set_motor_pos();

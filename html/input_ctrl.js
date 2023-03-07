@@ -223,6 +223,8 @@ window.btn_goto_xyz = async function(name) {
     await set_motor_pos(true);
     csa.cur_pos[2] = z;
     await set_motor_pos(true);
+    if (name == "user_pos0")
+        document.getElementById('btn_reset_aux').onclick();
 };
 window.btn_goto_z = async function(name) {
     if (name == 'inc_camera_dz') {
@@ -496,6 +498,8 @@ function input_init() {
                 <button class="button is-small" onclick="btn_update_xyz('user_pos${i}')">Update</button>
             </div>`);
     }
+    document.getElementById('user_name0').disabled = true;
+    document.getElementById('user_name1').disabled = true;
     auto_hide();
 }
 
