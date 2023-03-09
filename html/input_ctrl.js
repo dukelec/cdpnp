@@ -177,6 +177,8 @@ window.btn_update_xyz = async function(name) {
     let xyz = `${readable_float(csa.cur_pos[0])}, ${readable_float(csa.cur_pos[1])}, ${readable_float(csa.cur_pos[2])}`;
     document.getElementById(name).value = xyz;
     await input_change();
+    if (name == "user_pos0")
+        document.getElementById('btn_reset_aux').onclick();
 };
 window.btn_update_grab = async function(type) {
     let abs_xy = [Math.abs(csa.aux_pos[0]), Math.abs(csa.aux_pos[1])];
