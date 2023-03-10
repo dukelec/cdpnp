@@ -9,7 +9,7 @@ and the machine is much larger.
 
 This semi-automatic machine is simple to configure, just import the KiCad generated position file,
 place one or more PCBs, use the camera to mark any two reference points on each PCB and you are ready to go.
-The components basically do not need to be configured in advance. 
+All components do not need to be configured in software.
 
 For ICs with very dense pins, especially for BGA packages,
 it is recommended to check the position manually before putting them down and use the keyboard to adjust the position and angle.
@@ -22,11 +22,11 @@ If you place them directly by hand, it is not easy to align them and they are pr
 
 The hardware is modular in design. A CDBUS (RS-485) bus is used to connect all modules to the PC, including two cameras. (10 Mbps by default.)
 
-The machine has four degrees of freedom: X, Y, Z, R (rotate), and is controlled by multiple stepper motor controllers.
+The machine has four degrees of freedom: X, Y, Z, R (rotate, also with homing switch), and is controlled by multiple stepper motor controllers.
 
 The Y-axis is controlled by two motor controllers, synchronised by multicasting.
 
-The Z-axis contains a strain gauge sensor, the sensor data is relayed through the R-axis controller, as the sensor is closest to the R-axis.
+The Z-axis contains a strain gauge-based force sensor, the sensor data is relayed through the R-axis controller, as the sensor is closest to the R-axis.
 
 The machine automatically picks up component from a pre-defined search areas and put it onto the PCB in the corresponding position.
 
@@ -40,7 +40,7 @@ it will automatically pause and wait for the user to change the components in th
 The stepper motor controllers and camera mentioned above are all open source projects.
 Available at: https://github.com/dukelec/cdbus_gui
 
-In the future, it will be possible to add devices for automatic nozzle replacement, and for automatic reversal of resistors and other components.
+In the future, it will be possible to move components as well as flip components by adding a flexible feeding device (3-axis vibration).
 
 
 ### User Interface
