@@ -1,5 +1,5 @@
 
-### CD-PnP App Shortcuts
+### CDPnP App Shortcuts
 
 ```
 <-   : Move left     : Left arrow

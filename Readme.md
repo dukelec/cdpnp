@@ -1,7 +1,7 @@
-CD-PnP
+CDPnP
 =======================================
 
-The CD-PnP is an SMT assistant tool, not a fully automatic SMT machine.
+The CDPnP is an SMT assistant tool, not a fully automatic SMT machine.
 
 Fully automatic SMT machines are much more complicated to configure,
 requiring the configuration of feeders and the configuration of components in the software,
@@ -15,7 +15,7 @@ For ICs with very dense pins, especially for BGA packages,
 it is recommended to check the position manually before putting them down and use the keyboard to adjust the position and angle.
 If you place them directly by hand, it is not easy to align them and they are prone to hand shake.
 
-[Discussions](https://github.com/dukelec/cd_pnp/discussions) for this project have been enabled, so feel free to join our discussions and get more information posted.
+[Discussions](https://github.com/dukelec/cdpnp/discussions) for this project have been enabled, so feel free to join our discussions and get more information posted.
 
 
 ### Hardware
@@ -62,7 +62,7 @@ In practice, only components with same value can be placed at any one time.
 
 
 #### Download this GUI tool:
-`git clone --recurse-submodules https://github.com/dukelec/cd_pnp.git`
+`git clone --recurse-submodules https://github.com/dukelec/cdpnp.git`
 
 #### Update:
 `git pull --recurse-submodules`
