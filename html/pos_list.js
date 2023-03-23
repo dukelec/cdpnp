@@ -282,11 +282,21 @@ function pos_from_page() {
 function csv_to_pos(csv)
 {
     let csv_list = csv_parser(csv);
+    let ref_cnt = {};
     let pos = {};
     for (let row of csv_list) {
         if (!isFinite(row[5]) || !row[0].length)
             continue;
-        let row_ = [row[0], Number(row[3].replace('mm', '')), -Number(row[4].replace('mm', '')), Number(row[5])];
+        // avoid same reference name
+        let ref = row[0];
+        if (ref in ref_cnt) {
+            ref_cnt[ref] += 1;
+            ref += `_${ref_cnt[row[0]]}`;
+        } else {
+            ref_cnt[ref] = 0;
+        }
+        
+        let row_ = [ref, Number(row[3].replace('mm', '')), -Number(row[4].replace('mm', '')), Number(row[5])];
         if (row[6].toLowerCase().startsWith('b')) // bottom layer
             row_[3] = 180 - row_[3];
         if (row_[3] > 180.0)
