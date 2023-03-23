@@ -7,6 +7,7 @@
 import { csv_parser, read_file, readable_float } from './utils/helper.js';
 import { set_motor_pos, pcb2xyz } from './dev_cmd.js';
 import { csa, db } from './index.js';
+import { disable_goto_btn } from './input_ctrl.js';
 
 
 function get_comp_values(comp)
@@ -173,8 +174,11 @@ function select_comp(comp) {
 }
 
 async function move_to_comp(comp) {
+    if (document.getElementsByClassName('goto_btn')[0].disabled)
+        return;
     select_comp(comp);
     if (comp && (document.getElementById('pause_en').checked || document.getElementById('btn_stop').disabled)) {
+        disable_goto_btn(true);
         set_step(1); // step: goto_comp
         let comp_val = get_comp_values(comp);
         let board = get_board_safe();
@@ -196,8 +200,9 @@ async function move_to_comp(comp) {
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
             csa.cur_pos[3] = 0;
-            await set_motor_pos();
+            await set_motor_pos(true);
         }
+        disable_goto_btn(false);
     }
 }
 window.move_to_comp = move_to_comp;

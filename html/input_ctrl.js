@@ -9,6 +9,13 @@ import { get_motor_pos, set_motor_pos, set_pump, update_coeffs, enable_force } f
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export } from './index.js';
 
 
+function disable_goto_btn(val) {
+    let btn = document.getElementsByClassName('goto_btn');
+    for (let b of btn)
+        b.disabled = val;
+    document.getElementById('pos_list').style.backgroundColor = val ? '#f0f0f0' : '';
+}
+
 function auto_hide() {
     let skip_hide = true;
     for (let i = 0; i < 8; i++) {
@@ -198,6 +205,9 @@ window.btn_update_z = async function(name) {
 };
 window.btn_goto_xy = async function(name) {
     let xy_str = document.getElementById(name).value;
+    if (!xy_str)
+        return;
+    disable_goto_btn(true);
     let z = name.startsWith('comp_search') ? csa.comp_top_z : csa.pcb_top_z;
     let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
@@ -210,9 +220,13 @@ window.btn_goto_xy = async function(name) {
     await set_motor_pos(true);
     csa.cur_pos[2] = z;
     await set_motor_pos(true);
+    disable_goto_btn(false);
 };
 window.btn_goto_xyz = async function(name) {
     let xyz_str = document.getElementById(name).value;
+    if (!xyz_str)
+        return;
+    disable_goto_btn(true);
     let z = Number(xyz_str.split(',')[2]);
     let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
@@ -227,8 +241,10 @@ window.btn_goto_xyz = async function(name) {
     await set_motor_pos(true);
     if (name == "user_pos0")
         document.getElementById('btn_reset_aux').onclick();
+    disable_goto_btn(false);
 };
 window.btn_goto_z = async function(name) {
+    disable_goto_btn(true);
     if (name == 'inc_camera_dz') {
         csa.cur_pos[2] = csa.cur_pos[2] + csa.cam_dz;
     } else if (name == 'dec_camera_dz') {
@@ -240,13 +256,17 @@ window.btn_goto_z = async function(name) {
     } else {
         csa.cur_pos[2] = Number(document.getElementById(name).value);
     }
-    await set_motor_pos();
+    await set_motor_pos(true);
+    disable_goto_btn(false);
 };
 window.btn_goto_r = async function(angle) {
+    disable_goto_btn(true);
     csa.cur_pos[3] = angle;
-    await set_motor_pos();
+    await set_motor_pos(true);
+    disable_goto_btn(false);
 };
 window.btn_grab_ofs = async function(type, dir=1) {
+    disable_goto_btn(true);
     let origin_z = csa.cur_pos[2];
     csa.cur_pos[2] = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
     await set_motor_pos(true);
@@ -256,15 +276,18 @@ window.btn_grab_ofs = async function(type, dir=1) {
     csa.cur_pos[3] = type ? 180 : 0;
     await set_motor_pos(true);
     csa.cur_pos[2] = origin_z;
-    await set_motor_pos();
+    await set_motor_pos(true);
+    disable_goto_btn(false);
 };
 window.btn_detect_z = async function() {
+    disable_goto_btn(true);
     console.log('detect bottom z...');
     await enable_force();
     csa.cur_pos[2] = -92;
     await set_motor_pos(true, 2000);
     await get_motor_pos();
     console.log('detect bottom z done');
+    disable_goto_btn(false);
 };
 
 
@@ -472,7 +495,7 @@ function input_init() {
             <div id="search_grp${i}">
                 <span style="display: inline-block; min-width: 138px;">Comp search #${i}:</span>
                 <input type="text" id="comp_search${i}" onchange="input_change()">
-                <button class="button is-small" onclick="btn_goto_xy('comp_search${i}')">Goto</button>
+                <button class="button is-small goto_btn" onclick="btn_goto_xy('comp_search${i}')">Goto</button>
                 <button class="button is-small" onclick="btn_update_xy('comp_search${i}')">Update</button>
                 <button class="button is-small" onclick="btn_select_search(${i})" id="btn_comp_search${i}">Select</button>
             </div>`);
@@ -482,10 +505,10 @@ function input_init() {
             <div id="fiducial_grp${i}">
                 <span style="display: inline-block; min-width: 138px;">Fiducial cam #${i}:</span>
                 <input type="text" id="fiducial_cam${i}_0" onchange="input_change()">
-                <button class="button is-small" onclick="btn_goto_xy('fiducial_cam${i}_0')">Goto</button>
+                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_0')">Goto</button>
                 <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_0')">Update</button>
                 <input type="text" id="fiducial_cam${i}_1" onchange="input_change()">
-                <button class="button is-small" onclick="btn_goto_xy('fiducial_cam${i}_1')">Goto</button>
+                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_1')">Goto</button>
                 <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_1')">Update</button>
                 <button class="button is-small" onclick="btn_select_board(${i})" id="btn_board${i}">Select</button>
             </div>`);
@@ -496,7 +519,7 @@ function input_init() {
                 <span style="display: inline-block; min-width: 138px;">User pos #${i}:</span>
                 <input type="text" id="user_name${i}" onchange="input_change()" placeholder="name">
                 <input type="text" id="user_pos${i}" onchange="input_change()">
-                <button class="button is-small" onclick="btn_goto_xyz('user_pos${i}')">Goto</button>
+                <button class="button is-small goto_btn" onclick="btn_goto_xyz('user_pos${i}')">Goto</button>
                 <button class="button is-small" onclick="btn_update_xyz('user_pos${i}')">Update</button>
             </div>`);
     }
@@ -506,5 +529,5 @@ function input_init() {
 }
 
 export {
-    input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input
+    input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input, disable_goto_btn
 };
