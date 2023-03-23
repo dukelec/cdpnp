@@ -34,13 +34,14 @@ let csa_dft = {
     ],
     
     comp_height: null,
-    grap_err: null
+    grap_err: null,
+    motor_speed: 0.5
 };
 
 let csa = {};
 deep_merge(csa, csa_dft);
 
-let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos'];
+let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed'];
 let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
 let csa_cfg_export = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
 

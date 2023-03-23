@@ -58,6 +58,7 @@ function csa_to_page_pos()
 
 function csa_to_page_input()
 {
+    document.getElementById('motor_speed').value = csa.motor_speed;
     document.getElementById('grab_ofs0').value =
         `${readable_float(csa.grab_ofs0[0])}, ${readable_float(csa.grab_ofs0[1])}`;
     document.getElementById('grab_ofs180').value =
@@ -109,6 +110,7 @@ function csa_to_page_input()
 
 function csa_from_page_input()
 {
+    csa.motor_speed = Number(document.getElementById('motor_speed').value);
     let xy_str;
     xy_str = document.getElementById('grab_ofs0').value;
     csa.grab_ofs0 = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];

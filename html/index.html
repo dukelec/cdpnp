@@ -52,7 +52,20 @@
             <option value="2">x2</option>
             <option value="3" selected>x3</option>
             <option value="4">x4</option>
-        </select> Speed
+        </select> Step Size
+        &nbsp;
+        <select id="motor_speed" onchange="input_change()">
+            <option value="0.1">10%</option>
+            <option value="0.2">20%</option>
+            <option value="0.3">30%</option>
+            <option value="0.4">40%</option>
+            <option value="0.5" selected>50%</option>
+            <option value="0.6">60%</option>
+            <option value="0.7">70%</option>
+            <option value="0.8">80%</option>
+            <option value="0.9">90%</option>
+            <option value="1">100%</option>
+        </select> Motor Speed
         <br>
         <br>
         <button class="button is-small" onclick="btn_select_step(0)" id="btn_step0">Show target</button> >

@@ -72,15 +72,15 @@ def enable_motor():
         xyz['logger'].info('motor enable ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set accel #{i+1}')
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c4, struct.pack("<I", 800000 if i != 4 else 20000))
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c4, struct.pack("<I", 1600000 if i != 4 else 20000))
         xyz['logger'].info('motor set ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set emergency accel #{i+1}')
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c8, struct.pack("<I", 80000000 if i != 4 else 2000000))
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c8, struct.pack("<I", 160000000 if i != 4 else 2000000))
         xyz['logger'].info('motor set ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set vref #{i+1}')
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00ae, struct.pack("<H", 600 if i != 4 else 300))
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00ae, struct.pack("<H", 800 if i != 4 else 300))
         xyz['logger'].info('motor set vref ret: ' + rx.hex())
 
 
@@ -119,7 +119,7 @@ def goto_pos(pos, wait=False, s_speed=260000):
     done_flag = [0, 0, 0, 0, 0]
     dlt_max = max(abs(delta[0]), abs(delta[1]), abs(delta[2]), 0.01)
     v_speed = [round(s_speed * abs(delta[0])/dlt_max), round(s_speed * abs(delta[1])/dlt_max), round(s_speed * abs(delta[2])/dlt_max), round(s_speed / 10)]
-    v_speed = [max(v_speed[0], 1000), max(v_speed[1], 1000), max(v_speed[2], 1000), max(v_speed[3], 1000)] # avoid zero speed
+    v_speed = [max(v_speed[0], 2000), max(v_speed[1], 2000), max(v_speed[2], 2000), max(v_speed[3], 2000)] # avoid zero speed
     b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
     while True:
         xyz['sock'].clear()
@@ -186,7 +186,7 @@ def xyz_init():
         if rx[1] != 1:
             all_enable = False
     
+    enable_motor()
     if not all_enable:
-        enable_motor()
         detect_origin()
 
