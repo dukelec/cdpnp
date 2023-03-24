@@ -47,7 +47,7 @@ def cd_reg_rw(dev_addr, reg_addr, write=None, read=0, timeout=0.8, retry=3):
                 return dat
             xyz['logger'].warning(f'cd_reg_rw recv wrong src')
         else:
-            xyz['logger'].warning(f'cd_reg_rw timeout')
+            xyz['logger'].warning(f'cd_reg_rw timeout, dev: {dev_addr}')
     raise Exception('reg_rw retry error')
     #return None
 
@@ -71,12 +71,8 @@ def enable_motor():
         rx = cd_reg_rw(f'80:00:0{i+1}', 0x0108, struct.pack("<B", 1))
         xyz['logger'].info('motor enable ret: ' + rx.hex())
         
-        xyz['logger'].info(f'motor set accel #{i+1}')
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c4, struct.pack("<I", 1600000 if i != 4 else 20000))
-        xyz['logger'].info('motor set ret: ' + rx.hex())
-        
         xyz['logger'].info(f'motor set emergency accel #{i+1}')
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c8, struct.pack("<I", 160000000 if i != 4 else 2000000))
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00c8, struct.pack("<I", 80000000 if i != 4 else 2000000))
         xyz['logger'].info('motor set ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set vref #{i+1}')
@@ -112,6 +108,13 @@ def load_pos():
     return pos
 
 
+def cal_accel(v):
+    # in 600000: out 1600000, in 60000: out 160000
+    if v <= 60000:
+        return 160000
+    return round(v / 600000 * 1600000)
+
+
 def goto_pos(pos, wait=False, s_speed=260000):
     delta = [pos[0]-xyz['last_pos'][0], pos[1]-xyz['last_pos'][1], pos[2]-xyz['last_pos'][2]]
     xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
@@ -121,16 +124,18 @@ def goto_pos(pos, wait=False, s_speed=260000):
     v_speed = [round(s_speed * abs(delta[0])/dlt_max), round(s_speed * abs(delta[1])/dlt_max), round(s_speed * abs(delta[2])/dlt_max), round(s_speed / 10)]
     v_speed = [max(v_speed[0], 2000), max(v_speed[1], 2000), max(v_speed[2], 2000), max(v_speed[3], 2000)] # avoid zero speed
     b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
+    accel = [cal_accel(v_speed[0]), cal_accel(v_speed[1]), cal_accel(v_speed[2]), 20000]
+    b_accel = [struct.pack("<i", accel[0]), struct.pack("<i", accel[1]), struct.pack("<i", accel[2]), struct.pack("<i", accel[3])]
     while True:
         xyz['sock'].clear()
         if not done_flag[2]:
-            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP))+b_speed[0], ('80:00:03', 0x6))
+            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[0]/DIV_MM2STEP))+b_speed[0]+b_accel[0], ('80:00:03', 0x6))
         if (not done_flag[0]) or (not done_flag[1]):
-            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP))+b_speed[1], ('80:00:e0', 0x6))
+            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[1]/DIV_MM2STEP))+b_speed[1]+b_accel[1], ('80:00:e0', 0x6))
         if not done_flag[3]:
-            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed[2], ('80:00:04', 0x6))
+            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[2]*-1/DIV_MM2STEP))+b_speed[2]+b_accel[2], ('80:00:04', 0x6))
         if not done_flag[4]:
-            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[3]/DIV_DEG2STEP))+b_speed[3], ('80:00:05', 0x6))
+            xyz['sock'].sendto(b'\x20'+struct.pack("<i", round(pos[3]/DIV_DEG2STEP))+b_speed[3]+b_accel[3], ('80:00:05', 0x6))
         
         for i in range(5 - (done_flag[0] + done_flag[1] + done_flag[2] + done_flag[3] + done_flag[4])):
             dat, src = xyz['sock'].recvfrom(timeout=0.8)
