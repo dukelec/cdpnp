@@ -283,16 +283,18 @@ window.btn_grab_ofs = async function(type, dir=1) {
 };
 window.btn_detect_z = async function() {
     disable_goto_btn(true);
-    console.log('detect bottom z... (fast)');
-    await enable_force();
-    csa.cur_pos[2] = -92;
-    await set_motor_pos(true, 12000);
-    await get_motor_pos();
-    console.log('detect bottom z done (fast)');
-    csa.cur_pos[2] += 1;
-    await set_motor_pos(true);
+    if (!document.getElementById('pump_en').checked) {
+        console.log('detect bottom z... (fast)');
+        await enable_force();
+        csa.cur_pos[2] = -92;
+        await set_motor_pos(true, 12000);
+        await get_motor_pos();
+        console.log('detect bottom z done (fast)');
+        csa.cur_pos[2] += 1;
+        await set_motor_pos(true);
+        await sleep(800);
+    }
     console.log('detect bottom z... (slow)');
-    await sleep(800);
     await enable_force();
     csa.cur_pos[2] = -92;
     await set_motor_pos(true, 2000);

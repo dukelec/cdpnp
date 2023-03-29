@@ -76,7 +76,7 @@ def enable_motor():
         xyz['logger'].info('motor set ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set vref #{i+1}')
-        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00ae, struct.pack("<H", 800 if i != 4 else 300))
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00ae, struct.pack("<H", 800 if i != 4 else 450))
         xyz['logger'].info('motor set vref ret: ' + rx.hex())
 
 
