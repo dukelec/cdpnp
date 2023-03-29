@@ -116,16 +116,17 @@ def cal_accel(v):
 
 
 def goto_pos(pos, wait=False, s_speed=260000):
-    delta = [pos[0]-xyz['last_pos'][0], pos[1]-xyz['last_pos'][1], pos[2]-xyz['last_pos'][2]]
+    delta = [pos[0]-xyz['last_pos'][0], pos[1]-xyz['last_pos'][1], pos[2]-xyz['last_pos'][2], pos[3]-xyz['last_pos'][3]]
     xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
     dlt_max = max(abs(delta[0]), abs(delta[1]), abs(delta[2]), 0.01)
-    v_speed = [round(s_speed * abs(delta[0])/dlt_max), round(s_speed * abs(delta[1])/dlt_max), round(s_speed * abs(delta[2])/dlt_max), round(s_speed / 10)]
-    v_speed = [max(v_speed[0], 2000), max(v_speed[1], 2000), max(v_speed[2], 2000), max(v_speed[3], 2000)] # avoid zero speed
-    b_speed = [struct.pack("<i", v_speed[0]), struct.pack("<i", v_speed[1]), struct.pack("<i", v_speed[2]), struct.pack("<i", v_speed[3])]
-    accel = [cal_accel(v_speed[0]), cal_accel(v_speed[1]), cal_accel(v_speed[2]), 20000]
-    b_accel = [struct.pack("<i", accel[0]), struct.pack("<i", accel[1]), struct.pack("<i", accel[2]), struct.pack("<i", accel[3])]
+    # 360' / 4mm = 90, use 85 instead to avoid R axis waste time
+    v_speed = [s_speed * abs(delta[0])/dlt_max, s_speed * abs(delta[1])/dlt_max, s_speed * abs(delta[2])/dlt_max, s_speed * abs(delta[3]/85)/dlt_max]
+    v_speed = [max(v_speed[0], 2000), max(v_speed[1], 2000), max(v_speed[2], 2000), min(s_speed/45, max(v_speed[3], 2000/85))] # avoid zero speed
+    b_speed = [struct.pack("<i", round(v_speed[0])), struct.pack("<i", round(v_speed[1])), struct.pack("<i", round(v_speed[2])), struct.pack("<i", round(v_speed[3]))]
+    accel = [cal_accel(v_speed[0]), cal_accel(v_speed[1]), cal_accel(v_speed[2]), cal_accel(v_speed[3]*85)/85]
+    b_accel = [struct.pack("<i", round(accel[0])), struct.pack("<i", round(accel[1])), struct.pack("<i", round(accel[2])), struct.pack("<i", round(accel[3]))]
     while True:
         xyz['sock'].clear()
         if not done_flag[2]:
