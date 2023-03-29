@@ -417,7 +417,7 @@ window.btn_select_board = async function (idx) {
     if (idx >= csa.fiducial_cam.length)
         return;
     set_board(idx);
-    await window.select_comp(search_current_comp());
+    await select_comp(search_current_comp());
 };
 
 
