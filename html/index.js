@@ -184,7 +184,7 @@ document.getElementById('btn_run').onclick = async function() {
             await sleep(800);
             await enable_force();
             csa.cur_pos[2] = csa.comp_base_z - 1;
-            await set_motor_pos(true, 6000);
+            await set_motor_pos(true, csa.motor_speed >= 0.6 ? 12000 : 6000);
             await set_pump(1);
             if (csa.comp_height == null) {
                 await get_motor_pos();
@@ -215,7 +215,7 @@ document.getElementById('btn_run').onclick = async function() {
                 csa.cur_pos[0] = xyz_val[0] - grab_ofs[0];
                 csa.cur_pos[1] = xyz_val[1] - grab_ofs[1];
                 await set_motor_pos(true);
-                csa.cur_pos[2] = xyz_val[2] - csa.cam_dz + csa.comp_height;
+                csa.cur_pos[2] = xyz_val[2] - csa.cam_dz + csa.comp_height + 0.3; // add 0.3 safe space
                 await set_motor_pos(true);
                 
                 //document.getElementById('btn_reset_aux').onclick();
@@ -290,7 +290,7 @@ document.getElementById('btn_run').onclick = async function() {
                 await sleep(800);
                 await enable_force();
                 csa.cur_pos[2] = csa.pcb_base_z - 1;
-                await set_motor_pos(true, 6000);
+                await set_motor_pos(true, csa.motor_speed >= 0.6 ? 12000 : 6000);
                 await set_pump(0);
                 await z_keep_high();
             }

@@ -4,7 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { read_file, download, readable_float, cpy } from './utils/helper.js';
+import { read_file, download, readable_float, cpy, sleep } from './utils/helper.js';
 import { get_motor_pos, set_motor_pos, set_pump, update_coeffs, enable_force } from './dev_cmd.js';
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export } from './index.js';
 
@@ -283,12 +283,21 @@ window.btn_grab_ofs = async function(type, dir=1) {
 };
 window.btn_detect_z = async function() {
     disable_goto_btn(true);
-    console.log('detect bottom z...');
+    console.log('detect bottom z... (fast)');
+    await enable_force();
+    csa.cur_pos[2] = -92;
+    await set_motor_pos(true, 12000);
+    await get_motor_pos();
+    console.log('detect bottom z done (fast)');
+    csa.cur_pos[2] += 1;
+    await set_motor_pos(true);
+    console.log('detect bottom z... (slow)');
+    await sleep(800);
     await enable_force();
     csa.cur_pos[2] = -92;
     await set_motor_pos(true, 2000);
     await get_motor_pos();
-    console.log('detect bottom z done');
+    console.log('detect bottom z done (slow)');
     disable_goto_btn(false);
 };
 
