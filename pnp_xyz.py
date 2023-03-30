@@ -158,7 +158,7 @@ def goto_pos(pos, wait=False, s_speed=260000):
 def detect_origin():
     xyz['logger'].info(f'detecting origin, please wait...')
     goto_pos([2, 2, -2, 30], True, 100000)
-    goto_pos([-1000, -1000, 1000, -500], True, 50000)
+    goto_pos([-315, -265, 110, -375], True, 50000)
     for i in range(5):
         xyz['logger'].info(f'motor set origin: #{i+1}')
         rx = cd_reg_rw(f'80:00:0{i+1}', 0x00b1, struct.pack("<B", 1))

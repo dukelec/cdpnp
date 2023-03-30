@@ -318,9 +318,10 @@ async function set_camera_en(enable) {
 async function set_camera_cfg() {
     let dev = Number(document.getElementById('camera_dev').value);
     let detect = document.getElementById('camera_detect').value;
-    let light = document.getElementById('camera_light').checked;
+    let light1 = document.getElementById('camera_light1').checked;
+    let light2 = document.getElementById('camera_light2').checked;
     cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_camera_cfg', 'dev': dev, 'detect': detect, 'light': light}, ['server', 'dev']);
+    await cmd_sock.sendto({'action': 'set_camera_cfg', 'dev': dev, 'detect': detect, 'light1': light1, 'light2': light2}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
     console.log(`set_camera_cfg ${dev}, ${detect} ret`, dat);
 }
@@ -336,7 +337,8 @@ async function set_camera_dev() {
 document.getElementById('camera_en').onchange = async function() {
     await set_camera_en(document.getElementById('camera_en').checked);
 };
-document.getElementById('camera_light').onchange = set_camera_cfg
+document.getElementById('camera_light1').onchange = set_camera_cfg
+document.getElementById('camera_light2').onchange = set_camera_cfg
 document.getElementById('camera_detect').onchange = set_camera_cfg;
 document.getElementById('camera_dev').onchange = set_camera_dev;
 

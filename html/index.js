@@ -110,6 +110,8 @@ document.getElementById('btn_run').onclick = async function() {
         }
         if (parents_pre && (parents_pre[0] != parents[0] || parents_pre[1] != parents[1])) {
             document.getElementById('pause_en').checked = true;
+            document.getElementById('camera_light1').checked = true;
+            await document.getElementById('camera_light1').onchange();
             set_board(board);
             await move_to_comp(comp);
         }
@@ -131,6 +133,8 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 0) { // show_target
             console.log('fsm show target');
+            document.getElementById('camera_light1').checked = true;
+            await document.getElementById('camera_light1').onchange();
             await z_keep_high();
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
@@ -146,6 +150,8 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 1) { // goto_comp
             console.log('fsm goto_comp');
+            document.getElementById('camera_light1').checked = false;
+            await document.getElementById('camera_light1').onchange();
             await z_keep_high();
             csa.cur_pos[0] = csa.comp_search[search][0];
             csa.cur_pos[1] = csa.comp_search[search][1];
@@ -162,6 +168,8 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 2) { // snap
             console.log('fsm snap');
+            document.getElementById('camera_light1').checked = false;
+            await document.getElementById('camera_light1').onchange();
             let ret = await cam_comp_snap();
             if (ret < 0) {
                 if (++search >= csa.comp_search.length)
@@ -188,7 +196,7 @@ document.getElementById('btn_run').onclick = async function() {
             await set_pump(1);
             if (csa.comp_height == null) {
                 await get_motor_pos();
-                csa.comp_height = parseFloat((csa.cur_pos[2] - csa.comp_base_z).toFixed(3));
+                csa.comp_height = Math.max(parseFloat((csa.cur_pos[2] - csa.comp_base_z).toFixed(3)), 0);
                 document.getElementById('cur_height').innerText = `${csa.comp_height}`;
             }
             await sleep(600);
@@ -198,7 +206,7 @@ document.getElementById('btn_run').onclick = async function() {
             if (document.getElementById('check2_en').checked) {
                 let detect_bk = document.getElementById('camera_detect').value;
                 document.getElementById('camera_dev').value = 2;
-                document.getElementById('camera_light').checked = true;
+                document.getElementById('camera_light2').checked = true;
                 document.getElementById('camera_detect').value = "";
                 await document.getElementById('camera_dev').onchange();
                 
@@ -240,7 +248,7 @@ document.getElementById('btn_run').onclick = async function() {
                 await set_motor_pos(true);
                 document.getElementById('camera_dev').value = 1;
                 document.getElementById('camera_detect').value = detect_bk;
-                document.getElementById('camera_light').checked = false;
+                document.getElementById('camera_light2').checked = false;
                 await document.getElementById('camera_dev').onchange();
             }
             
