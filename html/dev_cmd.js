@@ -32,7 +32,7 @@ async function get_camera_cfg() {
 
 async function set_camera_cfg(_detect=null) {
     let dev = Number(document.getElementById('camera_dev').value);
-    let detect = _detect || document.getElementById('camera_detect').value;
+    let detect = _detect == null ? document.getElementById('camera_detect').value : _detect;
     let light1 = document.getElementById('camera_light1').checked;
     let light2 = document.getElementById('camera_light2').checked;
     cmd_sock.flush();

@@ -12,7 +12,7 @@ import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_c
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
 import { input_init, csa_to_page_input } from './input_ctrl.js';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump, pcb2xyz,
-         z_keep_high, enable_force, cam_comp_snap } from './dev_cmd.js';
+         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg } from './dev_cmd.js';
 
 let csa_dft = {
     cur_pos: [0, 0, 0, 0],
@@ -122,8 +122,8 @@ document.getElementById('btn_run').onclick = async function() {
         }
         if (parents_pre && (parents_pre[0] != parents[0] || parents_pre[1] != parents[1])) {
             document.getElementById('pause_en').checked = true;
-            document.getElementById('camera_light1').checked = true;
-            await document.getElementById('camera_light1').onchange();
+            //document.getElementById('camera_light1').checked = true;
+            await set_camera_cfg("");
             set_board(board);
             await move_to_comp(comp);
         }
@@ -146,8 +146,8 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 0) { // show_target
             console.log('fsm show target');
-            document.getElementById('camera_light1').checked = true;
-            await document.getElementById('camera_light1').onchange();
+            //document.getElementById('camera_light1').checked = true;
+            await set_camera_cfg("");
             await z_keep_high();
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
@@ -347,6 +347,7 @@ document.getElementById('btn_run').onclick = async function() {
     csa.grap_err = null;
     document.getElementById('cur_height').innerText = `--`;
     csa.cur_pos[3] = 0;
+    document.getElementById('btn_pld_clear').onclick();
     await set_motor_pos();
 };
 

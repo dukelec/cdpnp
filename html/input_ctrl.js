@@ -322,6 +322,7 @@ async function set_camera_en(enable) {
     await cmd_sock.sendto({'action': 'set_camera', 'val': enable}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
     console.log(`camera_en ${camera_en} ret`, dat);
+    await set_camera_cfg();
 };
 async function _set_camera_cfg() {
     await set_camera_cfg();
@@ -388,6 +389,7 @@ window.addEventListener('keydown', async function(e) {
             document.getElementById('pause_en').checked = false;
         else
             document.getElementById('pause_en').checked = !document.getElementById('pause_en').checked;
+        document.getElementById('btn_pld_clear').onclick();
         return;
     }
     if (e.keyCode >= 49 && e.keyCode <= 52) { // 1, 2, 3, 4
