@@ -7,6 +7,7 @@
 import { read_file, download, readable_float, cpy, sleep, wildcard_test } from './utils/helper.js';
 import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js';
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export } from './index.js';
+import { pld_csa_to_page, pld_csa_from_page } from './preload_ctrl.js';
 
 
 function disable_goto_btn(val) {
@@ -108,6 +109,7 @@ function csa_to_page_input()
     }
     
     document.getElementById('offset_config').value = csa.offset_config;
+    pld_csa_to_page();
 }
 
 function csa_from_page_input()
@@ -167,6 +169,7 @@ function csa_from_page_input()
     }
     
     csa.offset_config = document.getElementById('offset_config').value;
+    pld_csa_from_page();
 }
 
 async function input_change() {
@@ -213,7 +216,7 @@ window.btn_goto_xy = async function(name) {
     if (!xy_str)
         return;
     disable_goto_btn(true);
-    let z = name.startsWith('comp_search') ? csa.comp_top_z : csa.pcb_top_z;
+    let z = name.startsWith('comp_search') ? csa.comp_top_z : (name == 'pld_search' ? csa.pld_top_z : csa.pcb_top_z);
     let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
         csa.cur_pos[2] = z_middle;
@@ -258,6 +261,8 @@ window.btn_goto_z = async function(name) {
         csa.cur_pos[2] = csa.pcb_base_z + csa.cam_dz;
     } else if (name == 'comp_top_z') {
         csa.cur_pos[2] = csa.pcb_base_z + csa.cam_dz;
+    } else if (name == 'pld_top_z') {
+        csa.cur_pos[2] = csa.pld_base_z + csa.cam_dz;
     } else {
         csa.cur_pos[2] = Number(document.getElementById(name).value);
     }

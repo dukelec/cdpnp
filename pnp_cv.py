@@ -60,8 +60,12 @@ def cv_get_pos(img):
       area = cv.contourArea(c)
      
       # Ignore contours that are too small or too large
-      if area < 125 or 125000 < area:
-        continue
+      if cv_dat['detect'][0:4] == "pld_":
+          if area < 1800 or 3200 < area:
+            continue
+      else:
+          if area < 125 or 125000 < area:
+            continue
      
       # cv.minAreaRect returns:
       # (center(x, y), (width, height), angle of rotation) = cv2.minAreaRect(c)
@@ -93,11 +97,17 @@ def cv_get_pos(img):
       
       label = str(angle) + (' !' if cv_dat['detect'] == 'limit_angle' else '')
       cv.drawContours(img,[box],0,(0,0,255),1)
-      cv.putText(img, label, (center[0]+14, center[1]), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0,200,255), 1, cv.LINE_AA)
+      if cv_dat['detect'][0:4] != "pld_":
+        cv.putText(img, label, (center[0]+14, center[1]), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0,200,255), 1, cv.LINE_AA)
       cv.drawMarker(img, (center[0],center[1]), color=(0,255,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=10)
     
     if len(comps):
-        comps.sort(key = lambda e : e[3])
+        if cv_dat['detect'] == "pld_first":
+            comps.sort(key = lambda e : e[1])
+        elif cv_dat['detect'] == "pld_last":
+            comps.sort(key = lambda e : -e[1])
+        else:
+            comps.sort(key = lambda e : e[3])
         cv.drawMarker(img, (comps[0][0],comps[0][1]), color=(0,0,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=5)
         cv_dat['cur'] = comps[0]
     else:

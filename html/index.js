@@ -37,13 +37,23 @@ let csa_dft = {
     grap_err: null,
     motor_speed: 0.5,
     
-    offset_config: null
+    offset_config: null,
+    
+    pld_search: [47, 142],
+    pld_base_z: -89.9,
+    pld_comp_offset: 3.5,
+    pld_comp_space: 0.5,
+    pld_start_at: -0.5,
+    pld_tgt_grid: [2, 1.5],
+    pld_rotate: 0,
+    pld_enable: 0
 };
 
 let csa = {};
 deep_merge(csa, csa_dft);
 
-let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed', 'offset_config'];
+let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed',
+                     'offset_config', 'pld_search', 'pld_base_z', 'pld_comp_offset', 'pld_comp_space', 'pld_start_at', 'pld_tgt_grid', 'pld_rotate', 'pld_enable'];
 let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'offset_config'];
 let csa_cfg_export = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
 
@@ -343,6 +353,7 @@ document.getElementById('btn_run').onclick = async function() {
 document.getElementById('btn_stop').onclick = function() {
     csa.stop = true;
     document.getElementById('pause_en').checked = false;
+    document.getElementById('btn_stop').disabled = true;
     set_step(1);
 };
 

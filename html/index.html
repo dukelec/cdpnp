@@ -146,6 +146,50 @@
 
     <br>
     <div class="container">
+        <h1 class="title is-size-4">Preload <input type="checkbox" id="preload_en" onchange="input_change()" checked></h1>
+        <div class="content" style="font-size: 12px;">
+            
+            <span style="display: inline-block; min-width: 100px;">Preload search:</span>
+            <input type="text" id="pld_search" onchange="input_change()">
+            <button class="button is-small goto_btn" onclick="btn_goto_xy('pld_search')">Goto</button>
+            <button class="button is-small" onclick="btn_update_xy('pld_search')">Update</button>
+            <br>
+            <span style="display: inline-block; min-width: 100px;">Preload base z:</span>
+            <input type="text" id="pld_base_z" onchange="input_change()">
+            <button class="button is-small goto_btn" onclick="btn_goto_z('pld_base_z')">Goto</button>
+            <button class="button is-small" onclick="btn_update_z('pld_base_z')">Update</button> &nbsp;|&nbsp;
+            <button class="button is-small goto_btn" onclick="btn_goto_z('pld_top_z')">Preload base + cam dz</button>
+            <br><br>
+            
+            Comp offset: <input type="text" id="pld_comp_offset" onchange="input_change()" size="2" value="2"> mm &nbsp;|&nbsp;
+            
+            Comp space: <input type="text" id="pld_comp_space" onchange="input_change()" size="2" value="1"> unit (4mm) &nbsp;|&nbsp;
+            
+            Start at: <input type="text" id="pld_start_at" onchange="input_change()" size="2" value="0.5"> unit &nbsp;|&nbsp;
+            
+            Amount: <input type="text" id="pld_amount" size="2" value="--"> pcs
+            <br><br>
+            
+            Target grid: <input type="text" id="pld_tgt_grid" onchange="input_change()" size="2" value="2, 1.5"> mm &nbsp;|&nbsp;
+            
+            Rotate:
+            <select id="pld_rotate" onchange="input_change()">
+                <option value="0" selected>0</option>
+                <option value="90">90</option>
+                <option value="-90">-90</option>
+                <option value="180">180</option>
+            </select> &nbsp;|&nbsp;
+            
+            Count: <input type="text" id="pld_count" size="2" value="0"> &nbsp;
+            <button class="button is-small" id="btn_pld_clear">Clear</button>  &nbsp;|&nbsp;
+            <button class="button is-small" id="btn_pld_stop" disabled>Stop</button>
+            <button class="button is-small" id="btn_pld_run">Run</button>
+            
+        </div>
+    </div>
+
+    <br>
+    <div class="container">
         <h1 class="title is-size-4">Components</h1>
         
         Current: <span id="cur_progress">-- / --</span> &nbsp;|&nbsp;
