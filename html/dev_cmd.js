@@ -30,6 +30,17 @@ async function get_camera_cfg() {
     document.getElementById('camera_detect').value = dat[0].detect;
 }
 
+async function set_camera_cfg(_detect=null) {
+    let dev = Number(document.getElementById('camera_dev').value);
+    let detect = _detect || document.getElementById('camera_detect').value;
+    let light1 = document.getElementById('camera_light1').checked;
+    let light2 = document.getElementById('camera_light2').checked;
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'set_camera_cfg', 'dev': dev, 'detect': detect, 'light1': light1, 'light2': light2}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(500);
+    console.log(`set_camera_cfg ${dev}, ${detect} ret`, dat);
+}
+
 async function get_motor_pos() {
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'get_motor_pos'}, ['server', 'dev']);
@@ -63,16 +74,9 @@ async function set_pump(val) {
     document.getElementById('pump_en').checked = val ? true : false;
 }
 
-async function update_coeffs() {
+async function pcb2xyz(pcb, cam, x, y) {
     cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'update_coeffs', 'pcb': csa.fiducial_pcb, 'cam': csa.fiducial_cam}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(1500);
-    console.log('update_coeffs ret', dat);
-}
-
-async function pcb2xyz(idx, x, y) {
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'pcb2xyz', 'idx': idx, 'x': x, 'y': y}, ['server', 'dev']);
+    await cmd_sock.sendto({'action': 'pcb2xyz', 'pcb': pcb, 'cam': cam, 'x': x, 'y': y}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(1000);
     console.log('pcb2xyz ret', dat ? dat[0] : null);
     return dat ? dat[0] : null;
@@ -107,8 +111,8 @@ async function get_cv_cur() {
 // 10mm / 344 pixel
 let DIV_MM2PIXEL = 10/344;
 
-async function cam_comp_snap() {
-    for (let i = 0; i < 3; i++) {
+async function cam_comp_snap(times=3) {
+    for (let i = 0; i < times; i++) {
         let cv = await get_cv_cur();
         if (cv) {
             let dx = (cv[0] - 600/2) * DIV_MM2PIXEL
@@ -130,6 +134,6 @@ async function cam_comp_snap() {
 
 
 export {
-    get_camera_cfg, get_motor_pos, set_motor_pos, set_pump,
-    update_coeffs, pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap
+    get_camera_cfg, set_camera_cfg, get_motor_pos, set_motor_pos, set_pump,
+    pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap
 };

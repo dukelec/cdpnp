@@ -12,7 +12,7 @@ import { disable_goto_btn } from './input_ctrl.js';
 
 function get_comp_values(comp)
 {
-    let pos_list = document.getElementById('pos_list');    
+    let pos_list = document.getElementById('pos_list');
     let comp_list = pos_list.getElementsByClassName('list_comp');
     for (let elm of comp_list) {
         let subs = elm.querySelectorAll('td');
@@ -182,7 +182,7 @@ async function move_to_comp(comp) {
         set_step(1); // step: goto_comp
         let comp_val = get_comp_values(comp);
         let board = get_board_safe();
-        let comp_xyz = await pcb2xyz(board, comp_val[0], comp_val[1]);
+        let comp_xyz = await pcb2xyz(csa.fiducial_pcb, csa.fiducial_cam[board], comp_val[0], comp_val[1]);
         if (csa.cur_pos[2] != csa.pcb_top_z) {
             let z = csa.pcb_top_z;
             let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);

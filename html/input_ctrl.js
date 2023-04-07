@@ -5,7 +5,7 @@
  */
 
 import { read_file, download, readable_float, cpy, sleep } from './utils/helper.js';
-import { get_motor_pos, set_motor_pos, set_pump, update_coeffs, enable_force } from './dev_cmd.js';
+import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js';
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export } from './index.js';
 
 
@@ -168,7 +168,6 @@ function csa_from_page_input()
 async function input_change() {
     csa_from_page_input();
     auto_hide();
-    await update_coeffs();
     let save = {'cfg_ver': 1};
     cpy(save, csa, csa_need_save);
     await db.set('tmp', 'csa', save);
@@ -315,15 +314,8 @@ async function set_camera_en(enable) {
     let dat = await cmd_sock.recvfrom(500);
     console.log(`camera_en ${camera_en} ret`, dat);
 };
-async function set_camera_cfg() {
-    let dev = Number(document.getElementById('camera_dev').value);
-    let detect = document.getElementById('camera_detect').value;
-    let light1 = document.getElementById('camera_light1').checked;
-    let light2 = document.getElementById('camera_light2').checked;
-    cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_camera_cfg', 'dev': dev, 'detect': detect, 'light1': light1, 'light2': light2}, ['server', 'dev']);
-    let dat = await cmd_sock.recvfrom(500);
-    console.log(`set_camera_cfg ${dev}, ${detect} ret`, dat);
+async function _set_camera_cfg() {
+    await set_camera_cfg();
 }
 async function set_camera_dev() {
     if (document.getElementById('camera_en').checked) {
@@ -337,9 +329,9 @@ async function set_camera_dev() {
 document.getElementById('camera_en').onchange = async function() {
     await set_camera_en(document.getElementById('camera_en').checked);
 };
-document.getElementById('camera_light1').onchange = set_camera_cfg
-document.getElementById('camera_light2').onchange = set_camera_cfg
-document.getElementById('camera_detect').onchange = set_camera_cfg;
+document.getElementById('camera_light1').onchange = _set_camera_cfg
+document.getElementById('camera_light2').onchange = _set_camera_cfg
+document.getElementById('camera_detect').onchange = _set_camera_cfg;
 document.getElementById('camera_dev').onchange = set_camera_dev;
 
 async function camera_update_bg()
@@ -378,7 +370,7 @@ async function move_button(val)
 window.move_button = move_button;
 
 window.addEventListener('keydown', async function(e) {
-    if (document.activeElement.type == 'text')
+    if (document.activeElement.type == 'text' || document.activeElement.type == 'textarea')
         return;
     console.log(e.keyCode);
     if (e.keyCode == 32) { // space

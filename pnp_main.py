@@ -59,17 +59,16 @@ if dev:
 print('start...')
 
 
-board_idx = 0
-coeffs = []
+coeff = None
 fiducial_pcb = [ [0, 0], [1, 1] ]
-fiducial_cam = [ [[0, 0], [10, 10]] ]
+fiducial_cam = [ [0, 0], [10, 10] ]
 
 def equations(p):
     s, a, d_x, d_y = p
     F = np.empty((4))
     for i in range(2):
-        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_cam[board_idx][i][0]
-        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_cam[board_idx][i][1]
+        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_cam[i][0]
+        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_cam[i][1]
     return F
 
 def pcb2xyz(p, pcb):
@@ -78,21 +77,16 @@ def pcb2xyz(p, pcb):
     step_y = (pcb[0] * math.sin(a) + pcb[1] * math.cos(a)) * s + d_y
     return step_x, step_y, math.degrees(math.atan2(math.sin(-a), math.cos(-a))) # return limited-range angle
 
-def update_coeffs():
-    global board_idx, coeffs
-    coeffs = []
-    for i in range(len(fiducial_cam)):
-        board_idx = i
-        coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
-        print(f'coefficient #{i}:', coeff)
-        print('equations(coeff):', equations(coeff))
-        print('pcb2xyz:', pcb2xyz(coeff, (-6.3, 4.75)))
-        coeffs.append(coeff)
-    print('coeffs:', coeffs)
+def update_coeff():
+    global coeff
+    coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
+    #print(f'coefficient:', coeff)
+    #print('equations(coeff):', equations(coeff))
+    #print('coeff:', coeff)
 
 
 async def dev_service():
-    global coeffs, fiducial_pcb, fiducial_cam
+    global coeff, fiducial_pcb, fiducial_cam
     
     sock = CDWebSocket(ws_ns, 'dev')
     while True:
@@ -155,16 +149,12 @@ async def dev_service():
                 os.remove(f'{cur_path}/tmp/bg_invert.png')
             await sock.sendto('succeeded', src)
         
-        elif dat['action'] == 'update_coeffs':
-            logger.info(f"update_coeffs")
-            fiducial_pcb = dat['pcb']
-            fiducial_cam = dat['cam']
-            update_coeffs()
-            await sock.sendto('succeeded', src)
-        
         elif dat['action'] == 'pcb2xyz':
             logger.info(f"pcb2xyz")
-            p_xy = pcb2xyz(coeffs[dat['idx']], (dat['x'], dat['y']))
+            fiducial_pcb = dat['pcb']
+            fiducial_cam = dat['cam']
+            update_coeff()
+            p_xy = pcb2xyz(coeff, (dat['x'], dat['y']))
             await sock.sendto(p_xy, src)
         
         elif dat['action'] == 'get_cv_cur':

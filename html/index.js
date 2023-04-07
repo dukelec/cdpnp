@@ -11,7 +11,7 @@ import { Idb } from './utils/idb.js';
 import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_comp_values, pos_to_page,
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
 import { input_init, csa_to_page_input } from './input_ctrl.js';
-import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump, update_coeffs, pcb2xyz,
+import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump, pcb2xyz,
          z_keep_high, enable_force, cam_comp_snap } from './dev_cmd.js';
 
 let csa_dft = {
@@ -129,7 +129,7 @@ document.getElementById('btn_run').onclick = async function() {
         }
         
         let comp_val = get_comp_values(comp);
-        let comp_xyz = await pcb2xyz(board, comp_val[0], comp_val[1]);
+        let comp_xyz = await pcb2xyz(csa.fiducial_pcb, csa.fiducial_cam[board], comp_val[0], comp_val[1]);
         
         if (step == 0) { // show_target
             console.log('fsm show target');
@@ -344,7 +344,6 @@ function init_ws() {
         ws_ns.connections['server'] = ws;
         await get_motor_pos();
         await get_camera_cfg();
-        await update_coeffs();
     }
     ws.onmessage = async function(evt) {
         let dat = await blob2dat(evt.data);

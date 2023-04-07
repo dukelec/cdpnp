@@ -271,6 +271,13 @@ function csv_parser(str, delimiter ){
     return arrData;
 }
 
+// https://stackoverflow.com/questions/26246601
+function wildcard_test(str, wildcard) {
+    let w = wildcard.replace(/[.+^${}()|[\]\\]/g, '\\$&'); // regexp escape 
+    const re = new RegExp(`^${w.replace(/\*/g,'.*').replace(/\?/g,'.')}$`);
+    return re.test(str);
+}
+
 export {
     sleep, read_file, load_img, date2num, timestamp,
     sha256, aes256,
@@ -279,5 +286,5 @@ export {
     download,
     escape_html, readable_size, readable_float,
     blob2dat, deep_merge,
-    csv_parser
+    csv_parser, wildcard_test
 };
