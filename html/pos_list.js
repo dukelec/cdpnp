@@ -7,7 +7,7 @@
 import { csv_parser, read_file, readable_float } from './utils/helper.js';
 import { set_motor_pos, pcb2xyz } from './dev_cmd.js';
 import { csa, db } from './index.js';
-import { disable_goto_btn } from './input_ctrl.js';
+import { disable_goto_btn, offset_apply } from './input_ctrl.js';
 
 
 function get_comp_values(comp)
@@ -16,15 +16,27 @@ function get_comp_values(comp)
     let comp_list = pos_list.getElementsByClassName('list_comp');
     for (let elm of comp_list) {
         let subs = elm.querySelectorAll('td');
-        if (subs[0].innerText == comp)
-            return [Number(subs[1].innerText), Number(subs[2].innerText), Number(subs[3].innerText)];
+        if (subs[0].innerText == comp) {
+            let ret_val = [Number(subs[1].innerText), Number(subs[2].innerText), Number(subs[3].innerText)];
+            let [,,comp_offsets] = search_comp_parents(comp);
+            if (comp_offsets[1][0] != 0 || comp_offsets[1][1] != 0) {
+                let rad = -ret_val[2] * Math.PI / 180;
+                let offset = [
+                    Math.cos(rad) * comp_offsets[1][0] - Math.sin(rad) * comp_offsets[1][1],
+                    Math.sin(rad) * comp_offsets[1][0] + Math.cos(rad) * comp_offsets[1][1]
+                ];
+                ret_val[0] += offset[0];
+                ret_val[1] += offset[1];
+            }
+            return ret_val;
+        }
     }
     return null;
 }
 
 function search_comp_parents(comp, set_color=false, color='')
 {
-    let parents = [null, null];
+    let parents = [null, null, null]; // footprint, value, offset
     let pos_list = document.getElementById('pos_list');
     let comp_elm = null;
     
@@ -44,6 +56,15 @@ function search_comp_parents(comp, set_color=false, color='')
         if (elm.contains(comp_elm)) {
             let subs = elm.querySelectorAll('td');
             parents[0] = subs[0].innerText;
+            if (subs[1].innerText != '--') {
+                let xy_str1 = subs[1].innerText.split("|")[0];
+                let xy_str2 = subs[1].innerText.split("|")[1];
+                let offset1 = [Number(xy_str1.split(',')[0]), Number(xy_str1.split(',')[1])];
+                let offset2 = [Number(xy_str2.split(',')[0]), Number(xy_str2.split(',')[1])];
+                parents[2] = [offset1, offset2];
+            } else {
+                parents[2] = [[0, 0], [0, 0]];
+            }
             if (set_color) {
                 subs[0].style.backgroundColor = color;
                 subs[1].style.backgroundColor = color;
@@ -260,6 +281,8 @@ function pos_to_page(pos) {
             select_comp(search_current_comp());
         });
     }
+    
+    offset_apply();
 }
 
 function pos_from_page() {

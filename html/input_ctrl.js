@@ -4,7 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { read_file, download, readable_float, cpy, sleep } from './utils/helper.js';
+import { read_file, download, readable_float, cpy, sleep, wildcard_test } from './utils/helper.js';
 import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js';
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export } from './index.js';
 
@@ -106,6 +106,8 @@ function csa_to_page_input()
             document.getElementById(`user_name${i}`).value = '';
         }
     }
+    
+    document.getElementById('offset_config').value = csa.offset_config;
 }
 
 function csa_from_page_input()
@@ -163,6 +165,8 @@ function csa_from_page_input()
         else
             break;
     }
+    
+    csa.offset_config = document.getElementById('offset_config').value;
 }
 
 async function input_change() {
@@ -493,6 +497,42 @@ document.getElementById('btn_export_prj').onclick = async function() {
 };
 
 
+function offset_apply() {
+    let lines = csa.offset_config.split("\n");
+    let offsets = {};
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        if (!line || line.startsWith("//"))
+            continue;
+        let wildcard = line.split(":")[0];
+        let xy_str1 = line.split(":")[1].split("|")[0];
+        let xy_str2 = line.split(":")[1].split("|")[1];
+        let offset1 = [Number(xy_str1.split(',')[0]), Number(xy_str1.split(',')[1])];
+        let offset2 = [Number(xy_str2.split(',')[0]), Number(xy_str2.split(',')[1])];
+        offsets[wildcard] = `${offset1[0]}, ${offset1[1]} | ${offset2[0]}, ${offset2[1]}`;
+    }
+    console.log(`offsets:`, offsets);
+    
+    let footprint_list = pos_list.getElementsByClassName('list_footprint');
+    for (let elm of footprint_list) {
+        let subs = elm.querySelectorAll('td');
+        subs[1].innerText = '--';
+    }
+    for (let elm of footprint_list) {
+        let subs = elm.querySelectorAll('td');
+        for (let wildcard in offsets) {
+            if (wildcard_test(subs[0].innerText, wildcard))
+                subs[1].innerText = offsets[wildcard];
+        }
+    }
+};
+
+document.getElementById('offset_apply').onclick = async function() {
+    offset_apply();
+    alert("Apply OK.");
+};
+
+
 function input_init() {
     let search = document.getElementById('input_search');
     let fiducial = document.getElementById('input_fiducial');
@@ -536,5 +576,5 @@ function input_init() {
 }
 
 export {
-    input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input, disable_goto_btn
+    input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input, disable_goto_btn, offset_apply
 };

@@ -35,14 +35,16 @@ let csa_dft = {
     
     comp_height: null,
     grap_err: null,
-    motor_speed: 0.5
+    motor_speed: 0.5,
+    
+    offset_config: null
 };
 
 let csa = {};
 deep_merge(csa, csa_dft);
 
-let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed'];
-let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam'];
+let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed', 'offset_config'];
+let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'offset_config'];
 let csa_cfg_export = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
 
 let db = null;
@@ -130,6 +132,7 @@ document.getElementById('btn_run').onclick = async function() {
         
         let comp_val = get_comp_values(comp);
         let comp_xyz = await pcb2xyz(csa.fiducial_pcb, csa.fiducial_cam[board], comp_val[0], comp_val[1]);
+        let [,,comp_offsets] = search_comp_parents(comp);
         
         if (step == 0) { // show_target
             console.log('fsm show target');
@@ -188,6 +191,15 @@ document.getElementById('btn_run').onclick = async function() {
             csa.cur_pos[1] -= csa.grab_ofs0[1];
             if (csa.comp_height != null)
                 csa.cur_pos[2] = csa.comp_base_z + csa.comp_height + 1; // 1mm space
+            if (comp_offsets[0][0] != 0 || comp_offsets[0][1] != 0) {
+                let rad = -csa.cv_cur_r * Math.PI / 180;
+                let offset = [
+                    Math.cos(rad) * comp_offsets[0][0] - Math.sin(rad) * comp_offsets[0][1],
+                    Math.sin(rad) * comp_offsets[0][0] + Math.cos(rad) * comp_offsets[0][1]
+                ];
+                csa.cur_pos[0] += offset[0];
+                csa.cur_pos[1] += offset[1];
+            }
             await set_motor_pos(true);
             await sleep(800);
             await enable_force();
