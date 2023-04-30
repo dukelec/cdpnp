@@ -34,7 +34,8 @@ from pnp_cv import pnp_cv_init, cv_dat, cur_path
 from pnp_xyz import *
 
 args = CdArgs()
-dev_str = args.get("--dev", dft="ttyACM0")
+#dev_str = args.get("--dev", dft="ttyACM0")
+dev_str = args.get("--dev", dft="0483:5740")
 
 if args.get("--help", "-h") != None:
     print(__doc__)

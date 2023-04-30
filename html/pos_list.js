@@ -277,7 +277,7 @@ function pos_to_page(pos) {
     for (let s of sortable('.js-sortable-table')) {
         s.addEventListener('sortupdate', async function(e) {
             console.log('update list to db');
-            await db.set('tmp', 'list', pos_from_page());
+            document.getElementById('btn_save_cfg').style.background = 'yellow';
             select_comp(search_current_comp());
         });
     }
@@ -360,7 +360,7 @@ document.getElementById('btn_load_csv').onclick = async function() {
             let pos = csv_to_pos(data_str);
             console.log('load pos:', pos);
             pos_to_page(pos);
-            await db.set('tmp', 'list', pos);
+            document.getElementById('btn_save_cfg').style.background = 'yellow';
         }
         this.value = '';
     };

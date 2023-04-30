@@ -8,6 +8,7 @@ import { read_file, download, readable_float, cpy, sleep, wildcard_test } from '
 import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js';
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export } from './index.js';
 import { pld_csa_to_page, pld_csa_from_page } from './preload_ctrl.js';
+import { pos_to_page, pos_from_page } from './pos_list.js';
 
 
 function disable_goto_btn(val) {
@@ -172,13 +173,20 @@ function csa_from_page_input()
     pld_csa_from_page();
 }
 
-async function input_change() {
-    csa_from_page_input();
-    auto_hide();
+async function save_cfg() {
     let save = {'cfg_ver': 1};
     cpy(save, csa, csa_need_save);
     await db.set('tmp', 'csa', save);
-    console.log('saved');
+    await db.set('tmp', 'list', pos_from_page());
+    console.log('config saved');
+    document.getElementById('btn_save_cfg').style.background = '';
+}
+
+async function input_change() {
+    console.log('input_change');
+    csa_from_page_input();
+    auto_hide();
+    document.getElementById('btn_save_cfg').style.background = 'yellow';
 }
 window.input_change = input_change;
 
@@ -420,11 +428,16 @@ window.addEventListener('keydown', async function(e) {
     move_button(val);
 });
 
+document.getElementById('btn_save_cfg').onclick = async function() {
+    await save_cfg();
+    alert('Saved.');
+};
+
 document.getElementById('btn_reset_cfg').onclick = async function() {
     cpy(csa, csa_dft, csa_cfg_export);
-    await db.set('tmp', 'csa', csa);
-    alert('Refresh page...');
-    location.reload();
+    csa_to_page_input();
+    await input_change();
+    alert('Ok, please save config and refresh page.');
 };
 
 document.getElementById('btn_import_cfg').onclick = async function() {
@@ -446,9 +459,9 @@ document.getElementById('btn_import_cfg').onclick = async function() {
             }
             console.log('import cfg dat:', cfg);
             cpy(csa, cfg.csa, csa_cfg_export);
-            await db.set('tmp', 'csa', csa);
+            csa_to_page_input();
+            await input_change();
             alert('Import config succeeded');
-            location.reload();
         }
         this.value = '';
     };
@@ -483,10 +496,10 @@ document.getElementById('btn_import_prj').onclick = async function() {
             }
             console.log('import prj dat:', prj);
             cpy(csa, prj.csa, csa_prj_export);
-            await db.set('tmp', 'csa', csa);
-            await db.set('tmp', 'list', prj.list);
+            csa_to_page_input();
+            await input_change();
+            pos_to_page(prj.list);
             alert('Import project succeeded');
-            location.reload();
         }
         this.value = '';
     };
