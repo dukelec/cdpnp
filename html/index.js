@@ -37,7 +37,7 @@ let csa_dft = {
     grap_err: null,
     motor_speed: 0.5,
     
-    offset_config: null,
+    offset_config: "",
     
     pld_search: [47, 142],
     pld_base_z: -89.9,
