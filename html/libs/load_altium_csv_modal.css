@@ -1,0 +1,39 @@
+.load_altium_csv_modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.load_altium_csv_modal_content {
+    background-color: #fefefe;
+    margin: 20% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 400px;
+}
+
+.load_altium_csv_modal_buttons {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.load_altium_csv_modal_button {
+    margin: 0 10px;
+    padding: 8px 20px;
+    border: 1px solid gray;
+    background-color: #D5F5E3;
+    color: black;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.1s;
+}
+
+.load_altium_csv_modal_button.hovered {
+    background-color: #97e6ba;
+}

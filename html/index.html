@@ -16,6 +16,8 @@
     border-bottom-width: 0;
 }
 </style>
+<link rel="stylesheet" href="./libs/load_altium_csv_modal.css">
+<script src="./libs/papaparse.min.js"></script>
 
 </head>
 <body>
@@ -24,6 +26,7 @@
     <div class="container">
         <h1 class="title is-size-4">CDPnP</h1>
         <button class="button is-small" id="btn_load_csv">Load CSV</button>
+        <button class="button is-small" id="btn_load_altium_csv">Load Altium CSV</button>
         <button class="button is-small" id="btn_export_prj">Export Project</button>
         <button class="button is-small" id="btn_import_prj">Import Project</button> &nbsp;|&nbsp;
         <button class="button is-small" id="btn_reset_cfg">Reset Config</button>
@@ -141,6 +144,7 @@
             <span style="display: inline-block; min-width: 138px; padding-bottom: 0.1em;">Fiducial pcb:</span>
             <input type="text" id="fiducial_pcb0" onchange="input_change()">
             <input type="text" id="fiducial_pcb1" onchange="input_change()">
+            <span id="fiducial_warning_message" style="display: none; min-width: 138px; padding-bottom: 0.1em; color: red;"></span>
         </div>
         <div id="input_user"></div>
     </div>
@@ -230,6 +234,15 @@
 </section>
 
 <input id="input_file" type="file" style="display:none;">
+
+<div id="modal_load_altium_csv" class="load_altium_csv_modal">
+    <div class="load_altium_csv_modal_content">
+        <p>There are more than one layer in your CSV file.</p>
+        <p>Please select one of the layer.</p>
+        <div id="load_altium_csv_modal_buttons_container" class="load_altium_csv_modal_buttons"></div>
+    </div>
+</div>
+
 </body>
 <script src="./libs/html5sortable-3dac3ba.min.js" defer></script>
 <script src="./libs/msgpack-ygoe-9045d01.min.js" defer></script>
