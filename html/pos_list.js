@@ -77,9 +77,14 @@ function search_comp_parents(comp, set_color=false, color='')
     for (let elm of value_list) {
         if (elm.contains(comp_elm)) {
             let sub0 = elm.querySelector('td');
+            let quantity_list = elm.querySelectorAll('.list_quantity');
             parents[1] = sub0.innerText;
-            if (set_color)
+            if (set_color) {
                 sub0.style.backgroundColor = color;
+                for (let quan_elm of quantity_list) {
+                    quan_elm.style.backgroundColor = color;
+                }
+            }
             break;
         }
     }
@@ -246,9 +251,23 @@ function pos_to_page(pos) {
                         <td style="width: 7em;">${readable_float(comp[3])}</td>
                     </tr>`;
             }
+            let list_quantity_pre_pcb_html = '';
+            if (document.getElementById('quantity_pre_pcb').checked) {
+                list_quantity_pre_pcb_html = `
+                    <td class='list_quantity' style="width: 7em;">${pos[footprint][value].length}</td>
+                `;
+            }
+            let list_quantity_total_html = '';
+            if (document.getElementById('quantity_total').checked) {
+                list_quantity_total_html = `
+                    <td class='list_quantity' style="width: 7em;">${csa.fiducial_cam.length * pos[footprint][value].length}</td>
+                `;
+            }
             html_value += `
                 <tr class='list_value'>
                     <td style="width: 20em;">${value}</td>
+                    ${list_quantity_pre_pcb_html}
+                    ${list_quantity_total_html}
                     <td>
                         <table>
                             <tbody class="js-sortable-table">
@@ -258,11 +277,14 @@ function pos_to_page(pos) {
                     </td>
                 </tr>`;
         }
+        let colspan_counter = 5
+        colspan_counter += document.getElementById('quantity_pre_pcb').checked ? 1 : 0
+        colspan_counter += document.getElementById('quantity_total').checked ? 1 : 0
         let html = `
             <tr class='list_footprint'>
                 <td>${footprint}</td>
                 <td>--</td>
-                <td colspan="5">
+                <td colspan=${colspan_counter}>
                     <table>
                         <tbody class="js-sortable-table">
                             ${html_value}
@@ -443,6 +465,17 @@ window.btn_select_board = async function (idx) {
     await select_comp(search_current_comp());
 };
 
+async function update_pos(id="", column="") {
+    if (id != '' && column != '') {
+        let checkBox = document.getElementById(id);
+        let elm = document.getElementById(column);
+        elm.style.display = checkBox.checked ? '' : 'none';
+    }
+    let pos = await db.get('tmp', 'list');
+    if (pos)
+        pos_to_page(pos);
+};
+window.update_pos = update_pos;
 
 export {
     search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp, move_to_comp,

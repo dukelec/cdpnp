@@ -192,7 +192,15 @@
     <br>
     <div class="container">
         <h1 class="title is-size-4">Components</h1>
-        
+        <button id="btn_change_fuducial" class="button is-small" onclick="update_pos()">Update Quantity</button>
+        <label>(should click after changing the amount of Fiducials)</label>
+        &nbsp;
+        <label class="checkbox"><input id="quantity_pre_pcb" type="checkbox" onchange="update_pos('quantity_pre_pcb', 'quantity_pre_pcb_column')"> Show Quantity (pre PCB)</label>
+        &nbsp;|&nbsp;
+        <label class="checkbox"><input id="quantity_total" type="checkbox" checked onchange="update_pos('quantity_total', 'quantity_total_column')"> Show Quantity (total)</label>
+        <br>
+        <br>
+
         Current: <span id="cur_progress">-- / --</span> &nbsp;|&nbsp;
                  <span id="cur_comp">-- -- --</span> <span id="cur_board">--</span> &nbsp;|&nbsp;
                  Height: <span id="cur_height">--</span>
@@ -205,7 +213,9 @@
                   <thead>
                       <tr>
                           <td style="width: 20em;">Footprint</td> <td>Offset</td>
-                          <td style="width: 20em;">Value</td> <td style="width: 10em;">Reference</td>
+                          <td style="width: 20em;">Value</td>
+                          <td id="quantity_pre_pcb_column" style="width: 7em; display: none">Quantity<br>(pre PCB)</td> <td id="quantity_total_column" style="width: 7em;">Quantity<br>(total)</td>
+                          <td style="width: 10em;">Reference</td>
                           <td style="width: 7em;">X</td> <td style="width: 7em;">Y</td> <td style="width: 7em;">R</td>
                       </tr>
                   </thead>
