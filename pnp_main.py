@@ -27,7 +27,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'pycdnet'))
 from cdnet.utils.log import *
 from cdnet.utils.cd_args import CdArgs
 from cdnet.dev.cdbus_serial import CDBusSerial
-from cdnet.dev.cdbus_bridge import CDBusBridge
 from cdnet.dispatch import *
 
 from pnp_cv import pnp_cv_init, cv_dat, cur_path
@@ -51,7 +50,8 @@ elif args.get("--info", "-i") != None:
 logging.getLogger('websockets').setLevel(logging.WARNING)
 logger = logging.getLogger(f'cdpnp')
 
-dev = CDBusBridge(dev_str) if dev_str != 'None' else None
+# baudrate ignored for cdbus bridge
+dev = CDBusSerial(dev_str) if dev_str != 'None' else None
 if dev:
     CDNetIntf(dev, mac=0x00)
     pnp_cv_init()
