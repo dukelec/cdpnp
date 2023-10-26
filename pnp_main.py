@@ -114,7 +114,7 @@ async def dev_service():
         elif dat['action'] == 'set_camera':
             logger.info(f"set_camera {dat['val']}")
             if dev:
-                rx = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x0036, struct.pack("<B", 255 if dat['val'] else 0))
+                rx = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x005f, struct.pack("<B", 255 if dat['val'] else 0))
                 print('set cam ret: ' + rx.hex())
             await sock.sendto('succeeded', src)
         
@@ -122,19 +122,19 @@ async def dev_service():
             logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}, light: {dat['light1']}_{dat['light2']}")
             cv_dat['dev'] = dat['dev']
             cv_dat['detect'] = dat['detect']
-            rx = cd_reg_rw(f"80:00:21", 0x0040, struct.pack("<b", 1 if dat['light1'] else 0))
+            rx = cd_reg_rw(f"80:00:21", 0x0069, struct.pack("<b", 1 if dat['light1'] else 0))
             print('set cam_light1 ret: ' + rx.hex())
-            rx = cd_reg_rw(f"80:00:22", 0x0040, struct.pack("<b", 1 if dat['light2'] else 0))
+            rx = cd_reg_rw(f"80:00:22", 0x0069, struct.pack("<b", 1 if dat['light2'] else 0))
             print('set cam_light2 ret: ' + rx.hex())
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'get_camera_cfg':
             logger.info('get_camera_cfg')
-            rx0 = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x0036, read=1) if dev else bytes([0x80, 0x00])
+            rx0 = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x005f, read=1) if dev else bytes([0x80, 0x00])
             print('get_camera_cfg ret: ' + rx0.hex())
-            rx1 = cd_reg_rw(f"80:00:21", 0x0040, read=1) if dev else bytes([0x80, 0x00])
+            rx1 = cd_reg_rw(f"80:00:21", 0x0069, read=1) if dev else bytes([0x80, 0x00])
             print('get_camera_light1 ret: ' + rx1.hex())
-            rx2 = cd_reg_rw(f"80:00:22", 0x0040, read=1) if dev else bytes([0x80, 0x00])
+            rx2 = cd_reg_rw(f"80:00:22", 0x0069, read=1) if dev else bytes([0x80, 0x00])
             print('get_camera_light2 ret: ' + rx2.hex())
             await sock.sendto({'enable': rx0[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect'], 'light1': rx1[1], 'light2': rx2[1]}, src)
         
