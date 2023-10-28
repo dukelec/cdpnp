@@ -61,10 +61,10 @@ def cv_get_pos(img):
      
       # Ignore contours that are too small or too large
       if cv_dat['detect'][0:4] == "pld_":
-          if area < 1800 or 3200 < area:
+          if area < 42*42 or 57*57 < area:
             continue
       else:
-          if area < 125 or 125000 < area:
+          if area < 11*11 or 580*580 < area:
             continue
      
       # cv.minAreaRect returns:
