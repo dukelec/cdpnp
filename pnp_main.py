@@ -119,13 +119,15 @@ async def dev_service():
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'set_camera_cfg':
-            logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}, light: {dat['light1']}_{dat['light2']}")
+            logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}, light: {dat['light1']}_{dat['light2']}, expos: {dat['expos']}")
             cv_dat['dev'] = dat['dev']
             cv_dat['detect'] = dat['detect']
             rx = cd_reg_rw(f"80:00:21", 0x0069, struct.pack("<b", 1 if dat['light1'] else 0))
             print('set cam_light1 ret: ' + rx.hex())
             rx = cd_reg_rw(f"80:00:22", 0x0069, struct.pack("<b", 1 if dat['light2'] else 0))
             print('set cam_light2 ret: ' + rx.hex())
+            rx = cd_reg_rw(f"80:00:2{cv_dat['dev']}", 0x0044, struct.pack("<H", dat['expos']))
+            print('set exposure ret: ' + rx.hex())
             await sock.sendto('succeeded', src)
         
         elif dat['action'] == 'get_camera_cfg':

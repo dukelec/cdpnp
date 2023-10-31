@@ -19,8 +19,8 @@ let csa_dft = {
     old_pos: [0, 0, 0, 0],
     aux_pos: [0, 0, 0, 0],
     
-    grab_ofs0:   [33.53, 6.45],
-    grab_ofs180: [33.69, 6.18],
+    grab_ofs:    [33.53, 6.45], // camera to grab rotation center
+    nozzle_cali: [-0.1, -0.05], // error vector at 0 degree
     comp_search: [[55, 142], [65, 142]],
     cam_dz: 7,
     comp_base_z: -89.9,
@@ -52,30 +52,25 @@ let csa_dft = {
 let csa = {};
 deep_merge(csa, csa_dft);
 
-let csa_need_save = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed',
+let csa_need_save = ['grab_ofs', 'nozzle_cali', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed',
                      'offset_config', 'pld_search', 'pld_base_z', 'pld_comp_offset', 'pld_comp_space', 'pld_start_at', 'pld_tgt_grid', 'pld_rotate', 'pld_enable'];
 let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'offset_config'];
-let csa_cfg_export = ['grab_ofs0', 'grab_ofs180', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
+let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
 
 let db = null;
 let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
 
-function cal_grab_ofs_center() {
-    let delta = [csa.grab_ofs0[0] - csa.grab_ofs180[0], csa.grab_ofs0[1] - csa.grab_ofs180[1]];
-    return [csa.grab_ofs0[0] - delta[0] / 2, csa.grab_ofs0[1] - delta[1] / 2];
-}
 
 function cal_grab_ofs(angle, err=null) {
     let rad = -angle * Math.PI / 180;
-    let ofs = cal_grab_ofs_center();
     if (err == null)
-        err = [csa.grab_ofs0[0] - ofs[0], csa.grab_ofs0[1] - ofs[1]];
+        err = [csa.nozzle_cali[0], csa.nozzle_cali[1]];
     let err_at_angle = [
         Math.cos(rad) * err[0] - Math.sin(rad) * err[1],
         Math.sin(rad) * err[0] + Math.cos(rad) * err[1]
     ];
-    return [ofs[0] + err_at_angle[0], ofs[1] + err_at_angle[1]];
+    return [csa.grab_ofs[0] + err_at_angle[0], csa.grab_ofs[1] + err_at_angle[1]];
 }
 
 
@@ -197,8 +192,10 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 3) { // pickup
             console.log('fsm pickup');
-            csa.cur_pos[0] -= csa.grab_ofs0[0];
-            csa.cur_pos[1] -= csa.grab_ofs0[1];
+            let grab_ofs = cal_grab_ofs(0);
+            csa.cur_pos[0] -= grab_ofs[0];
+            csa.cur_pos[1] -= grab_ofs[1];
+            csa.cur_pos[3] = 0;
             if (csa.comp_height != null)
                 csa.cur_pos[2] = csa.comp_base_z + csa.comp_height + 1; // 1mm space
             if (comp_offsets[0][0] != 0 || comp_offsets[0][1] != 0) {
@@ -404,5 +401,5 @@ window.addEventListener('load', async function() {
 });
 
 export {
-    csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export
+    csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs
 };

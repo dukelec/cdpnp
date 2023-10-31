@@ -7,7 +7,7 @@
 import { readable_float, sleep } from './utils/helper.js';
 import { set_camera_cfg, set_motor_pos, set_pump, cam_comp_snap, pcb2xyz } from './dev_cmd.js';
 import { get_comp_search } from './pos_list.js';
-import { csa } from './index.js';
+import { csa, cal_grab_ofs } from './index.js';
 
 
 function pld_get_grid(idx)
@@ -154,8 +154,9 @@ document.getElementById('btn_pld_run').onclick = async function() {
         for (let i = 0; !csa.pld_stop && i < amount; i++) {
             let comp_xyz = await pcb2xyz(pcb, cam, csa.pld_comp_offset, 4 * (csa.pld_comp_space * i + csa.pld_start_at));
             let top_z = csa.pld_base_z + Math.abs(csa.pld_base_z - csa.comp_base_z) * 2 + 1;
-            csa.cur_pos[0] = comp_xyz[0] - csa.grab_ofs0[0];
-            csa.cur_pos[1] = comp_xyz[1] - csa.grab_ofs0[1];
+            let grab_ofs = cal_grab_ofs(0);
+            csa.cur_pos[0] = comp_xyz[0] - grab_ofs[0];
+            csa.cur_pos[1] = comp_xyz[1] - grab_ofs[1];
             csa.cur_pos[2] = top_z;
             csa.cur_pos[3] = 0;
             await set_motor_pos(true);
@@ -171,8 +172,8 @@ document.getElementById('btn_pld_run').onclick = async function() {
             let tgt_grid = pld_get_grid(tgt_count);
             let tgt = [tgt_grid[0] * csa.pld_tgt_grid[0], tgt_grid[1] * csa.pld_tgt_grid[1]];
             let search = get_comp_search();
-            csa.cur_pos[0] = csa.comp_search[search][0] - csa.grab_ofs0[0] + tgt[0];
-            csa.cur_pos[1] = csa.comp_search[search][1] - csa.grab_ofs0[1] + tgt[1];
+            csa.cur_pos[0] = csa.comp_search[search][0] - grab_ofs[0] + tgt[0];
+            csa.cur_pos[1] = csa.comp_search[search][1] - grab_ofs[1] + tgt[1];
             csa.cur_pos[3] = csa.pld_rotate;
             await set_motor_pos(true);
             

@@ -30,13 +30,14 @@ async function get_camera_cfg() {
     document.getElementById('camera_detect').value = dat[0].detect;
 }
 
-async function set_camera_cfg(_detect=null) {
+async function set_camera_cfg(_detect=null, exposure=20) {
     let dev = Number(document.getElementById('camera_dev').value);
     let detect = _detect == null ? document.getElementById('camera_detect').value : _detect;
     let light1 = document.getElementById('camera_light1').checked;
     let light2 = document.getElementById('camera_light2').checked;
     cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'set_camera_cfg', 'dev': dev, 'detect': detect, 'light1': light1, 'light2': light2}, ['server', 'dev']);
+    await cmd_sock.sendto({'action': 'set_camera_cfg', 'dev': dev, 'detect': detect,
+                           'light1': light1, 'light2': light2, 'expos': exposure}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(500);
     console.log(`set_camera_cfg ${dev}, ${detect} ret`, dat);
 }
@@ -112,15 +113,19 @@ async function get_cv_cur() {
 let DIV_MM2PIXEL = 10/344;
 
 async function cam_comp_snap(times=3) {
+    let dev = Number(document.getElementById('camera_dev').value);
+    let sign = dev == 1 ? 1 : -1;
+    let cam_width = dev == 1 ? 600 : 800;
+    let cam_height = dev == 1 ? 800 : 600;
+    
     for (let i = 0; i < times; i++) {
         let cv = await get_cv_cur();
         if (cv) {
-            let dx = (cv[0] - 600/2) * DIV_MM2PIXEL
-            let dy = (cv[1] - 800/2) * DIV_MM2PIXEL
+            let dx = (cv[0] - cam_width/2) * DIV_MM2PIXEL
+            let dy = (cv[1] - cam_height/2) * DIV_MM2PIXEL
             console.log('cv dx dy', dx, dy)
-            csa.cur_pos[0] += dx
-            csa.cur_pos[1] += dy
-            csa.cur_pos[3] = 0
+            csa.cur_pos[0] += dx * sign
+            csa.cur_pos[1] += dy * sign
             csa.cv_cur_r = cv[2] // [-89, 90]
             await set_motor_pos(true);
         } else {

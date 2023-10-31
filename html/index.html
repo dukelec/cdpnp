@@ -106,20 +106,18 @@
         
         <br>
         <button class="button is-small goto_btn" id="btn_cali_offset">Calibration Offset</button>
+        <button class="button is-small goto_btn" id="btn_cali_nozzle">Calibration Nozzle</button>
         <br>
-        <span style="display: inline-block; min-width: 138px;">Grab offset (0°):</span>
-        <input type="text" id="grab_ofs0" onchange="input_change()">
-        <button class="button is-small" onclick="btn_update_grab(0)">Update |Aux|</button>
+        <span style="display: inline-block; min-width: 138px;">Grab offset:</span>
+        <input type="text" id="grab_ofs" onchange="input_change()">
+        <button class="button is-small goto_btn" onclick="btn_grab_ofs(null, 1)"><-</button>
+        <button class="button is-small goto_btn" onclick="btn_grab_ofs(null, -1)">-></button>
+        <br>
+        <span style="display: inline-block; min-width: 138px;">Nozzle cali (0°):</span>
+        <input type="text" id="nozzle_cali" onchange="input_change()">
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(0, 1)"><-</button>
-        <button class="button is-small goto_btn" onclick="btn_grab_ofs(0, -1)">-></button> &nbsp;|&nbsp;
-        <button class="button is-small goto_btn" onclick="btn_goto_r(0)">Go 0°</button>
+        <button class="button is-small goto_btn" onclick="btn_grab_ofs(0, -1)">-></button>
         <br>
-        <span style="display: inline-block; min-width: 138px;">Grab offset (180°):</span>
-        <input type="text" id="grab_ofs180" onchange="input_change()">
-        <button class="button is-small" onclick="btn_update_grab(180)">Update |Aux|</button>
-        <button class="button is-small goto_btn" onclick="btn_grab_ofs(180, 1)"><-</button>
-        <button class="button is-small goto_btn" onclick="btn_grab_ofs(180, -1)">-></button> &nbsp;|&nbsp;
-        <button class="button is-small goto_btn" onclick="btn_goto_r(180)">Go 180°</button>
         <div id="input_search"></div>
         <span style="display: inline-block; min-width: 138px;">Camera delta z:</span>
         <input type="text" id="comp_cam_dz" onchange="input_change()">

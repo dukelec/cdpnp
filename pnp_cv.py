@@ -114,6 +114,56 @@ def cv_get_pos(img):
         cv_dat['cur'] = None
 
 
+def cv_get_circle(img):
+    if not cv_dat['detect']:
+        return
+    
+    # Convert image to grayscale
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    gray = cv.medianBlur(gray, 3)
+    
+    # Closing small gaps
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (7, 7))
+    gray = cv.morphologyEx(gray, cv.MORPH_OPEN, kernel)
+    
+    # Convert image to binary
+    _, bw = cv.threshold(gray, 199, 255, cv.THRESH_BINARY)
+    #cv.imwrite(f'{cur_path}/tmp/gray.png', gray) # for debug
+    #cv.imwrite(f'{cur_path}/tmp/bw.png', bw)
+    
+    # Find all the contours in the thresholded image
+    contours, hierarchy = cv.findContours(bw, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+    comps = []
+    
+    for i in range(len(contours)):
+        cnt = contours[i]
+        (x,y), radius = cv.minEnclosingCircle(cnt)
+        center = (int(x), int(y))
+        radius = int(radius)
+        
+        if radius < 4 or 13 < radius:       # hole of juki-502 and 503
+            continue
+        if bw[center[1], center[0]] != 0:   # skip white
+            continue
+        if hierarchy[0][i][2] != -1:        # skip if child exist
+            continue
+        
+        cv.drawMarker(img, center, color=(0,255,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=10)
+        cv.circle(img, center, radius, (0,0,255), 1)
+        #print(center, radius, bw[center[1], center[0]])
+        
+        height, width = img.shape[:2]
+        x_center, y_center = int(width/2), int(height/2)
+        l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
+        comps.append([center[0], center[1], 0, l_center])
+
+    if len(comps):
+        comps.sort(key = lambda e : e[3])
+        cv.drawMarker(img, (comps[0][0],comps[0][1]), color=(0,0,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=5)
+        cv_dat['cur'] = comps[0]
+    else:
+        cv_dat['cur'] = None
+
 
 def pic_rx():
     rx_dat = None
@@ -158,9 +208,17 @@ def pic_rx():
                     if cv_dat['bg_img'] is not None:
                         img = cv.addWeighted(img, 0.8, cv_dat['bg_img'], 0.6, 0)
                 height, width = img.shape[:2]
-                cv_get_pos(img)
-                if cv_dat['dev'] != 2:
+                
+                if cv_dat['detect'] == "cali_nozzle":
+                    cv_get_circle(img)
+                else:
+                    cv_get_pos(img)
+                
+                if cv_dat['dev'] == 1:
                     img = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
+                else:
+                    img = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, markerSize=height-20, thickness=1)
+                
                 if not cv_dat['img_queue'].full():
                     if not cv_dat['local']:
                         img = cv.imencode('.png', img)[1].tobytes()

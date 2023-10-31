@@ -6,7 +6,7 @@
 
 import { read_file, download, readable_float, cpy, sleep, wildcard_test } from './utils/helper.js';
 import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js';
-import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export } from './index.js';
+import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs } from './index.js';
 import { pld_csa_to_page, pld_csa_from_page } from './preload_ctrl.js';
 import { pos_to_page, pos_from_page } from './pos_list.js';
 import { } from './calibration.js';
@@ -62,10 +62,10 @@ function csa_to_page_pos()
 function csa_to_page_input()
 {
     document.getElementById('motor_speed').value = csa.motor_speed;
-    document.getElementById('grab_ofs0').value =
-        `${readable_float(csa.grab_ofs0[0])}, ${readable_float(csa.grab_ofs0[1])}`;
-    document.getElementById('grab_ofs180').value =
-        `${readable_float(csa.grab_ofs180[0])}, ${readable_float(csa.grab_ofs180[1])}`;
+    document.getElementById('grab_ofs').value =
+        `${readable_float(csa.grab_ofs[0])}, ${readable_float(csa.grab_ofs[1])}`;
+    document.getElementById('nozzle_cali').value =
+        `${readable_float(csa.nozzle_cali[0])}, ${readable_float(csa.nozzle_cali[1])}`;
     
     for (let i = 0; i < 8; i++) {
         if (i < csa.comp_search.length) {
@@ -118,10 +118,10 @@ function csa_from_page_input()
 {
     csa.motor_speed = Number(document.getElementById('motor_speed').value);
     let xy_str;
-    xy_str = document.getElementById('grab_ofs0').value;
-    csa.grab_ofs0 = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
-    xy_str = document.getElementById('grab_ofs180').value;
-    csa.grab_ofs180 = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
+    xy_str = document.getElementById('grab_ofs').value;
+    csa.grab_ofs = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
+    xy_str = document.getElementById('nozzle_cali').value;
+    csa.nozzle_cali = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
     
     csa.comp_search = [];
     for (let i = 0; ; i++) {
@@ -204,17 +204,6 @@ window.btn_update_xyz = async function(name) {
     if (name == "user_pos0")
         document.getElementById('btn_reset_aux').onclick();
 };
-window.btn_update_grab = async function(type) {
-    let abs_xy = [Math.abs(csa.aux_pos[0]), Math.abs(csa.aux_pos[1])];
-    if (type) {
-        csa.grab_ofs180 = [abs_xy[0], abs_xy[1]];
-    } else {
-        csa.grab_ofs0 = [abs_xy[0], abs_xy[1]];
-    }
-    let xy = `${readable_float(abs_xy[0])}, ${readable_float(abs_xy[1])}`;
-    document.getElementById(`grab_ofs${type}`).value = xy;
-    await input_change();
-};
 window.btn_update_z = async function(name) {
     let z = `${readable_float(csa.cur_pos[2])}`;
     document.getElementById(name).value = z;
@@ -278,21 +267,15 @@ window.btn_goto_z = async function(name) {
     await set_motor_pos(true);
     disable_goto_btn(false);
 };
-window.btn_goto_r = async function(angle) {
-    disable_goto_btn(true);
-    csa.cur_pos[3] = angle;
-    await set_motor_pos(true);
-    disable_goto_btn(false);
-};
 window.btn_grab_ofs = async function(type, dir=1) {
     disable_goto_btn(true);
     let origin_z = csa.cur_pos[2];
     csa.cur_pos[2] = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
     await set_motor_pos(true);
-    let grab_ofs = type ? csa.grab_ofs180 : csa.grab_ofs0;
+    let grab_ofs = type == 0 ? cal_grab_ofs(0) : csa.grab_ofs;
     csa.cur_pos[0] -= dir * grab_ofs[0];
     csa.cur_pos[1] -= dir * grab_ofs[1];
-    csa.cur_pos[3] = type ? 180 : 0;
+    csa.cur_pos[3] = 0;
     await set_motor_pos(true);
     csa.cur_pos[2] = origin_z;
     await set_motor_pos(true);
@@ -382,7 +365,7 @@ async function move_button(val)
     let dx = val[0] * div;
     let dy = val[1] * div;
     let dz = val[2] * div;
-    let dr = val[3] * div * 10;
+    let dr = val[3] * (div < 10 ? div * 10 : 45);
     csa.cur_pos = [csa.cur_pos[0] + dx, csa.cur_pos[1] + dy, csa.cur_pos[2] + dz, csa.cur_pos[3] + dr];
     await set_motor_pos();
 }
@@ -394,10 +377,7 @@ window.addEventListener('keydown', async function(e) {
     console.log(e.keyCode);
     if (e.keyCode == 32) { // space
         e.preventDefault();
-        if (document.getElementById('btn_stop').disabled)
-            document.getElementById('pause_en').checked = false;
-        else
-            document.getElementById('pause_en').checked = !document.getElementById('pause_en').checked;
+        document.getElementById('pause_en').checked = !document.getElementById('pause_en').checked;
         document.getElementById('btn_pld_clear').onclick();
         return;
     }
