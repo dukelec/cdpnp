@@ -34,7 +34,6 @@ let csa_dft = {
     ],
     
     comp_height: null,
-    grap_err: null,
     motor_speed: 0.5,
     
     offset_config: "",
@@ -62,14 +61,28 @@ let ws_ns = new CDWebSocketNS('/');
 let cmd_sock = new CDWebSocket(ws_ns, 'cmd');
 
 
-function cal_grab_ofs(angle, err=null) {
+//         |  (90 degree)
+//         |
+//         |
+// --------+-------->  x (0 degree)
+//         |
+//         |
+//         |
+//         v  y (-90 degree)
+
+function rotate_vector(angle, vector) {
     let rad = -angle * Math.PI / 180;
+    let new_vector = [
+        Math.cos(rad) * vector[0] - Math.sin(rad) * vector[1],
+        Math.sin(rad) * vector[0] + Math.cos(rad) * vector[1]
+    ];
+    return new_vector;
+}
+
+function cal_grab_ofs(angle, err=null) {
     if (err == null)
         err = [csa.nozzle_cali[0], csa.nozzle_cali[1]];
-    let err_at_angle = [
-        Math.cos(rad) * err[0] - Math.sin(rad) * err[1],
-        Math.sin(rad) * err[0] + Math.cos(rad) * err[1]
-    ];
+    let err_at_angle = rotate_vector(angle, err);
     return [csa.grab_ofs[0] + err_at_angle[0], csa.grab_ofs[1] + err_at_angle[1]];
 }
 
@@ -100,6 +113,10 @@ document.getElementById('btn_run').onclick = async function() {
         csa.cur_pos[2] = z_middle;
         await set_motor_pos(true);
     }
+    
+    // error vector and nozzle angle before putdown
+    let nozzle_err_vector = null;
+    let nozzle_err_angle = null;
     
     while (true) {
         let comp = get_comp_safe();
@@ -220,7 +237,6 @@ document.getElementById('btn_run').onclick = async function() {
             }
             await sleep(600);
             await z_keep_high();
-            csa.grap_err = null;
             
             if (document.getElementById('check2_en').checked) {
                 let detect_bk = document.getElementById('camera_detect').value;
@@ -228,47 +244,51 @@ document.getElementById('btn_run').onclick = async function() {
                 document.getElementById('camera_light2').checked = true;
                 document.getElementById('camera_detect').value = "";
                 await document.getElementById('camera_dev').onchange();
+                await set_camera_cfg("cali_pad");
                 
-                csa.cur_pos[3] = comp_val[2] - csa.cv_cur_r;
-                let grab_ofs = cal_grab_ofs(csa.cur_pos[3]);
+                let cali_pos = csa.user_pos[0][1];
+                csa.cur_pos[3] = -csa.cv_cur_r;
+                let err = rotate_vector(csa.cur_pos[3], csa.nozzle_cali);
                 
-                let xyz_str = document.getElementById('user_pos0').value;
-                let xyz_val = [Number(xyz_str.split(',')[0]), Number(xyz_str.split(',')[1]), Number(xyz_str.split(',')[2])];
-                let z_middle = Math.min(Math.max(xyz_val[2], csa.cur_pos[2]) + csa.cam_dz + csa.comp_height, -2);
+                let z_middle = Math.min(Math.max(cali_pos[2], csa.cur_pos[2]) + csa.comp_height, -2);
                 if (csa.cur_pos[2] < z_middle) {
                     csa.cur_pos[2] = z_middle;
                     await set_motor_pos(true);
                 }
-                csa.cur_pos[0] = xyz_val[0] - grab_ofs[0];
-                csa.cur_pos[1] = xyz_val[1] - grab_ofs[1];
+                csa.cur_pos[0] = cali_pos[0] - err[0];
+                csa.cur_pos[1] = cali_pos[1] - err[1];
                 await set_motor_pos(true);
-                csa.cur_pos[2] = xyz_val[2] - csa.cam_dz + csa.comp_height + 0.3; // add 0.3 safe space
+                csa.cur_pos[2] = cali_pos[2] + csa.comp_height;
                 await set_motor_pos(true);
                 
-                //document.getElementById('btn_reset_aux').onclick();
+                while (document.getElementById('pause_en').checked)
+                    await sleep(100);
+                if (csa.stop)
+                    break;
+                
+                await sleep(800);
+                let ret = await cam_comp_snap();
+                
+                csa.cur_pos[3] -= csa.cv_cur_r;
+                await set_motor_pos(true);
+                
                 document.getElementById('pause_en').checked = true;
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
-                // manual movement here
+                if (csa.stop)
+                    break;
                 
-                let ofs_center = cal_grab_ofs_center();
-                let grap_center = [csa.cur_pos[0] + ofs_center[0], csa.cur_pos[1] + ofs_center[1]];
-                let err = [xyz_val[0] - grap_center[0], xyz_val[1] - grap_center[1]];
-                
-                let rad = csa.cur_pos[3] * Math.PI / 180;
-                let err_at_angle0 = [
-                    Math.cos(rad) * err[0] - Math.sin(rad) * err[1],
-                    Math.sin(rad) * err[0] + Math.cos(rad) * err[1]
-                ];
-                csa.grap_err = err_at_angle0;
-                csa.cv_cur_r = comp_val[2] - csa.cur_pos[3];
-                
-                csa.cur_pos[2] = z_middle;
-                await set_motor_pos(true);
+                nozzle_err_vector = [cali_pos[0] - csa.cur_pos[0], cali_pos[1] - csa.cur_pos[1]];
+                nozzle_err_angle = csa.cur_pos[3];
+
                 document.getElementById('camera_dev').value = 1;
                 document.getElementById('camera_detect').value = detect_bk;
                 document.getElementById('camera_light2').checked = false;
                 await document.getElementById('camera_dev').onchange();
+                
+            } else {
+                nozzle_err_angle = -csa.cv_cur_r;
+                nozzle_err_vector = rotate_vector(nozzle_err_angle, csa.nozzle_cali)
             }
             
             set_step(4);
@@ -279,18 +299,22 @@ document.getElementById('btn_run').onclick = async function() {
             console.log('fsm goto_pcb');
             await z_keep_high();
             // optimize the rotation angle for faster speed
-            if (csa.cv_cur_r != null) {
-                let rad = (comp_val[2] - csa.cv_cur_r + comp_xyz[2]) * Math.PI / 180;
-                csa.cur_pos[3] = Math.atan2(Math.sin(rad), Math.cos(rad)) * 180 / Math.PI;
+            if (nozzle_err_angle != null) {
+                let rad = (comp_val[2] + nozzle_err_angle + comp_xyz[2]) * Math.PI / 180;
+                let tgt_angle = Math.atan2(Math.sin(rad), Math.cos(rad)) * 180 / Math.PI;
                 if (document.getElementById('camera_detect').value == 'default' &&
-                        Math.abs(csa.cur_pos[3]) > 90 && !document.getElementById('check2_en').checked) {
-                    console.log('  rotate 180, before:', csa.cur_pos[3]);
-                    csa.cur_pos[3] = csa.cur_pos[3] > 90 ? csa.cur_pos[3] - 180 : csa.cur_pos[3] + 180;
+                        Math.abs(tgt_angle) > 90 && !document.getElementById('check2_en').checked) {
+                    console.log('  rotate 180, before:', tgt_angle);
+                    tgt_angle = tgt_angle > 90 ? tgt_angle - 180 : tgt_angle + 180;
                 }
+                nozzle_err_vector = rotate_vector(tgt_angle - nozzle_err_angle, nozzle_err_vector);
+                csa.cur_pos[3] = tgt_angle;
+            } else {
+                nozzle_err_vector = [0, 0];
             }
-            let grab_ofs = cal_grab_ofs(csa.cur_pos[3], document.getElementById('check2_en').checked ? csa.grap_err : null);
-            csa.cur_pos[0] = comp_xyz[0] - grab_ofs[0];
-            csa.cur_pos[1] = comp_xyz[1] - grab_ofs[1];
+            
+            csa.cur_pos[0] = comp_xyz[0] - csa.grab_ofs[0] - nozzle_err_vector[0];
+            csa.cur_pos[1] = comp_xyz[1] - csa.grab_ofs[1] - nozzle_err_vector[1];
             await set_motor_pos(true);
             set_step(5);
             continue;
@@ -341,7 +365,6 @@ document.getElementById('btn_run').onclick = async function() {
     document.getElementById('btn_run').disabled = false;
     document.getElementById('btn_stop').disabled = true;
     csa.comp_height = null;
-    csa.grap_err = null;
     document.getElementById('cur_height').innerText = `--`;
     csa.cur_pos[3] = 0;
     document.getElementById('btn_pld_clear').onclick();

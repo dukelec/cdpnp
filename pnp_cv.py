@@ -71,13 +71,14 @@ def cv_get_pos(img):
       # (center(x, y), (width, height), angle of rotation) = cv2.minAreaRect(c)
       rect = cv.minAreaRect(c)
       box = cv.boxPoints(rect)
-      box = np.int0(box)
+      box = np.int0(np.around(box))
      
       # Retrieve the key parameters of the rotated bounding box
-      center = (int(rect[0][0]),int(rect[0][1])) 
-      width = int(rect[1][0])
-      height = int(rect[1][1])
-      angle = int(rect[2])
+      center_f = (rect[0][0], rect[0][1])
+      center = (round(rect[0][0]),round(rect[0][1]))
+      width = round(rect[1][0])
+      height = round(rect[1][1])
+      angle = rect[2]
       
       if width < height:
         angle = 90 - angle
@@ -89,11 +90,12 @@ def cv_get_pos(img):
             angle += 90
         elif angle > 45:
             angle -= 90
+      angle = round(angle, 1)
       
       height, width = img.shape[:2]
-      x_center, y_center = int(width/2), int(height/2)
+      x_center, y_center = round(width/2), round(height/2)
       l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
-      comps.append([center[0], center[1], angle, l_center])
+      comps.append([center_f[0], center_f[1], angle, l_center])
       
       label = str(angle) + (' !' if cv_dat['detect'] == 'limit_angle' else '')
       cv.drawContours(img,[box],0,(0,0,255),1)
@@ -108,7 +110,7 @@ def cv_get_pos(img):
             comps.sort(key = lambda e : -e[1])
         else:
             comps.sort(key = lambda e : e[3])
-        cv.drawMarker(img, (comps[0][0],comps[0][1]), color=(0,0,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=5)
+        cv.drawMarker(img, (round(comps[0][0]),round(comps[0][1])), color=(0,0,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=5)
         cv_dat['cur'] = comps[0]
     else:
         cv_dat['cur'] = None
@@ -137,9 +139,9 @@ def cv_get_circle(img):
     
     for i in range(len(contours)):
         cnt = contours[i]
-        (x,y), radius = cv.minEnclosingCircle(cnt)
-        center = (int(x), int(y))
-        radius = int(radius)
+        center_f, radius = cv.minEnclosingCircle(cnt)
+        center = (round(center_f[0]), round(center_f[1]))
+        radius = round(radius, 1)
         
         if radius < 4 or 13 < radius:       # hole of juki-502 and 503
             continue
@@ -153,16 +155,120 @@ def cv_get_circle(img):
         #print(center, radius, bw[center[1], center[0]])
         
         height, width = img.shape[:2]
-        x_center, y_center = int(width/2), int(height/2)
+        x_center, y_center = round(width/2), round(height/2)
         l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
-        comps.append([center[0], center[1], 0, l_center])
+        comps.append([center_f[0], center_f[1], 0, l_center])
 
     if len(comps):
         comps.sort(key = lambda e : e[3])
-        cv.drawMarker(img, (comps[0][0],comps[0][1]), color=(0,0,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=5)
+        cv.drawMarker(img, (round(comps[0][0]),round(comps[0][1])), color=(0,0,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=5)
         cv_dat['cur'] = comps[0]
     else:
         cv_dat['cur'] = None
+
+
+def cv_get_pad(img):
+    if not cv_dat['detect']:
+        return
+    
+    # Convert image to grayscale
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    gray = cv.medianBlur(gray, 3)
+    
+    # Closing small gaps
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
+    gray = cv.morphologyEx(gray, cv.MORPH_OPEN, kernel)
+     
+    # Convert image to binary
+    _, bw = cv.threshold(gray, 100, 255, cv.THRESH_BINARY)
+    #cv.imwrite(f'{cur_path}/tmp/gray.png', gray) # for debug
+    #cv.imwrite(f'{cur_path}/tmp/bw.png', bw)
+    
+    # Find all the contours in the thresholded image
+    contours, _ = cv.findContours(bw, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+    
+    for i, c in enumerate(contours):
+     
+      # Calculate the area of each contour
+      area = cv.contourArea(c)
+     
+      # cv.minAreaRect returns:
+      # (center(x, y), (width, height), angle of rotation) = cv2.minAreaRect(c)
+      rect = cv.minAreaRect(c)
+     
+      # Retrieve the key parameters of the rotated bounding box
+      center = (round(rect[0][0]), round(rect[0][1]))
+     
+      # Ignore contours that are too small or too large
+      if area < 2*2 or 580*580 < area:
+        continue
+      if bw[center[1], center[0]] != 255:   # skip black
+          continue
+      # todo: ignore contours too far away
+      
+      cam_height, cam_width = img.shape[:2]
+      cam_center = (round(cam_width/2), round(cam_height/2))
+      
+      # connect all contours
+      cv.line(bw, center, cam_center, (255,255,255), 1)
+    
+    
+    #cv.imwrite(f'{cur_path}/tmp/bw.png', bw)
+    
+    # Find all the contours in the thresholded image
+    contours, _ = cv.findContours(bw, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+    
+    comps = []
+    for i, c in enumerate(contours):
+     
+      # Calculate the area of each contour
+      area = cv.contourArea(c)
+     
+      # Ignore contours that are too small or too large
+      #if area < 2*11 or 580*580 < area:
+      #  continue
+     
+      # cv.minAreaRect returns:
+      # (center(x, y), (width, height), angle of rotation) = cv2.minAreaRect(c)
+      rect = cv.minAreaRect(c)
+      box = cv.boxPoints(rect)
+      box = np.int0(np.around(box))
+     
+      # Retrieve the key parameters of the rotated bounding box
+      center_f = (rect[0][0], rect[0][1])
+      center = (round(rect[0][0]), round(rect[0][1])) 
+      width = round(rect[1][0])
+      height = round(rect[1][1])
+      angle = rect[2]
+      
+      if width < height:
+        angle = 90 - angle
+      else:
+        angle = -angle
+      
+      if angle < -45:
+          angle += 90
+      elif angle > 45:
+          angle -= 90
+      angle = round(angle, 1)
+      
+      height, width = img.shape[:2]
+      x_center, y_center = round(width/2), round(height/2)
+      l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
+      comps.append([center_f[0], center_f[1], angle, l_center])
+      
+      label = str(angle) + ' !'
+      cv.drawContours(img,[box],0,(0,0,255),1)
+      cv.putText(img, label, (center[0]+14, center[1]), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0,200,255), 1, cv.LINE_AA)
+      cv.drawMarker(img, (center[0],center[1]), color=(0,255,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=10)
+    
+    if len(comps):
+        comps.sort(key = lambda e : e[3])
+        cv.drawMarker(img, (round(comps[0][0]),round(comps[0][1])), color=(0,0,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=5)
+        cv_dat['cur'] = comps[0]
+    else:
+        cv_dat['cur'] = None
+    
 
 
 def pic_rx():
@@ -211,6 +317,8 @@ def pic_rx():
                 
                 if cv_dat['detect'] == "cali_nozzle":
                     cv_get_circle(img)
+                elif cv_dat['detect'] == "cali_pad":
+                    cv_get_pad(img)
                 else:
                     cv_get_pos(img)
                 
