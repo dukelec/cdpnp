@@ -151,7 +151,7 @@ def cv_get_circle(img):
             continue
         
         cv.drawMarker(img, center, color=(0,255,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=10)
-        cv.circle(img, center, radius, (0,0,255), 1)
+        cv.circle(img, center, round(radius), (0,0,255), 1)
         #print(center, radius, bw[center[1], center[0]])
         
         height, width = img.shape[:2]

@@ -29,7 +29,7 @@ let csa_dft = {
     fiducial_cam: [[[89.67, 175.0], [109.9, 158.6]], [[120.7, 175.3], [140.8, 158.9]]],
     
     user_pos: [
-        ['Calibration', [61.63, 17.75, -45.8]],
+        ['Calibration', [27.95, 10.87, -29.57]],
         ['Idle', [132.0, 62.0, -45.0]]
     ],
     
@@ -272,7 +272,11 @@ document.getElementById('btn_run').onclick = async function() {
                 csa.cur_pos[3] -= csa.cv_cur_r;
                 await set_motor_pos(true);
                 
-                document.getElementById('pause_en').checked = true;
+                if (!document.getElementById('putdown_en').checked) {
+                    document.getElementById('pause_en').checked = true;
+                } else {
+                    await sleep(800);
+                }
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
                 if (csa.stop)
