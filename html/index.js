@@ -243,67 +243,72 @@ document.getElementById('btn_run').onclick = async function() {
             await z_keep_high();
             
             if (document.getElementById('check2_en').checked) {
-                let detect_bk = document.getElementById('camera_detect').value;
-                document.getElementById('camera_dev').value = 2;
-                document.getElementById('camera_light2').checked = true;
-                document.getElementById('camera_detect').value = "";
-                await document.getElementById('camera_dev').onchange();
-                await set_camera_cfg("cali_pad");
-                
-                let cali_pos = csa.user_pos[0][1];
-                csa.cur_pos[3] = -csa.cv_cur_r;
-                let err = rotate_vector(csa.cur_pos[3], csa.nozzle_cali);
-                
-                let z_middle = Math.min(Math.max(cali_pos[2], csa.cur_pos[2]) + csa.comp_height, -2);
-                if (csa.cur_pos[2] < z_middle) {
-                    csa.cur_pos[2] = z_middle;
-                    await set_motor_pos(true);
-                }
-                csa.cur_pos[0] = cali_pos[0] - err[0];
-                csa.cur_pos[1] = cali_pos[1] - err[1];
-                await set_motor_pos(true);
-                csa.cur_pos[2] = cali_pos[2] + csa.comp_height;
-                await set_motor_pos(true);
-                
-                while (document.getElementById('pause_en').checked)
-                    await sleep(100);
-                if (csa.stop)
-                    break;
-                
-                await sleep(800);
-                let ret = await cam_comp_snap();
-                
-                csa.cur_pos[3] -= csa.cv_cur_r;
-                await set_motor_pos(true);
-                
-                if (!document.getElementById('putdown_en').checked) {
-                    document.getElementById('pause_en').checked = true;
-                } else {
-                    await sleep(800);
-                }
-                while (document.getElementById('pause_en').checked)
-                    await sleep(100);
-                if (csa.stop)
-                    break;
-                
-                nozzle_err_vector = [cali_pos[0] - csa.cur_pos[0], cali_pos[1] - csa.cur_pos[1]];
-                nozzle_err_angle = csa.cur_pos[3];
-
-                document.getElementById('camera_dev').value = 1;
-                document.getElementById('camera_detect').value = detect_bk;
-                document.getElementById('camera_light2').checked = false;
-                await document.getElementById('camera_dev').onchange();
-                
+                set_step(4);
             } else {
                 nozzle_err_angle = -csa.cv_cur_r;
                 nozzle_err_vector = rotate_vector(nozzle_err_angle, csa.nozzle_cali)
+                set_step(5);
             }
-            
-            set_step(4);
             continue;
         }
         
-        if (step == 4) { // goto_pcb
+        if (step == 4) { // 2nd check
+            console.log('fsm check');
+            let detect_bk = document.getElementById('camera_detect').value;
+            document.getElementById('camera_dev').value = 2;
+            document.getElementById('camera_light2').checked = true;
+            document.getElementById('camera_detect').value = "";
+            await document.getElementById('camera_dev').onchange();
+            await set_camera_cfg("cali_pad");
+            
+            let cali_pos = csa.user_pos[0][1];
+            csa.cur_pos[3] = -csa.cv_cur_r;
+            let err = rotate_vector(csa.cur_pos[3], csa.nozzle_cali);
+            
+            let z_middle = Math.min(Math.max(cali_pos[2], csa.cur_pos[2]) + csa.comp_height, -2);
+            if (csa.cur_pos[2] < z_middle) {
+                csa.cur_pos[2] = z_middle;
+                await set_motor_pos(true);
+            }
+            csa.cur_pos[0] = cali_pos[0] - err[0];
+            csa.cur_pos[1] = cali_pos[1] - err[1];
+            await set_motor_pos(true);
+            csa.cur_pos[2] = cali_pos[2] + csa.comp_height;
+            await set_motor_pos(true);
+            
+            while (document.getElementById('pause_en').checked)
+                await sleep(100);
+            if (csa.stop)
+                break;
+            
+            await sleep(800);
+            let ret = await cam_comp_snap();
+            
+            csa.cur_pos[3] -= csa.cv_cur_r;
+            await set_motor_pos(true);
+            
+            if (!document.getElementById('putdown_en').checked) {
+                document.getElementById('pause_en').checked = true;
+            } else {
+                await sleep(800);
+            }
+            while (document.getElementById('pause_en').checked)
+                await sleep(100);
+            if (csa.stop)
+                break;
+            
+            nozzle_err_vector = [cali_pos[0] - csa.cur_pos[0], cali_pos[1] - csa.cur_pos[1]];
+            nozzle_err_angle = csa.cur_pos[3];
+
+            document.getElementById('camera_dev').value = 1;
+            document.getElementById('camera_detect').value = detect_bk;
+            document.getElementById('camera_light2').checked = false;
+            await document.getElementById('camera_dev').onchange();
+            set_step(5);
+            continue;
+        }
+        
+        if (step == 5) { // goto_pcb
             console.log('fsm goto_pcb');
             await z_keep_high();
             // optimize the rotation angle for faster speed
@@ -324,11 +329,11 @@ document.getElementById('btn_run').onclick = async function() {
             csa.cur_pos[0] = comp_xyz[0] - csa.grab_ofs[0] - nozzle_err_vector[0];
             csa.cur_pos[1] = comp_xyz[1] - csa.grab_ofs[1] - nozzle_err_vector[1];
             await set_motor_pos(true);
-            set_step(5);
+            set_step(6);
             continue;
         }
         
-        if (step == 5) { // putdown
+        if (step == 6) { // putdown
             console.log('fsm putdown');
             if (csa.comp_height != null) {
                 csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space

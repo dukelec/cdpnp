@@ -385,13 +385,13 @@ function get_board_safe() {
 }
 
 function set_step(idx) {
-    for (let i = 0; i < 6; i++)
+    for (let i = 0; i < 7; i++)
         document.getElementById(`btn_step${i}`).style.backgroundColor = '';
     document.getElementById(`btn_step${idx}`).style.backgroundColor = '#D5F5E3';
 }
 
 function get_step_safe() {
-    for (let i = 0; i < 6; i++)
+    for (let i = 0; i < 7; i++)
         if (document.getElementById(`btn_step${i}`).style.backgroundColor)
             return i;
     let idx = Number(!document.getElementById('show_target').checked);

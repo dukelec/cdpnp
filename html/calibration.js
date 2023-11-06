@@ -51,11 +51,10 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             while (document.getElementById('pause_en').checked)
                 await sleep(100);
             console.log(`exit wait`);
-            parents_pre = null;
             continue;
         }
         
-        if (step == 0 || step == 4) {
+        if (step == 0 || step == 4 || step == 5) {
             set_step(1);
             continue;
         }
@@ -127,11 +126,11 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             
             csa.cur_pos[3] = 180;
             await set_motor_pos(true);
-            set_step(5);
+            set_step(6);
             continue;
         }
         
-        if (step == 5) { // putdown
+        if (step == 6) { // putdown
             console.log('fsm putdown');
             if (csa.comp_height != null) {
                 csa.cur_pos[2] = csa.comp_base_z + csa.comp_height + 1; // 1mm space
