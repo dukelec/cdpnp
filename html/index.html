@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--link rel="icon" type="image/png" href="./img/icon.png" /-->
-<title>CDPNP Tools - V2.1</title>
+<title>CDPNP Tools - V2.2</title>
 
 <link rel="stylesheet" href="./libs/bulma-0.9.4.css">
 <!-- fix sub border missing by override bulma css -->
@@ -93,7 +93,11 @@
         <select id="camera_detect">
             <option value="default" selected>Default</option>
             <option value="limit_angle">Limit angle</option>
-            <option value="">None</option>
+            <option value="">-- None --</option>
+            <option value="cali_nozzle_13_4">Cali nozzle 502</option> <!-- Φ13mm ±4mm -->
+            <option value="cali_nozzle_22_4">Cali nozzle 503</option>
+            <option value="cali_nozzle_37_6">Cali nozzle 504</option>
+            <option value="cali_nozzle_49_6">Cali nozzle 506</option>
         </select>
         <label class="checkbox"><input type="checkbox" id="camera_en"> Enable</label>
         <label class="checkbox"><input type="checkbox" id="camera_light1">_<input type="checkbox" id="camera_light2"> Light</label>

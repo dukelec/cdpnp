@@ -174,18 +174,18 @@ document.getElementById('btn_cali_offset').onclick = async function() {
 
 
 document.getElementById('btn_cali_nozzle').onclick = async function() {
-    if (!document.getElementById('camera_detect').value) {
-        alert("please set camera vision detect method!");
+    if (!document.getElementById('camera_detect').value.startsWith('cali_nozzle')) {
+        alert("please set camera vision detect method for nozzle calibration!");
         return;
     }
-    if (document.getElementById('camera_dev').value != '2' || !document.getElementById('camera_en').checked) {
-        console.log("auto enable camera before run task");
-        document.getElementById('camera_dev').value = 2;
-        document.getElementById('camera_en').checked = true;
-        await document.getElementById('camera_dev').onchange();
-    }
+    console.log("auto enable camera before run task");
+    document.getElementById('camera_dev').value = 2;
+    document.getElementById('camera_en').checked = true;
+    document.getElementById('camera_light1').checked = false;
+    document.getElementById('camera_light2').checked = true;
+    await document.getElementById('camera_dev').onchange();
     
-    await set_camera_cfg("cali_nozzle", 5000);
+    await set_camera_cfg(document.getElementById('camera_detect').value, 5000);
     
     await window.btn_goto_xyz('user_pos0'); // goto position for calibration
     
