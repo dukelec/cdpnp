@@ -6,7 +6,7 @@
 
 import { readable_float, sleep } from './utils/helper.js';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump,
-         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg } from './dev_cmd.js';
+         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, set_vision_cfg } from './dev_cmd.js';
 import { set_step, get_step_safe, set_comp_search, get_comp_search } from './pos_list.js';
 import { csa_to_page_input, input_change } from './input_ctrl.js';
 import { csa } from './index.js';
@@ -185,7 +185,8 @@ document.getElementById('btn_cali_nozzle').onclick = async function() {
     document.getElementById('camera_light2').checked = true;
     await document.getElementById('camera_dev').onchange();
     
-    await set_camera_cfg(document.getElementById('camera_detect').value, 5000);
+    await set_camera_cfg(document.getElementById('camera_detect').value, csa.nozzle_expos);
+    await set_vision_cfg();
     
     await window.btn_goto_xyz('user_pos0'); // goto position for calibration
     
@@ -231,5 +232,11 @@ document.getElementById('btn_cali_nozzle').onclick = async function() {
     await set_motor_pos();
 };
 
+
+document.getElementById('btn_update_vision').onclick = async function() {
+    let debug_en = document.getElementById('vision_debug_en').checked;
+    await set_camera_cfg(document.getElementById('camera_detect').value, csa.nozzle_expos);
+    await set_vision_cfg(debug_en);
+};
 
 export { };

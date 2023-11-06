@@ -29,6 +29,9 @@ cv_dat = {
 
     'bg_img': None, # background image
     'bg_capture': False,
+    
+    'nozzle_thresh': 199,
+    'debug': False,
 
     'sock_pic': None
 }
@@ -36,7 +39,7 @@ cv_dat = {
 
 def cv_get_pos(img):
     if not cv_dat['detect']:
-        return
+        return img
 
     # Convert image to grayscale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -114,11 +117,12 @@ def cv_get_pos(img):
         cv_dat['cur'] = comps[0]
     else:
         cv_dat['cur'] = None
+    return img
 
 
 def cv_get_circle(img):
     if not cv_dat['detect']:
-        return
+        return img
 
     # Convert image to grayscale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -129,9 +133,12 @@ def cv_get_circle(img):
     gray = cv.morphologyEx(gray, cv.MORPH_OPEN, kernel)
 
     # Convert image to binary
-    _, bw = cv.threshold(gray, 199, 255, cv.THRESH_BINARY)
+    _, bw = cv.threshold(gray, cv_dat['nozzle_thresh'], 255, cv.THRESH_BINARY)
     #cv.imwrite(f'{cur_path}/tmp/gray.png', gray) # for debug
     #cv.imwrite(f'{cur_path}/tmp/bw.png', bw)
+
+    if cv_dat['debug']:
+        img = bw
 
     # Find all the contours in the thresholded image
     contours, hierarchy = cv.findContours(bw, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
@@ -169,11 +176,12 @@ def cv_get_circle(img):
         cv_dat['cur'] = comps[0]
     else:
         cv_dat['cur'] = None
+    return img
 
 
 def cv_get_pad(img):
     if not cv_dat['detect']:
-        return
+        return img
 
     # Convert image to grayscale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -272,6 +280,7 @@ def cv_get_pad(img):
         cv_dat['cur'] = comps[0]
     else:
         cv_dat['cur'] = None
+    return img
 
 
 
@@ -320,11 +329,11 @@ def pic_rx():
                 height, width = img.shape[:2]
 
                 if cv_dat['detect'].startswith("cali_nozzle"):
-                    cv_get_circle(img)
+                    img = cv_get_circle(img)
                 elif cv_dat['detect'] == "cali_pad":
-                    cv_get_pad(img)
+                    img = cv_get_pad(img)
                 else:
-                    cv_get_pos(img)
+                    img = cv_get_pos(img)
 
                 if cv_dat['dev'] == 1:
                     img = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)

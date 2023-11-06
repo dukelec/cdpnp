@@ -140,6 +140,12 @@ async def dev_service():
             print('get_camera_light2 ret: ' + rx2.hex())
             await sock.sendto({'enable': rx0[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect'], 'light1': rx1[1], 'light2': rx2[1]}, src)
         
+        elif dat['action'] == 'set_vision_cfg':
+            logger.info(f"set_vision_cfg nozzle_thresh: {dat['nozzle_thresh']}, debug: {dat['debug']}")
+            cv_dat['nozzle_thresh'] = dat['nozzle_thresh']
+            cv_dat['debug'] = dat['debug']
+            await sock.sendto('succeeded', src)
+        
         elif dat['action'] == 'update_camera_bg':
             logger.info(f"update_camera_bg...")
             cv_dat['bg_capture'] = True

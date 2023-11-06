@@ -62,6 +62,8 @@ function csa_to_page_pos()
 function csa_to_page_input()
 {
     document.getElementById('motor_speed').value = csa.motor_speed;
+    document.getElementById('nozzle_expos').value = csa.nozzle_expos;
+    document.getElementById('nozzle_thresh').value = csa.nozzle_thresh;
     document.getElementById('grab_ofs').value =
         `${readable_float(csa.grab_ofs[0])}, ${readable_float(csa.grab_ofs[1])}`;
     document.getElementById('nozzle_cali').value =
@@ -117,6 +119,8 @@ function csa_to_page_input()
 function csa_from_page_input()
 {
     csa.motor_speed = Number(document.getElementById('motor_speed').value);
+    csa.nozzle_expos = Number(document.getElementById('nozzle_expos').value);
+    csa.nozzle_thresh = Number(document.getElementById('nozzle_thresh').value);
     let xy_str;
     xy_str = document.getElementById('grab_ofs').value;
     csa.grab_ofs = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];

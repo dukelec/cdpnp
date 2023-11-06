@@ -36,6 +36,9 @@ let csa_dft = {
     comp_height: null,
     motor_speed: 0.5,
     
+    nozzle_expos: 5000,
+    nozzle_thresh: 199,
+    
     offset_config: "",
     
     pld_search: [47, 142],
@@ -52,6 +55,7 @@ let csa = {};
 deep_merge(csa, csa_dft);
 
 let csa_need_save = ['grab_ofs', 'nozzle_cali', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed',
+                     'nozzle_expos', 'nozzle_thresh',
                      'offset_config', 'pld_search', 'pld_base_z', 'pld_comp_offset', 'pld_comp_space', 'pld_start_at', 'pld_tgt_grid', 'pld_rotate', 'pld_enable'];
 let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'offset_config'];
 let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];

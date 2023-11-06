@@ -42,6 +42,13 @@ async function set_camera_cfg(_detect=null, exposure=20) {
     console.log(`set_camera_cfg ${dev}, ${detect} ret`, dat);
 }
 
+async function set_vision_cfg(debug=false) {
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'set_vision_cfg', 'nozzle_thresh': csa.nozzle_thresh, 'debug': debug}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(500);
+    console.log(`set_vision_cfg ret`, dat);
+}
+
 async function get_motor_pos() {
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'get_motor_pos'}, ['server', 'dev']);
@@ -140,5 +147,5 @@ async function cam_comp_snap(times=3) {
 
 export {
     get_camera_cfg, set_camera_cfg, get_motor_pos, set_motor_pos, set_pump,
-    pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap
+    pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap, set_vision_cfg
 };
