@@ -74,6 +74,7 @@ async function set_motor_pos(wait=false, speed=600000) {
     console.log('set_motor_pos ret', dat);
 }
 
+// 0: off, 1: valve on, 2: pump on
 async function set_pump(val) {
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'set_pump', 'val': val}, ['server', 'dev']);

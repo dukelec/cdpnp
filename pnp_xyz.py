@@ -52,17 +52,11 @@ def cd_reg_rw(dev_addr, reg_addr, write=None, read=0, timeout=0.8, retry=3):
     #return None
 
 
+# 0: off, 1: valve on, 2: pump on
 def set_pump(val):
-    pump = 2 if val != 0 else 1
-    xyz['logger'].info(f'set pump... {pump}')
-    rx = cd_reg_rw('80:00:11', 0x0036, struct.pack("<B", pump))
+    xyz['logger'].info(f'set pump... {val}')
+    rx = cd_reg_rw('80:00:11', 0x0036, struct.pack("<B", val))
     xyz['logger'].info('set pump ret: ' + rx.hex())
-    if pump == 1:
-        sleep(0.5)
-        pump = 0
-        xyz['logger'].info(f'set pump... {pump}')
-        rx = cd_reg_rw('80:00:11', 0x0036, struct.pack("<B", pump))
-        xyz['logger'].info('set pump ret: ' + rx.hex())
 
 
 def enable_motor():

@@ -163,7 +163,7 @@ document.getElementById('btn_pld_run').onclick = async function() {
             
             csa.cur_pos[2] = csa.pld_base_z - 0.5;
             await set_motor_pos(true);
-            await set_pump(1);
+            await set_pump(2);
             await sleep(600);
             csa.cur_pos[2] = top_z;
             await set_motor_pos(true);
@@ -179,10 +179,12 @@ document.getElementById('btn_pld_run').onclick = async function() {
             
             csa.cur_pos[2] = csa.comp_base_z + Math.abs(csa.pld_base_z - csa.comp_base_z) - 0.5;
             await set_motor_pos(true);
-            await set_pump(0);
+            await set_pump(1);
+            await sleep(500);
             
             csa.cur_pos[2] = top_z;
             await set_motor_pos(true);
+            await set_pump(0);
             
             document.getElementById('pld_count').value = tgt_count + 1;
             if (csa.pld_stop)

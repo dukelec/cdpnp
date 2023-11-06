@@ -310,7 +310,13 @@ window.btn_detect_z = async function() {
 
 document.getElementById('pump_en').onchange = async function() {
     let pump_en = document.getElementById('pump_en').checked;
-    await set_pump(pump_en);
+    if (pump_en) {
+        await set_pump(2);
+    } else {
+        await set_pump(1);
+        await sleep(500);
+        await set_pump(0);
+    }
 };
 
 async function set_camera_en(enable) {

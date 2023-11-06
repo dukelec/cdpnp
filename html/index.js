@@ -233,7 +233,7 @@ document.getElementById('btn_run').onclick = async function() {
             await enable_force();
             csa.cur_pos[2] = csa.comp_base_z - 1;
             await set_motor_pos(true, csa.motor_speed >= 0.6 ? 12000 : 6000);
-            await set_pump(1);
+            await set_pump(2);
             if (csa.comp_height == null) {
                 await get_motor_pos();
                 csa.comp_height = Math.max(parseFloat((csa.cur_pos[2] - csa.comp_base_z).toFixed(3)), 0);
@@ -341,8 +341,10 @@ document.getElementById('btn_run').onclick = async function() {
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
                 // manual select comp during putdown pause
-                await set_pump(0);
+                await set_pump(1);
+                await sleep(500);
                 await z_keep_high();
+                await set_pump(0);
                 if (get_comp_safe() != comp || get_board_safe() != board)
                     continue;
             } else {
@@ -350,8 +352,10 @@ document.getElementById('btn_run').onclick = async function() {
                 await enable_force();
                 csa.cur_pos[2] = csa.pcb_base_z - 1;
                 await set_motor_pos(true, csa.motor_speed >= 0.6 ? 12000 : 6000);
-                await set_pump(0);
+                await set_pump(1);
+                await sleep(500);
                 await z_keep_high();
+                await set_pump(0);
             }
             set_step(Number(!document.getElementById('show_target').checked));
         }
