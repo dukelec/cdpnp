@@ -17,6 +17,10 @@ document.getElementById('btn_cali_offset').onclick = async function() {
         alert("please set camera vision detect method!");
         return;
     }
+    if (!csa.stop) {
+        alert("please stop smt first!");
+        return;
+    }
     if (document.getElementById('camera_dev').value != '1' || !document.getElementById('camera_en').checked) {
         console.log("auto enable camera before run task");
         document.getElementById('camera_dev').value = 1;
@@ -63,7 +67,7 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             console.log('fsm goto_comp');
             document.getElementById('camera_light1').checked = false;
             await document.getElementById('camera_light1').onchange();
-            await z_keep_high(100);
+            await z_keep_high(70);
             if (cali_dat.length) {
                 csa.cur_pos[0] = cali_dat[cali_dat.length-1][0];
                 csa.cur_pos[1] = cali_dat[cali_dat.length-1][1];
@@ -72,12 +76,13 @@ document.getElementById('btn_cali_offset').onclick = async function() {
                 csa.cur_pos[1] = csa.comp_search[search][1];
             }
             csa.cur_pos[3] = 0;
-            await set_motor_pos(100);
             if (csa.cur_pos[2] != csa.comp_top_z) {
+                await set_motor_pos(70);
                 csa.cur_pos[2] = csa.comp_top_z;
                 await set_motor_pos(100);
+            } else {
+                await set_motor_pos(100);
             }
-            await sleep(800);
             set_step(2);
             continue;
         }
@@ -121,20 +126,19 @@ document.getElementById('btn_cali_offset').onclick = async function() {
                 document.getElementById('cur_height').innerText = `${csa.comp_height}`;
             }
             await sleep(600);
-            await z_keep_high(100);
+            await z_keep_high(70, 260000);
             
             csa.cur_pos[3] = 180;
-            await set_motor_pos(100);
+            await set_motor_pos(0);
             set_step(6);
             continue;
         }
         
         if (step == 6) { // putdown
             console.log('fsm putdown');
-            if (csa.comp_height != null) {
+            if (csa.comp_height != null)
                 csa.cur_pos[2] = csa.comp_base_z + csa.comp_height + 1; // 1mm space
-                await set_motor_pos(100);
-            }
+            await set_motor_pos(100);
 
             await sleep(800);
             await enable_force();
@@ -142,7 +146,7 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
             await set_pump(1);
             await sleep(500);
-            await z_keep_high(100);
+            await z_keep_high(70);
             set_step(1);
             await set_pump(0);
         }
@@ -190,7 +194,6 @@ document.getElementById('btn_cali_nozzle').onclick = async function() {
     
     await window.btn_goto_xyz('user_pos0'); // goto position for calibration
     
-    await sleep(800);
     if (document.getElementById('pause_en').checked)
         return;
     let ret = await cam_comp_snap();
@@ -201,7 +204,6 @@ document.getElementById('btn_cali_nozzle').onclick = async function() {
     csa.cur_pos[3] = 180;
     await set_motor_pos(100);
     
-    await sleep(800);
     if (document.getElementById('pause_en').checked)
         return;
     ret = await cam_comp_snap();

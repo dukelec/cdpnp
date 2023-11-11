@@ -185,12 +185,13 @@ document.getElementById('btn_run').onclick = async function() {
             csa.cur_pos[0] = csa.comp_search[search][0];
             csa.cur_pos[1] = csa.comp_search[search][1];
             csa.cur_pos[3] = 0;
-            await set_motor_pos(100);
             if (csa.cur_pos[2] != csa.comp_top_z) {
+                await set_motor_pos(70);
                 csa.cur_pos[2] = csa.comp_top_z;
                 await set_motor_pos(100);
+            } else {
+                await set_motor_pos(100);
             }
-            await sleep(800);
             set_step(2);
             continue;
         }
@@ -273,11 +274,11 @@ document.getElementById('btn_run').onclick = async function() {
             let z_middle = Math.min(Math.max(cali_pos[2], csa.cur_pos[2]) + csa.comp_height, -2);
             if (csa.cur_pos[2] < z_middle) {
                 csa.cur_pos[2] = z_middle;
-                await set_motor_pos(100);
+                await set_motor_pos(70);
             }
             csa.cur_pos[0] = cali_pos[0] - err[0];
             csa.cur_pos[1] = cali_pos[1] - err[1];
-            await set_motor_pos(100);
+            await set_motor_pos(70);
             csa.cur_pos[2] = cali_pos[2] + csa.comp_height;
             await set_motor_pos(100);
             
@@ -286,9 +287,7 @@ document.getElementById('btn_run').onclick = async function() {
             if (csa.stop)
                 break;
             
-            await sleep(800);
             let ret = await cam_comp_snap();
-            
             csa.cur_pos[3] -= csa.cv_cur_r;
             await set_motor_pos(100);
             
@@ -333,18 +332,17 @@ document.getElementById('btn_run').onclick = async function() {
             
             csa.cur_pos[0] = comp_xyz[0] - csa.grab_ofs[0] - nozzle_err_vector[0];
             csa.cur_pos[1] = comp_xyz[1] - csa.grab_ofs[1] - nozzle_err_vector[1];
-            await set_motor_pos(100);
+            await set_motor_pos(70);
             set_step(6);
             continue;
         }
         
         if (step == 6) { // putdown
             console.log('fsm putdown');
+            if (csa.comp_height != null)
+                csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
+            await set_motor_pos(100);
             if (!document.getElementById('putdown_en').checked) {
-                if (csa.comp_height != null) {
-                    csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
-                    await set_motor_pos(100);
-                }
                 document.getElementById('pause_en').checked = true;
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
@@ -360,10 +358,6 @@ document.getElementById('btn_run').onclick = async function() {
                     csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height - 0.5; // -0.5mm space
                     await set_motor_pos(100);
                 } else {
-                    if (csa.comp_height != null) {
-                        csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
-                        await set_motor_pos(100);
-                    }
                     await sleep(800);
                     await enable_force();
                     csa.cur_pos[2] = csa.pcb_base_z - 1;

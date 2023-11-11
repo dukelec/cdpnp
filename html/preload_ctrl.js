@@ -115,12 +115,10 @@ document.getElementById('btn_pld_run').onclick = async function() {
             csa.cur_pos[2] = csa.pld_top_z;
             await set_motor_pos(100);
         }
-        await sleep(800);
         
         console.log('fsm snap');
         await cam_comp_snap(1);
         await set_camera_cfg();
-        await sleep(200);
         let ret = await cam_comp_snap();
         if (ret < 0) {
             console.log("no comp found!");

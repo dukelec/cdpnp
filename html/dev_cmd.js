@@ -127,6 +127,7 @@ async function cam_comp_snap(times=3, max_err=0.01) {
     let cam_height = dev == 1 ? 800 : 600;
     let cv = null;
     
+    await sleep(600);
     for (let i = 0; i < times; i++) {
         cv = await get_cv_cur();
         if (cv) {
@@ -136,6 +137,8 @@ async function cam_comp_snap(times=3, max_err=0.01) {
             csa.cur_pos[0] += dx * sign
             csa.cur_pos[1] += dy * sign
             await set_motor_pos(100);
+            if (times == 1) // for preload_ctrl
+                return null;
             if (Math.abs(dx) < max_err && Math.abs(dy) < max_err) {
                 console.log('cv breaks at:', i)
                 i = times; // breaks
