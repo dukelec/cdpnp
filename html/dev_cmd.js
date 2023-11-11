@@ -120,28 +120,31 @@ async function get_cv_cur() {
 // 10mm / 344 pixel
 let DIV_MM2PIXEL = 10/344;
 
-async function cam_comp_snap(times=3) {
+async function cam_comp_snap(times=3, max_err=0.01) {
     let dev = Number(document.getElementById('camera_dev').value);
     let sign = dev == 1 ? 1 : -1;
     let cam_width = dev == 1 ? 600 : 800;
     let cam_height = dev == 1 ? 800 : 600;
+    let cv = null;
     
     for (let i = 0; i < times; i++) {
-        let cv = await get_cv_cur();
+        cv = await get_cv_cur();
         if (cv) {
             let dx = (cv[0] - cam_width/2) * DIV_MM2PIXEL
             let dy = (cv[1] - cam_height/2) * DIV_MM2PIXEL
             console.log('cv dx dy', dx, dy)
             csa.cur_pos[0] += dx * sign
             csa.cur_pos[1] += dy * sign
-            csa.cv_cur_r = cv[2] // [-89, 90]
             await set_motor_pos(100);
-        } else {
-            csa.cv_cur_r = null;
+            if (Math.abs(dx) < max_err && Math.abs(dy) < max_err) {
+                console.log('cv breaks at:', i)
+                i = times; // breaks
+            }
         }
         await sleep(600);
     }
-    let cv = await get_cv_cur();
+    cv = await get_cv_cur();
+    csa.cv_cur_r = cv ? cv[2] : null; // [-89, 90]
     return cv ? 0 : -1;
 }
 
