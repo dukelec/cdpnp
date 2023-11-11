@@ -97,7 +97,7 @@ document.getElementById('btn_pld_run').onclick = async function() {
     let z_middle = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
         csa.cur_pos[2] = z_middle;
-        await set_motor_pos(true);
+        await set_motor_pos(100);
     }
     
     let pcb = [ [0, 0], [0, 4] ];
@@ -110,10 +110,10 @@ document.getElementById('btn_pld_run').onclick = async function() {
         csa.cur_pos[0] = csa.pld_search[0];
         csa.cur_pos[1] = csa.pld_search[1];
         csa.cur_pos[3] = 0;
-        await set_motor_pos(true);
+        await set_motor_pos(100);
         if (csa.cur_pos[2] != csa.pld_top_z) {
             csa.cur_pos[2] = csa.pld_top_z;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
         }
         await sleep(800);
         
@@ -142,7 +142,7 @@ document.getElementById('btn_pld_run').onclick = async function() {
             let comp_xyz = await pcb2xyz(pcb, cam, 3.5, 2 * i);
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             await sleep(200); // 800
         } */
         
@@ -159,14 +159,14 @@ document.getElementById('btn_pld_run').onclick = async function() {
             csa.cur_pos[1] = comp_xyz[1] - grab_ofs[1];
             csa.cur_pos[2] = top_z;
             csa.cur_pos[3] = 0;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             
             csa.cur_pos[2] = csa.pld_base_z - 0.5;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             await set_pump(2);
             await sleep(600);
             csa.cur_pos[2] = top_z;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             
             let tgt_count = Number(document.getElementById('pld_count').value);
             let tgt_grid = pld_get_grid(tgt_count);
@@ -175,15 +175,15 @@ document.getElementById('btn_pld_run').onclick = async function() {
             csa.cur_pos[0] = csa.comp_search[search][0] - grab_ofs[0] + tgt[0];
             csa.cur_pos[1] = csa.comp_search[search][1] - grab_ofs[1] + tgt[1];
             csa.cur_pos[3] = csa.pld_rotate;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             
             csa.cur_pos[2] = csa.comp_base_z + Math.abs(csa.pld_base_z - csa.comp_base_z) - 0.5;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             await set_pump(1);
             await sleep(500);
             
             csa.cur_pos[2] = top_z;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             await set_pump(0);
             
             document.getElementById('pld_count').value = tgt_count + 1;
@@ -196,7 +196,7 @@ document.getElementById('btn_pld_run').onclick = async function() {
     csa.cur_pos[1] = csa.pld_search[1];
     csa.cur_pos[2] = csa.pld_top_z;
     csa.cur_pos[3] = 0;
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     
     console.log('preload finished');
     csa.pld_stop = true;

@@ -209,19 +209,19 @@ async function move_to_comp(comp) {
             let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
             if (csa.cur_pos[2] < z_middle) {
                 csa.cur_pos[2] = z_middle;
-                await set_motor_pos(true);
+                await set_motor_pos(100);
             }
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
             csa.cur_pos[3] = 0;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             csa.cur_pos[2] = z;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
         } else {
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
             csa.cur_pos[3] = 0;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
         }
         disable_goto_btn(false);
     }

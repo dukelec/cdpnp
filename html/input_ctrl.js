@@ -222,14 +222,14 @@ window.btn_goto_xy = async function(name) {
     let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
         csa.cur_pos[2] = z_middle;
-        await set_motor_pos(true);
+        await set_motor_pos(100);
     }
     csa.cur_pos[0] = Number(xy_str.split(',')[0]);
     csa.cur_pos[1] = Number(xy_str.split(',')[1]);
     csa.cur_pos[3] = 0;
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     csa.cur_pos[2] = z;
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     disable_goto_btn(false);
 };
 window.btn_goto_xyz = async function(name) {
@@ -241,14 +241,14 @@ window.btn_goto_xyz = async function(name) {
     let z_middle = Math.min(Math.max(z, csa.cur_pos[2]) + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
         csa.cur_pos[2] = z_middle;
-        await set_motor_pos(true);
+        await set_motor_pos(100);
     }
     csa.cur_pos[0] = Number(xyz_str.split(',')[0]);
     csa.cur_pos[1] = Number(xyz_str.split(',')[1]);
     csa.cur_pos[3] = 0;
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     csa.cur_pos[2] = z;
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     if (name == "user_pos0")
         document.getElementById('btn_reset_aux').onclick();
     disable_goto_btn(false);
@@ -268,21 +268,21 @@ window.btn_goto_z = async function(name) {
     } else {
         csa.cur_pos[2] = Number(document.getElementById(name).value);
     }
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     disable_goto_btn(false);
 };
 window.btn_grab_ofs = async function(type, dir=1) {
     disable_goto_btn(true);
     let origin_z = csa.cur_pos[2];
     csa.cur_pos[2] = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     let grab_ofs = type == 0 ? cal_grab_ofs(0) : csa.grab_ofs;
     csa.cur_pos[0] -= dir * grab_ofs[0];
     csa.cur_pos[1] -= dir * grab_ofs[1];
     csa.cur_pos[3] = 0;
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     csa.cur_pos[2] = origin_z;
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     disable_goto_btn(false);
 };
 window.btn_detect_z = async function() {
@@ -291,17 +291,17 @@ window.btn_detect_z = async function() {
         console.log('detect bottom z... (fast)');
         await enable_force();
         csa.cur_pos[2] = -92;
-        await set_motor_pos(true, 12000);
+        await set_motor_pos(100, 12000);
         await get_motor_pos();
         console.log('detect bottom z done (fast)');
         csa.cur_pos[2] += 1;
-        await set_motor_pos(true);
+        await set_motor_pos(100);
         await sleep(800);
     }
     console.log('detect bottom z... (slow)');
     await enable_force();
     csa.cur_pos[2] = -92;
-    await set_motor_pos(true, 2000);
+    await set_motor_pos(100, 2000);
     await get_motor_pos();
     console.log('detect bottom z done (slow)');
     disable_goto_btn(false);

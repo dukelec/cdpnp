@@ -59,8 +59,8 @@ async function get_motor_pos() {
     csa_to_page_pos();
 }
 
-async function set_motor_pos(wait=false, speed=600000) {
-    console.log('set_motor_pos:', csa.cur_pos);
+async function set_motor_pos(wait=0, speed=600000) {
+    console.log(`set_motor_pos: ${csa.cur_pos}, wait: ${wait}`);
     if (speed == 600000)
         speed = Math.round(speed * csa.motor_speed);
     csa.cur_pos[0] = Math.min(Math.max(csa.cur_pos[0], 2), 300)
@@ -91,13 +91,13 @@ async function pcb2xyz(pcb, cam, x, y) {
     return dat ? dat[0] : null;
 }
 
-async function z_keep_high(speed=260000) {
+async function z_keep_high(wait=0, speed=600000) {
     let min_z = Math.max(csa.pcb_top_z, csa.comp_top_z);
     if (document.getElementById('pump_en').checked && csa.comp_height != null)
         min_z += csa.comp_height;
     if (csa.cur_pos[2] < min_z) {
         csa.cur_pos[2] = min_z;
-        await set_motor_pos(true, speed);
+        await set_motor_pos(wait, speed);
     }
 }
 
@@ -135,7 +135,7 @@ async function cam_comp_snap(times=3) {
             csa.cur_pos[0] += dx * sign
             csa.cur_pos[1] += dy * sign
             csa.cv_cur_r = cv[2] // [-89, 90]
-            await set_motor_pos(true);
+            await set_motor_pos(100);
         } else {
             csa.cv_cur_r = null;
         }

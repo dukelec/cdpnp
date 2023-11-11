@@ -32,7 +32,7 @@ document.getElementById('btn_cali_offset').onclick = async function() {
     let z_middle = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
         csa.cur_pos[2] = z_middle;
-        await set_motor_pos(true);
+        await set_motor_pos(100);
     }
     
     set_step(1);
@@ -63,7 +63,7 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             console.log('fsm goto_comp');
             document.getElementById('camera_light1').checked = false;
             await document.getElementById('camera_light1').onchange();
-            await z_keep_high();
+            await z_keep_high(100);
             if (cali_dat.length) {
                 csa.cur_pos[0] = cali_dat[cali_dat.length-1][0];
                 csa.cur_pos[1] = cali_dat[cali_dat.length-1][1];
@@ -72,10 +72,10 @@ document.getElementById('btn_cali_offset').onclick = async function() {
                 csa.cur_pos[1] = csa.comp_search[search][1];
             }
             csa.cur_pos[3] = 0;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             if (csa.cur_pos[2] != csa.comp_top_z) {
                 csa.cur_pos[2] = csa.comp_top_z;
-                await set_motor_pos(true);
+                await set_motor_pos(100);
             }
             await sleep(800);
             set_step(2);
@@ -94,7 +94,6 @@ document.getElementById('btn_cali_offset').onclick = async function() {
                 set_step(1);
             } else {
                 set_step(3);
-                
                 console.log(`cali_cnt: ${cali_cnt}, csa.cur_pos: ${csa.cur_pos}`);
                 cali_dat.push([csa.cur_pos[0], csa.cur_pos[1]]);
                 if (++cali_cnt >= 2)
@@ -110,11 +109,11 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             csa.cur_pos[3] = 0;
             if (csa.comp_height != null)
                 csa.cur_pos[2] = csa.comp_base_z + csa.comp_height + 1; // 1mm space
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             await sleep(800);
             await enable_force();
             csa.cur_pos[2] = csa.comp_base_z - 1;
-            await set_motor_pos(true, csa.motor_speed >= 0.6 ? 12000 : 6000);
+            await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
             await set_pump(2);
             if (csa.comp_height == null) {
                 await get_motor_pos();
@@ -122,10 +121,10 @@ document.getElementById('btn_cali_offset').onclick = async function() {
                 document.getElementById('cur_height').innerText = `${csa.comp_height}`;
             }
             await sleep(600);
-            await z_keep_high();
+            await z_keep_high(100);
             
             csa.cur_pos[3] = 180;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             set_step(6);
             continue;
         }
@@ -134,16 +133,16 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             console.log('fsm putdown');
             if (csa.comp_height != null) {
                 csa.cur_pos[2] = csa.comp_base_z + csa.comp_height + 1; // 1mm space
-                await set_motor_pos(true);
+                await set_motor_pos(100);
             }
 
             await sleep(800);
             await enable_force();
             csa.cur_pos[2] = csa.pcb_base_z - 1;
-            await set_motor_pos(true, csa.motor_speed >= 0.6 ? 12000 : 6000);
+            await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
             await set_pump(1);
             await sleep(500);
-            await z_keep_high();
+            await z_keep_high(100);
             set_step(1);
             await set_pump(0);
         }
@@ -200,7 +199,7 @@ document.getElementById('btn_cali_nozzle').onclick = async function() {
     let y0 = csa.cur_pos[1];
     
     csa.cur_pos[3] = 180;
-    await set_motor_pos(true);
+    await set_motor_pos(100);
     
     await sleep(800);
     if (document.getElementById('pause_en').checked)

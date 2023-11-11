@@ -21,6 +21,7 @@ DIV_DEG2STEP = 0.0140625
 xyz = {
     'logger': None,
     'last_pos': None,
+    'old_pos': None,
     'sock': None,
     'sock_dbg': None
 }
@@ -74,6 +75,20 @@ def enable_motor():
         xyz['logger'].info('motor set vref ret: ' + rx.hex())
 
 
+def load_pos():
+    pos = [0, 0, 0, 0]
+    xyz['logger'].info(f'motor read pos')
+    rx = cd_reg_rw('80:00:03', 0x0100, read=4)
+    pos[0] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
+    rx = cd_reg_rw('80:00:01', 0x0100, read=4)
+    pos[1] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
+    rx = cd_reg_rw('80:00:04', 0x0100, read=4)
+    pos[2] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP * -1
+    rx = cd_reg_rw('80:00:05', 0x0100, read=4)
+    pos[3] = struct.unpack("<i", rx[1:])[0] * DIV_DEG2STEP * -1
+    return pos
+
+
 def wait_stop():
     for i in range(5):
         while True:
@@ -83,23 +98,21 @@ def wait_stop():
             sleep(0.1)
 
 
+def wait_finish(axis, wait):
+    old = xyz['old_pos'][axis]
+    last = xyz['last_pos'][axis]
+    dist = abs(last - old)
+    while True:
+        cur = load_pos()[axis]
+        finish = abs(cur - old)
+        if finish * 100 / dist >= wait:
+            break
+        sleep(0.1)
+
+
 def enable_force():
     rx = cd_reg_rw('80:00:04', 0x006c, struct.pack("<B", 1))
     xyz['logger'].info(f'enable force ret: {rx[0]:02x}')
-
-
-def load_pos():
-    pos = [0, 0, 0, 0]
-    xyz['logger'].info(f'motor read pos')
-    rx = cd_reg_rw('80:00:03', 0x00bc, read=4)
-    pos[0] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
-    rx = cd_reg_rw('80:00:01', 0x00bc, read=4)
-    pos[1] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
-    rx = cd_reg_rw('80:00:04', 0x00bc, read=4)
-    pos[2] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP * -1
-    rx = cd_reg_rw('80:00:05', 0x00bc, read=4)
-    pos[3] = struct.unpack("<i", rx[1:])[0] * DIV_DEG2STEP * -1
-    return pos
 
 
 def cal_accel(v):
@@ -109,9 +122,10 @@ def cal_accel(v):
     return round(v / 600000 * 1600000)
 
 
-def goto_pos(pos, wait=False, s_speed=260000):
-    delta = [pos[0]-xyz['last_pos'][0], pos[1]-xyz['last_pos'][1], pos[2]-xyz['last_pos'][2], pos[3]-xyz['last_pos'][3]]
+def goto_pos(pos, wait=0, s_speed=260000):
+    xyz['old_pos'] = load_pos()
     xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
+    delta = [pos[0]-xyz['old_pos'][0], pos[1]-xyz['old_pos'][1], pos[2]-xyz['old_pos'][2], pos[3]-xyz['old_pos'][3]]
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
     dlt_max = max(abs(delta[0]), abs(delta[1]), abs(delta[2]), 0.01)
@@ -144,9 +158,19 @@ def goto_pos(pos, wait=False, s_speed=260000):
             xyz['logger'].error(f'error: set retry > 3, done_flag: f{done_flag}')
             raise Exception('goto_pos retry error')
     
-    if not wait:
+    if wait <= 0:
         return 0
-    wait_stop()
+    elif wait >= 100:
+        wait_stop()
+    else:
+        if dlt_max == abs(delta[0]):
+            wait_finish(0, wait)
+        elif dlt_max == abs(delta[1]):
+            wait_finish(1, wait)
+        elif dlt_max == abs(delta[2]):
+            wait_finish(2, wait)
+        elif dlt_max == 0.01:
+            wait_finish(3, wait)
 
 
 def detect_origin():

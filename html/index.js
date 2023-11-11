@@ -115,7 +115,7 @@ document.getElementById('btn_run').onclick = async function() {
     let z_middle = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
         csa.cur_pos[2] = z_middle;
-        await set_motor_pos(true);
+        await set_motor_pos(100);
     }
     
     // error vector and nozzle angle before putdown
@@ -164,13 +164,13 @@ document.getElementById('btn_run').onclick = async function() {
             console.log('fsm show target');
             //document.getElementById('camera_light1').checked = true;
             await set_camera_cfg("");
-            await z_keep_high();
+            await z_keep_high(70);
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             if (csa.cur_pos[2] != csa.pcb_top_z) {
                 csa.cur_pos[2] = csa.pcb_top_z;
-                await set_motor_pos(true);
+                await set_motor_pos(100);
             }
             await sleep(600);
             set_step(1);
@@ -181,14 +181,14 @@ document.getElementById('btn_run').onclick = async function() {
             console.log('fsm goto_comp');
             document.getElementById('camera_light1').checked = false;
             await document.getElementById('camera_light1').onchange();
-            await z_keep_high();
+            await z_keep_high(70);
             csa.cur_pos[0] = csa.comp_search[search][0];
             csa.cur_pos[1] = csa.comp_search[search][1];
             csa.cur_pos[3] = 0;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             if (csa.cur_pos[2] != csa.comp_top_z) {
                 csa.cur_pos[2] = csa.comp_top_z;
-                await set_motor_pos(true);
+                await set_motor_pos(100);
             }
             await sleep(800);
             set_step(2);
@@ -228,15 +228,15 @@ document.getElementById('btn_run').onclick = async function() {
                 csa.cur_pos[0] += offset[0];
                 csa.cur_pos[1] += offset[1];
             }
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             if (csa.comp_height != null && document.getElementById('less_detect').checked) {
                 csa.cur_pos[2] = csa.comp_base_z + csa.comp_height - 0.5; // -0.5mm space
-                await set_motor_pos(true);
+                await set_motor_pos(100);
             } else {
                 await sleep(800);
                 await enable_force();
                 csa.cur_pos[2] = csa.comp_base_z - 1;
-                await set_motor_pos(true, csa.motor_speed >= 0.6 ? 12000 : 6000);
+                await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
             }
             await set_pump(2);
             if (csa.comp_height == null) {
@@ -245,7 +245,7 @@ document.getElementById('btn_run').onclick = async function() {
                 document.getElementById('cur_height').innerText = `${csa.comp_height}`;
             }
             await sleep(600);
-            await z_keep_high();
+            await z_keep_high(70, 260000);
             
             if (document.getElementById('check2_en').checked) {
                 set_step(4);
@@ -273,13 +273,13 @@ document.getElementById('btn_run').onclick = async function() {
             let z_middle = Math.min(Math.max(cali_pos[2], csa.cur_pos[2]) + csa.comp_height, -2);
             if (csa.cur_pos[2] < z_middle) {
                 csa.cur_pos[2] = z_middle;
-                await set_motor_pos(true);
+                await set_motor_pos(100);
             }
             csa.cur_pos[0] = cali_pos[0] - err[0];
             csa.cur_pos[1] = cali_pos[1] - err[1];
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             csa.cur_pos[2] = cali_pos[2] + csa.comp_height;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             
             while (document.getElementById('pause_en').checked)
                 await sleep(100);
@@ -290,7 +290,7 @@ document.getElementById('btn_run').onclick = async function() {
             let ret = await cam_comp_snap();
             
             csa.cur_pos[3] -= csa.cv_cur_r;
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             
             if (!document.getElementById('putdown_en').checked) {
                 document.getElementById('pause_en').checked = true;
@@ -315,7 +315,7 @@ document.getElementById('btn_run').onclick = async function() {
         
         if (step == 5) { // goto_pcb
             console.log('fsm goto_pcb');
-            await z_keep_high();
+            await z_keep_high(70);
             // optimize the rotation angle for faster speed
             if (nozzle_err_angle != null) {
                 let rad = (comp_val[2] + nozzle_err_angle + comp_xyz[2]) * Math.PI / 180;
@@ -333,7 +333,7 @@ document.getElementById('btn_run').onclick = async function() {
             
             csa.cur_pos[0] = comp_xyz[0] - csa.grab_ofs[0] - nozzle_err_vector[0];
             csa.cur_pos[1] = comp_xyz[1] - csa.grab_ofs[1] - nozzle_err_vector[1];
-            await set_motor_pos(true);
+            await set_motor_pos(100);
             set_step(6);
             continue;
         }
@@ -343,7 +343,7 @@ document.getElementById('btn_run').onclick = async function() {
             if (!document.getElementById('putdown_en').checked) {
                 if (csa.comp_height != null) {
                     csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
-                    await set_motor_pos(true);
+                    await set_motor_pos(100);
                 }
                 document.getElementById('pause_en').checked = true;
                 while (document.getElementById('pause_en').checked)
@@ -351,27 +351,27 @@ document.getElementById('btn_run').onclick = async function() {
                 // manual select comp during putdown pause
                 await set_pump(1);
                 await sleep(500);
-                await z_keep_high();
+                await z_keep_high(70);
                 await set_pump(0);
                 if (get_comp_safe() != comp || get_board_safe() != board)
                     continue;
             } else {
                 if (csa.comp_height != null && document.getElementById('less_detect').checked) {
                     csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height - 0.5; // -0.5mm space
-                    await set_motor_pos(true);
+                    await set_motor_pos(100);
                 } else {
                     if (csa.comp_height != null) {
                         csa.cur_pos[2] = csa.pcb_base_z + csa.comp_height + 1; // 1mm space
-                        await set_motor_pos(true);
+                        await set_motor_pos(100);
                     }
                     await sleep(800);
                     await enable_force();
                     csa.cur_pos[2] = csa.pcb_base_z - 1;
-                    await set_motor_pos(true, csa.motor_speed >= 0.6 ? 12000 : 6000);
+                    await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
                 }
                 await set_pump(1);
                 await sleep(500);
-                await z_keep_high();
+                await z_keep_high(70);
                 await set_pump(0);
             }
             set_step(Number(!document.getElementById('show_target').checked));
