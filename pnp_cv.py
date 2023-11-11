@@ -79,11 +79,14 @@ def cv_get_pos(img):
         # Retrieve the key parameters of the rotated bounding box
         center_f = (rect[0][0], rect[0][1])
         center = (round(rect[0][0]),round(rect[0][1]))
-        width = round(rect[1][0])
-        height = round(rect[1][1])
+        height = round(rect[1][0])
+        width = round(rect[1][1])
         angle = rect[2]
+        cam_height, cam_width = img.shape[:2]
+        if width == cam_width - 1 and height == cam_height - 1:
+            continue
 
-        if width < height:
+        if width > height:
             angle = 90 - angle
         else:
             angle = -angle
@@ -95,8 +98,7 @@ def cv_get_pos(img):
                  angle -= 90
         angle = round(angle, 1)
 
-        height, width = img.shape[:2]
-        x_center, y_center = round(width/2), round(height/2)
+        x_center, y_center = round(cam_width/2), round(cam_height/2)
         l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
         comps.append([center_f[0], center_f[1], angle, l_center])
 
@@ -165,8 +167,8 @@ def cv_get_circle(img):
         cv.circle(img, center, round(radius), (0,0,255), 1)
         #print(center, radius, bw[center[1], center[0]])
 
-        height, width = img.shape[:2]
-        x_center, y_center = round(width/2), round(height/2)
+        cam_height, cam_width = img.shape[:2]
+        x_center, y_center = round(cam_width/2), round(cam_height/2)
         l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
         comps.append([center_f[0], center_f[1], 0, l_center])
 
@@ -249,11 +251,11 @@ def cv_get_pad(img):
         # Retrieve the key parameters of the rotated bounding box
         center_f = (rect[0][0], rect[0][1])
         center = (round(rect[0][0]), round(rect[0][1]))
-        width = round(rect[1][0])
-        height = round(rect[1][1])
+        height = round(rect[1][0])
+        width = round(rect[1][1])
         angle = rect[2]
 
-        if width < height:
+        if width > height:
             angle = 90 - angle
         else:
             angle = -angle
@@ -264,8 +266,8 @@ def cv_get_pad(img):
             angle -= 90
         angle = round(angle, 1)
 
-        height, width = img.shape[:2]
-        x_center, y_center = round(width/2), round(height/2)
+        cam_height, cam_width = img.shape[:2]
+        x_center, y_center = round(cam_width/2), round(cam_height/2)
         l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
         comps.append([center_f[0], center_f[1], angle, l_center])
 
@@ -326,7 +328,7 @@ def pic_rx():
                         cv.imwrite(f'{cur_path}/tmp/bg_invert.png', cv_dat['bg_img'])
                     if cv_dat['bg_img'] is not None:
                         img = cv.addWeighted(img, 0.8, cv_dat['bg_img'], 0.6, 0)
-                height, width = img.shape[:2]
+                cam_height, cam_width = img.shape[:2]
 
                 if cv_dat['detect'].startswith("cali_nozzle"):
                     img = cv_get_circle(img)
@@ -336,9 +338,9 @@ def pic_rx():
                     img = cv_get_pos(img)
 
                 if cv_dat['dev'] == 1:
-                    img = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
+                    img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
                 else:
-                    img = cv.drawMarker(img, (int(width/2),int(height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, markerSize=height-20, thickness=1)
+                    img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, markerSize=height-20, thickness=1)
 
                 if not cv_dat['img_queue'].full():
                     if not cv_dat['local']:

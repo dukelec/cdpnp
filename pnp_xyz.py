@@ -110,7 +110,7 @@ def wait_finish(axis, wait):
     while True:
         cur = load_pos(1 << axis)[axis]
         finish = abs(cur - old)
-        if finish * 100 / dist >= wait:
+        if dist == 0 or finish * 100 / dist >= wait:
             break
         sleep(0.02)
 
