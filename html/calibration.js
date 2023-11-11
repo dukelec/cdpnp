@@ -17,7 +17,7 @@ document.getElementById('btn_cali_offset').onclick = async function() {
         alert("please set camera vision detect method!");
         return;
     }
-    if (!csa.stop) {
+    if (!document.getElementById('btn_stop').disabled) {
         alert("please stop smt first!");
         return;
     }
@@ -129,7 +129,7 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             await z_keep_high(70, 260000);
             
             csa.cur_pos[3] = 180;
-            await set_motor_pos(0);
+            await set_motor_pos(100);
             set_step(6);
             continue;
         }

@@ -167,9 +167,11 @@ document.getElementById('btn_run').onclick = async function() {
             await z_keep_high(70);
             csa.cur_pos[0] = comp_xyz[0];
             csa.cur_pos[1] = comp_xyz[1];
-            await set_motor_pos(100);
             if (csa.cur_pos[2] != csa.pcb_top_z) {
+                await set_motor_pos(70);
                 csa.cur_pos[2] = csa.pcb_top_z;
+                await set_motor_pos(100);
+            } else {
                 await set_motor_pos(100);
             }
             await sleep(600);

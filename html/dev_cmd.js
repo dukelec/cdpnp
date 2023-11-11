@@ -120,7 +120,7 @@ async function get_cv_cur() {
 // 10mm / 344 pixel
 let DIV_MM2PIXEL = 10/344;
 
-async function cam_comp_snap(times=3, max_err=0.01) {
+async function cam_comp_snap(times=3, max_err=0.02) {
     let dev = Number(document.getElementById('camera_dev').value);
     let sign = dev == 1 ? 1 : -1;
     let cam_width = dev == 1 ? 600 : 800;
@@ -133,7 +133,7 @@ async function cam_comp_snap(times=3, max_err=0.01) {
         if (cv) {
             let dx = (cv[0] - cam_width/2) * DIV_MM2PIXEL
             let dy = (cv[1] - cam_height/2) * DIV_MM2PIXEL
-            console.log('cv dx dy', dx, dy)
+            console.log(`cv i: ${i}, dx: ${dx}, dy: ${dy}`)
             csa.cur_pos[0] += dx * sign
             csa.cur_pos[1] += dy * sign
             await set_motor_pos(100);

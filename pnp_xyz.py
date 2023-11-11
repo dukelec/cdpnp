@@ -75,17 +75,21 @@ def enable_motor():
         xyz['logger'].info('motor set vref ret: ' + rx.hex())
 
 
-def load_pos():
-    pos = [0, 0, 0, 0]
-    xyz['logger'].info(f'motor read pos')
-    rx = cd_reg_rw('80:00:03', 0x0100, read=4)
-    pos[0] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
-    rx = cd_reg_rw('80:00:01', 0x0100, read=4)
-    pos[1] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
-    rx = cd_reg_rw('80:00:04', 0x0100, read=4)
-    pos[2] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP * -1
-    rx = cd_reg_rw('80:00:05', 0x0100, read=4)
-    pos[3] = struct.unpack("<i", rx[1:])[0] * DIV_DEG2STEP * -1
+def load_pos(mask=0xf):
+    pos = [None, None, None, None]
+    #xyz['logger'].info(f'motor read pos')
+    if mask & 1:
+        rx = cd_reg_rw('80:00:03', 0x0100, read=4)
+        pos[0] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
+    if mask & 2:
+        rx = cd_reg_rw('80:00:01', 0x0100, read=4)
+        pos[1] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
+    if mask & 4:
+        rx = cd_reg_rw('80:00:04', 0x0100, read=4)
+        pos[2] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP * -1
+    if mask & 8:
+        rx = cd_reg_rw('80:00:05', 0x0100, read=4)
+        pos[3] = struct.unpack("<i", rx[1:])[0] * DIV_DEG2STEP * -1
     return pos
 
 
@@ -101,13 +105,14 @@ def wait_stop():
 def wait_finish(axis, wait):
     old = xyz['old_pos'][axis]
     last = xyz['last_pos'][axis]
+    #print(f'wait_finish: old: {xyz["old_pos"]}, last: {xyz["last_pos"]}, axis: {axis}')
     dist = abs(last - old)
     while True:
-        cur = load_pos()[axis]
+        cur = load_pos(1 << axis)[axis]
         finish = abs(cur - old)
         if finish * 100 / dist >= wait:
             break
-        sleep(0.1)
+        sleep(0.02)
 
 
 def enable_force():
@@ -124,8 +129,8 @@ def cal_accel(v):
 
 def goto_pos(pos, wait=0, s_speed=260000):
     xyz['old_pos'] = load_pos()
-    xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
     delta = [pos[0]-xyz['old_pos'][0], pos[1]-xyz['old_pos'][1], pos[2]-xyz['old_pos'][2], pos[3]-xyz['old_pos'][3]]
+    xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
     dlt_max = max(abs(delta[0]), abs(delta[1]), abs(delta[2]), 0.01)
@@ -175,8 +180,8 @@ def goto_pos(pos, wait=0, s_speed=260000):
 
 def detect_origin():
     xyz['logger'].info(f'detecting origin, please wait...')
-    goto_pos([2, 2, -2, 30], True, 100000)
-    goto_pos([-315, -265, 110, -375], True, 50000)
+    goto_pos([2, 2, -2, 30], 100, 100000)
+    goto_pos([-315, -265, 110, -375], 100, 50000)
     for i in range(5):
         xyz['logger'].info(f'motor set origin: #{i+1}')
         rx = cd_reg_rw(f'80:00:0{i+1}', 0x00b1, struct.pack("<B", 1))
@@ -187,7 +192,7 @@ def detect_origin():
     xyz['logger'].info('motor disable limit switch ret: ' + rx.hex())
     sleep(0.5)
     xyz['last_pos'] = load_pos()
-    goto_pos([2, 2, -2, 7.2*17], True) # 360/50=7.2, 7.2*17=122.4
+    goto_pos([2, 2, -2, 7.2*17], 100) # 360/50=7.2, 7.2*17=122.4
     
     xyz['logger'].info(f'motor set origin: #5')
     rx = cd_reg_rw(f'80:00:05', 0x00b1, struct.pack("<B", 1))
