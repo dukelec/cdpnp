@@ -78,18 +78,46 @@ def enable_motor():
 def load_pos(mask=0xf):
     pos = [None, None, None, None]
     #xyz['logger'].info(f'motor read pos')
-    if mask & 1:
-        rx = cd_reg_rw('80:00:03', 0x0100, read=4)
-        pos[0] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
-    if mask & 2:
-        rx = cd_reg_rw('80:00:01', 0x0100, read=4)
-        pos[1] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP
-    if mask & 4:
-        rx = cd_reg_rw('80:00:04', 0x0100, read=4)
-        pos[2] = struct.unpack("<i", rx[1:])[0] * DIV_MM2STEP * -1
-    if mask & 8:
-        rx = cd_reg_rw('80:00:05', 0x0100, read=4)
-        pos[3] = struct.unpack("<i", rx[1:])[0] * DIV_DEG2STEP * -1
+    retry_cnt = 0
+    while True:
+        xyz['sock'].clear()
+        tx_num = 0
+        rx_num = 0
+        if mask & 1:
+            xyz['sock'].sendto(b'\x00'+struct.pack("<H", 0x0100) + struct.pack("<B", 4), ('80:00:03', 0x5))
+            tx_num += 1
+        if mask & 2:
+            xyz['sock'].sendto(b'\x00'+struct.pack("<H", 0x0100) + struct.pack("<B", 4), ('80:00:01', 0x5))
+            tx_num += 1
+        if mask & 4:
+            xyz['sock'].sendto(b'\x00'+struct.pack("<H", 0x0100) + struct.pack("<B", 4), ('80:00:04', 0x5))
+            tx_num += 1
+        if mask & 8:
+            xyz['sock'].sendto(b'\x00'+struct.pack("<H", 0x0100) + struct.pack("<B", 4), ('80:00:05', 0x5))
+            tx_num += 1
+        
+        for i in range(tx_num):
+            dat, src = xyz['sock'].recvfrom(timeout=0.8)
+            if src and src[1] == 0x5:
+                if src[0] == '80:00:03':
+                    pos[0] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP
+                    rx_num += 1
+                elif src[0] == '80:00:01':
+                    pos[1] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP
+                    rx_num += 1
+                elif src[0] == '80:00:04':
+                    pos[2] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP * -1
+                    rx_num += 1
+                elif src[0] == '80:00:05':
+                    pos[3] = struct.unpack("<i", dat[1:])[0] * DIV_DEG2STEP * -1
+                    rx_num += 1
+        if rx_num == tx_num:
+            break
+        xyz['logger'].warning(f'error: retry_cnt: {retry_cnt}, done_flag: f{done_flag}')
+        retry_cnt += 1
+        if retry_cnt > 3:
+            xyz['logger'].error(f'error: set retry > 3, done_flag: f{done_flag}')
+            raise Exception('load_pos retry error')
     return pos
 
 
@@ -105,7 +133,7 @@ def wait_stop():
 def wait_finish(axis, wait):
     old = xyz['old_pos'][axis]
     last = xyz['last_pos'][axis]
-    #print(f'wait_finish: old: {xyz["old_pos"]}, last: {xyz["last_pos"]}, axis: {axis}')
+    #xyz['logger'].debug(f'wait_finish: old: {xyz["old_pos"]}, last: {xyz["last_pos"]}, axis: {axis}')
     dist = abs(last - old)
     while True:
         cur = load_pos(1 << axis)[axis]
@@ -131,6 +159,9 @@ def goto_pos(pos, wait=0, s_speed=260000):
     xyz['old_pos'] = load_pos()
     delta = [pos[0]-xyz['old_pos'][0], pos[1]-xyz['old_pos'][1], pos[2]-xyz['old_pos'][2], pos[3]-xyz['old_pos'][3]]
     xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
+    #xyz['logger'].debug(f"goto_pos: cur: {xyz['old_pos']}")
+    #xyz['logger'].debug(f"goto_pos: tgt: {xyz['last_pos']}")
+    #xyz['logger'].debug(f"goto_pos: dlt: {delta}")
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
     dlt_max = max(abs(delta[0]), abs(delta[1]), abs(delta[2]), 0.01)
