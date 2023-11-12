@@ -61,6 +61,8 @@ async function get_motor_pos() {
 
 async function set_motor_pos(wait=0, speed=600000) {
     console.log(`set_motor_pos: ${csa.cur_pos}, wait: ${wait}`);
+    if (wait > 0)
+        wait = 100; // not use curve path
     if (speed == 600000)
         speed = Math.round(speed * csa.motor_speed);
     csa.cur_pos[0] = Math.min(Math.max(csa.cur_pos[0], 2), 300)
