@@ -340,7 +340,7 @@ def pic_rx():
                 if cv_dat['dev'] == 1:
                     img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
                 else:
-                    img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, markerSize=height-20, thickness=1)
+                    img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, markerSize=cam_height-20, thickness=1)
 
                 if not cv_dat['img_queue'].full():
                     if not cv_dat['local']:

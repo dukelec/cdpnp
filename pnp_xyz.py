@@ -113,10 +113,10 @@ def load_pos(mask=0xf):
                     rx_num += 1
         if rx_num == tx_num:
             break
-        xyz['logger'].warning(f'error: retry_cnt: {retry_cnt}, done_flag: f{done_flag}')
+        xyz['logger'].warning(f'error: retry_cnt: {retry_cnt}, pos: f{pos}')
         retry_cnt += 1
         if retry_cnt > 3:
-            xyz['logger'].error(f'error: set retry > 3, done_flag: f{done_flag}')
+            xyz['logger'].error(f'error: set retry > 3, pos: f{pos}')
             raise Exception('load_pos retry error')
     return pos
 
