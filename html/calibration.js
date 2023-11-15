@@ -211,6 +211,10 @@ document.getElementById('btn_cali_nozzle').onclick = async function() {
     let x180 = csa.cur_pos[0];
     let y180 = csa.cur_pos[1];
     
+    // turn off the lights after completing calibration
+    document.getElementById('camera_light2').checked = false;
+    await document.getElementById('camera_dev').onchange();
+    
     console.log('cali_nozzle finished');
     let delta_x = (x180 - x0) / 2;
     let delta_y = (y180 - y0) / 2;
