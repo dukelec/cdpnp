@@ -13,6 +13,7 @@ import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_c
 import { input_init, csa_to_page_input } from './input_ctrl.js';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump, pcb2xyz,
          z_keep_high, enable_force, cam_comp_snap, set_camera_cfg } from './dev_cmd.js';
+import './load_altium_csv.js';
 
 let csa_dft = {
     cur_pos: [0, 0, 0, 0],
