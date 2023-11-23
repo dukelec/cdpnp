@@ -33,7 +33,7 @@ with open(in_file, 'r', encoding=encoding, newline='') as csvfile:
     for row in reader:
         if len(row) <= 1:
             continue
-        csv_list.append(','.join(row))
+        csv_list.append('"' + '","'.join(row) + '"')
 
 top_list = []
 bottom_list = []
