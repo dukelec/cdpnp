@@ -314,6 +314,8 @@ def pic_rx():
         elif (hdr & 0xf0) == 0x70: # end
             if dat_cnt == (hdr & 0xf):
                 #print('pic received!')
+                if rx_dat[0] != 0xff or rx_dat[1] != 0xd8:
+                    print(f'jpg header error: {rx_dat[0]:02x} {rx_dat[1]:02x}!')
                 inp = np.asarray(bytearray(rx_dat), dtype=np.uint8)
                 img = cv.imdecode(inp, cv.IMREAD_COLOR)
                 if cv_dat['dev'] == 2:
