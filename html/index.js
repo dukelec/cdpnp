@@ -149,6 +149,10 @@ document.getElementById('btn_run').onclick = async function() {
             break;
         if (document.getElementById('pause_en').checked) {
             console.log(`enter wait`);
+            if (step == 3) {
+                console.log(`exit pickup before pause`);
+                set_step(1);
+            }
             while (document.getElementById('pause_en').checked)
                 await sleep(100);
             console.log(`exit wait`);
