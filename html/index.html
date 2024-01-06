@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--link rel="icon" type="image/png" href="./img/icon.png" /-->
-<title>CDPNP Tools - V3.1</title>
+<title>CDPNP Tools - V3.2</title>
 
 <link rel="stylesheet" href="./libs/bulma-0.9.4.css">
 <!-- fix sub border missing by override bulma css -->
@@ -104,7 +104,7 @@
         </select>
         <label class="checkbox"><input type="checkbox" id="camera_en"> <span>${L('Enable')}</span></label>
         <label class="checkbox"><input type="checkbox" id="camera_light1">_<input type="checkbox" id="camera_light2"> <span>${L('Light')}</span></label>
-        <button class="button is-small" onclick="camera_update_bg()">${L('New BG')}</button>
+        <button class="button is-small" onclick="camera_update_bg()" title="${L('Use the current camera image as background')}">${L('New BG')}</button>
         <button class="button is-small" onclick="camera_remove_bg()">${L('Del BG')}</button>
         &nbsp;
         <label class="checkbox"><input type="checkbox" id="show_target"> <span>${L('Show target')}</span></label>
@@ -119,28 +119,31 @@
         <label class="checkbox"><input type="checkbox" id="vision_debug_en"> <span>${L('Debug')}</span></label>
         <button class="button is-small goto_btn" id="btn_update_vision">${L('Set')}</button>
         <br>
-        <span style="display: inline-block; min-width: 138px;">${L('Grab offset')}:</span>
+        <span style="display: inline-block; min-width: 138px;" title="${L('Distance from the camera center to the nozzle rotation center')}">
+            ${L('Grab offset')}:</span>
         <input type="text" id="grab_ofs" onchange="input_change()">
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(null, 1)"><-</button>
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(null, -1)">-></button>
         <br>
-        <span style="display: inline-block; min-width: 138px;">${L('Nozzle cali')} (0°):</span>
+        <span style="display: inline-block; min-width: 138px;" title="${L('Offset from the nozzle rotation center to nozzle at 0 degrees')}">
+            ${L('Nozzle cali')} (0°):</span>
         <input type="text" id="nozzle_cali" onchange="input_change()">
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(0, 1)"><-</button>
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(0, -1)">-></button>
         <br>
         <div id="input_search"></div>
-        <span style="display: inline-block; min-width: 138px;">${L('Camera delta z')}:</span>
+        <span style="display: inline-block; min-width: 138px;" title="${L('Height of nozzle to target when focusing (better not modify this)')}">
+            ${L('Camera delta z')}:</span>
         <input type="text" id="comp_cam_dz" onchange="input_change()">
         <br>
-        <span style="display: inline-block; min-width: 138px;">${L('Comp base z')}:</span>
+        <span style="display: inline-block; min-width: 138px;" title="${L('Tray surface height')}">${L('Comp base z')}:</span>
         <input type="text" id="comp_base_z" onchange="input_change()">
         <button class="button is-small goto_btn" onclick="btn_goto_z('comp_base_z')">${L('Goto')}</button>
         <button class="button is-small" onclick="btn_update_z('comp_base_z')">${L('Update')}</button> &nbsp;|&nbsp;
         <button class="button is-small goto_btn" onclick="btn_goto_z('comp_top_z')">${L('Comp base')} + cam dz</button> &nbsp;|&nbsp;
         <button class="button is-small goto_btn" onclick="btn_detect_z()">${L('Detect bottom')}</button>
         <br>
-        <span style="display: inline-block; min-width: 138px;">${L('PCB base z')}:</span>
+        <span style="display: inline-block; min-width: 138px;" title="${L('PCB surface height')}">${L('PCB base z')}:</span>
         <input type="text" id="pcb_base_z" onchange="input_change()">
         <button class="button is-small goto_btn" onclick="btn_goto_z('pcb_base_z')">${L('Goto')}</button>
         <button class="button is-small" onclick="btn_update_z('pcb_base_z')">${L('Update')}</button> &nbsp;|&nbsp;
@@ -149,7 +152,8 @@
         <button class="button is-small goto_btn" onclick="btn_goto_z('dec_camera_dz')">${L('Cur')} - cam dz</button>
         
         <div id="input_fiducial">
-            <span style="display: inline-block; min-width: 138px; padding-bottom: 0.1em;">${L('Fiducial pcb')}:</span>
+            <span style="display: inline-block; min-width: 138px; padding-bottom: 0.1em;" title="${L('Fiducial coordinates in PCB file')}">
+                ${L('Fiducial pcb')}:</span>
             <input type="text" id="fiducial_pcb0" onchange="input_change()">
             <input type="text" id="fiducial_pcb1" onchange="input_change()">
         </div>

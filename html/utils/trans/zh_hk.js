@@ -125,7 +125,12 @@ let trans_zh_hk = {
     'please set camera vision detect method!': '請選擇一個視覺探測方式！',
     'list empty!': '列表為空',
     'please stop smt first!': '請先停止 smt!',
-    'please set camera vision detect method for nozzle calibration!': '請選擇符合吸嘴探測的視覺方式！'
+    'please set camera vision detect method for nozzle calibration!': '請選擇符合吸嘴探測的視覺方式！',
+    
+    'Distance from the camera center to the nozzle rotation center': '相機中心 到 吸嘴旋轉中心 的位移',
+    'Offset from the nozzle rotation center to nozzle at 0 degrees': '吸嘴旋轉中心 到 吸嘴位於 0 度時的偏移',
+    'Height of nozzle to target when focusing (better not modify this)': '相機對焦時，吸嘴到目標的高度 (建議不要修改)',
+    'Fiducial coordinates in PCB file': '定位點在 PCB 軟件中的座標'
 };
 
 export { trans_zh_hk };

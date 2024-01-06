@@ -443,8 +443,11 @@ window.addEventListener('load', async function() {
     // apply translation
     for (let tag of ['button', 'span', 'option', 'td']) {
         let elems = document.getElementsByTagName(tag);
-        for (let e of elems)
+        for (let e of elems) {
             e.innerHTML = eval("`" + e.innerHTML + "`");
+            if (e.title)
+                e.title = eval("`" + e.title + "`");
+        }
     }
     
     db = await new Idb();
