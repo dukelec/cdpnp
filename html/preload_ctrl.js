@@ -176,10 +176,14 @@ document.getElementById('btn_pld_run').onclick = async function() {
             csa.cur_pos[3] = csa.pld_rotate;
             await set_motor_pos(100);
             
-            csa.cur_pos[2] = csa.comp_base_z + Math.abs(csa.pld_base_z - csa.comp_base_z) - 0.5;
+            csa.cur_pos[2] = csa.comp_base_z + Math.abs(csa.pld_base_z - csa.comp_base_z) - 1.0;
             await set_motor_pos(100);
             await set_pump(1);
             await sleep(500);
+            
+            // go up with rotation, avoid sticking
+            csa.cur_pos[3] += csa.cur_pos[3] < 0 ? 15 : -15;
+            await set_motor_pos(-30); // force wait by percent
             
             csa.cur_pos[2] = top_z;
             await set_motor_pos(100);

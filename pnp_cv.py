@@ -54,7 +54,7 @@ def cv_get_pos(img):
     #cv.imwrite(f'{cur_path}/tmp/bw.png', bw)
 
     # Find all the contours in the thresholded image
-    contours, _ = cv.findContours(bw, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv.findContours(bw, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
 
     comps = []
     for i, c in enumerate(contours):
@@ -69,6 +69,8 @@ def cv_get_pos(img):
         else:
             if area < 11*11 or 580*580 < area:
                 continue
+        if hierarchy[0][i][2] != -1:        # skip if child exist
+            continue
 
         # cv.minAreaRect returns:
         # (center(x, y), (width, height), angle of rotation) = cv2.minAreaRect(c)
