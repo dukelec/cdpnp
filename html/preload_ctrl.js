@@ -4,6 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
+import { L } from './utils/lang.js'
 import { readable_float, sleep } from './utils/helper.js';
 import { set_camera_cfg, set_motor_pos, set_pump, cam_comp_snap, pcb2xyz } from './dev_cmd.js';
 import { get_comp_search } from './pos_list.js';
@@ -81,7 +82,7 @@ document.getElementById('preload_en').onclick = async function() {
 
 document.getElementById('btn_pld_run').onclick = async function() {
     if (!document.getElementById('camera_detect').value) {
-        alert("please set camera vision detect method!");
+        alert(L("please set camera vision detect method!"));
         return;
     }
     if (document.getElementById('camera_dev').value != '1' || !document.getElementById('camera_en').checked) {

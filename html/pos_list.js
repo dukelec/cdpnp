@@ -4,6 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
+import { L } from './utils/lang.js'
 import { csv_parser, read_file, readable_float } from './utils/helper.js';
 import { set_motor_pos, pcb2xyz } from './dev_cmd.js';
 import { csa, db } from './index.js';
@@ -160,7 +161,7 @@ function select_comp(comp) {
         if (csa.fiducial_cam.length > 1) {
             let total_num = progress[1] * csa.fiducial_cam.length;
             let total_cnt = (progress[0] - 1) * csa.fiducial_cam.length + get_board_safe() + 1;
-            document.getElementById('cur_progress').innerText += ` (total ${total_cnt} / ${total_num})`
+            document.getElementById('cur_progress').innerText += ` (${L('total')} ${total_cnt} / ${total_num})`
         }
         
         let next = comp;
@@ -179,7 +180,7 @@ function select_comp(comp) {
             document.getElementById('next_comp').innerText = `${next_parents[0]} ${next_parents[1]}`;
             document.getElementById('next_total').innerText = `${progress[1]}`;
             if (csa.fiducial_cam.length > 1)
-                document.getElementById('next_total').innerText += ` (total ${progress[1] * csa.fiducial_cam.length})`;
+                document.getElementById('next_total').innerText += ` (${L('total')} ${progress[1] * csa.fiducial_cam.length})`;
         } else {
             document.getElementById('next_comp').innerText = "-- --";
             document.getElementById('next_total').innerText = "--";

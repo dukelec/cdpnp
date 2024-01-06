@@ -4,6 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
+import { L } from './utils/lang.js'
 import { readable_float, sleep } from './utils/helper.js';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump,
          z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, set_vision_cfg } from './dev_cmd.js';
@@ -14,11 +15,11 @@ import { csa } from './index.js';
 
 document.getElementById('btn_cali_offset').onclick = async function() {
     if (!document.getElementById('camera_detect').value) {
-        alert("please set camera vision detect method!");
+        alert(L("please set camera vision detect method!"));
         return;
     }
     if (!document.getElementById('btn_stop').disabled) {
-        alert("please stop smt first!");
+        alert(L("please stop smt first!"));
         return;
     }
     if (document.getElementById('camera_dev').value != '1' || !document.getElementById('camera_en').checked) {
@@ -179,7 +180,7 @@ document.getElementById('btn_cali_offset').onclick = async function() {
 
 document.getElementById('btn_cali_nozzle').onclick = async function() {
     if (!document.getElementById('camera_detect').value.startsWith('cali_nozzle')) {
-        alert("please set camera vision detect method for nozzle calibration!");
+        alert(L("please set camera vision detect method for nozzle calibration!"));
         return;
     }
     console.log("auto enable camera before run task");

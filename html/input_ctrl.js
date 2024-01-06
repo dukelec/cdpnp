@@ -4,6 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
+import { L } from './utils/lang.js'
 import { read_file, download, readable_float, cpy, sleep, wildcard_test } from './utils/helper.js';
 import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js';
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs } from './index.js';
@@ -421,14 +422,14 @@ window.addEventListener('keydown', async function(e) {
 
 document.getElementById('btn_save_cfg').onclick = async function() {
     await save_cfg();
-    alert('Saved.');
+    alert(L('Saved.'));
 };
 
 document.getElementById('btn_reset_cfg').onclick = async function() {
     cpy(csa, csa_dft, csa_cfg_export);
     csa_to_page_input();
     await input_change();
-    alert('Ok, please save config and refresh page.');
+    alert(L('Ok, please save config and refresh page.'));
 };
 
 document.getElementById('btn_import_cfg').onclick = async function() {
@@ -452,7 +453,7 @@ document.getElementById('btn_import_cfg').onclick = async function() {
             cpy(csa, cfg.csa, csa_cfg_export);
             csa_to_page_input();
             await input_change();
-            alert('Import config succeeded');
+            alert(L('Import config succeeded'));
         }
         this.value = '';
     };
@@ -490,7 +491,7 @@ document.getElementById('btn_import_prj').onclick = async function() {
             csa_to_page_input();
             await input_change();
             pos_to_page(prj.list);
-            alert('Import project succeeded');
+            alert(L('Import project succeeded'));
         }
         this.value = '';
     };
@@ -540,7 +541,7 @@ function offset_apply() {
 
 document.getElementById('offset_apply').onclick = async function() {
     offset_apply();
-    alert("Apply OK.");
+    alert(L("Apply OK."));
 };
 
 
@@ -551,34 +552,34 @@ function input_init() {
     for (let i = 0; i < 8; i++) {
         search.insertAdjacentHTML('beforeend', `
             <div id="search_grp${i}">
-                <span style="display: inline-block; min-width: 138px;">Comp search #${i}:</span>
+                <span style="display: inline-block; min-width: 138px;">${L('Comp search')} #${i}:</span>
                 <input type="text" id="comp_search${i}" onchange="input_change()">
-                <button class="button is-small goto_btn" onclick="btn_goto_xy('comp_search${i}')">Goto</button>
-                <button class="button is-small" onclick="btn_update_xy('comp_search${i}')">Update</button>
-                <button class="button is-small" onclick="btn_select_search(${i})" id="btn_comp_search${i}">Select</button>
+                <button class="button is-small goto_btn" onclick="btn_goto_xy('comp_search${i}')">${L('Goto')}</button>
+                <button class="button is-small" onclick="btn_update_xy('comp_search${i}')">${L('Update')}</button>
+                <button class="button is-small" onclick="btn_select_search(${i})" id="btn_comp_search${i}">${L('Select')}</button>
             </div>`);
     }
     for (let i = 0; i < 10; i++) {
         fiducial.insertAdjacentHTML('beforeend', `
             <div id="fiducial_grp${i}">
-                <span style="display: inline-block; min-width: 138px;">Fiducial cam #${i}:</span>
+                <span style="display: inline-block; min-width: 138px;">${L('Fiducial cam')} #${i}:</span>
                 <input type="text" id="fiducial_cam${i}_0" onchange="input_change()">
-                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_0')">Goto</button>
-                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_0')">Update</button>
+                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_0')">${L('Goto')}</button>
+                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_0')">${L('Update')}</button>
                 <input type="text" id="fiducial_cam${i}_1" onchange="input_change()">
-                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_1')">Goto</button>
-                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_1')">Update</button>
-                <button class="button is-small" onclick="btn_select_board(${i})" id="btn_board${i}">Select</button>
+                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_1')">${L('Goto')}</button>
+                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_1')">${L('Update')}</button>
+                <button class="button is-small" onclick="btn_select_board(${i})" id="btn_board${i}">${L('Select')}</button>
             </div>`);
     }
     for (let i = 0; i < 8; i++) {
         fiducial.insertAdjacentHTML('beforeend', `
             <div id="user_grp${i}">
-                <span style="display: inline-block; min-width: 138px;">User pos #${i}:</span>
+                <span style="display: inline-block; min-width: 138px;">${L('User pos')} #${i}:</span>
                 <input type="text" id="user_name${i}" onchange="input_change()" placeholder="name">
                 <input type="text" id="user_pos${i}" onchange="input_change()">
-                <button class="button is-small goto_btn" onclick="btn_goto_xyz('user_pos${i}')">Goto</button>
-                <button class="button is-small" onclick="btn_update_xyz('user_pos${i}')">Update</button>
+                <button class="button is-small goto_btn" onclick="btn_goto_xyz('user_pos${i}')">${L('Goto')}</button>
+                <button class="button is-small" onclick="btn_update_xyz('user_pos${i}')">${L('Update')}</button>
             </div>`);
     }
     document.getElementById('user_name0').disabled = true;

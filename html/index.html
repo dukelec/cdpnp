@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--link rel="icon" type="image/png" href="./img/icon.png" /-->
-<title>CDPNP Tools - V2.7</title>
+<title>CDPNP Tools - V3.0</title>
 
 <link rel="stylesheet" href="./libs/bulma-0.9.4.css">
 <!-- fix sub border missing by override bulma css -->
@@ -23,37 +23,37 @@
 <section class="section">
     <div class="container">
         <h1 class="title is-size-4">CDPnP</h1>
-        <button class="button is-small" id="btn_load_csv">Load CSV</button>
-        <button class="button is-small" id="btn_export_prj">Export Project</button>
-        <button class="button is-small" id="btn_import_prj">Import Project</button> &nbsp;|&nbsp;
-        <button class="button is-small" id="btn_reset_cfg">Reset Config</button>
-        <button class="button is-small" id="btn_export_cfg">Export Config</button>
-        <button class="button is-small" id="btn_import_cfg">Import Config</button> &nbsp;|&nbsp;
-        <button class="button is-small" id="btn_save_cfg">Save Config & Project</button>
+        <button class="button is-small" id="btn_load_csv">${L('Load')} CSV</button>
+        <button class="button is-small" id="btn_export_prj">${L('Export')} ${L('Project')}</button>
+        <button class="button is-small" id="btn_import_prj">${L('Import')} ${L('Project')}</button> &nbsp;|&nbsp;
+        <button class="button is-small" id="btn_reset_cfg">${L('Reset')} ${L('Config')}</button>
+        <button class="button is-small" id="btn_export_cfg">${L('Export')} ${L('Config')}</button>
+        <button class="button is-small" id="btn_import_cfg">${L('Import')} ${L('Config')}</button> &nbsp;|&nbsp;
+        <button class="button is-small" id="btn_save_cfg">${L('Save')} ${L('Config')} & ${L('Project')}</button>
         <br><br>
         
-        <span style="display: inline-block; min-width: 70px;">Cur pos:</span> <span id="cur_pos">--</span>
+        <span style="display: inline-block; min-width: 70px;">${L('Cur pos')}:</span> <span id="cur_pos">--</span>
         <br>
-        <span style="display: inline-block; min-width: 70px;">Aux pos:</span> <span id="aux_pos">--</span>
+        <span style="display: inline-block; min-width: 70px;">${L('Aux pos')}:</span> <span id="aux_pos">--</span>
         &nbsp;
-        <button class="button is-small" id="btn_reset_aux">Reset aux</button>
+        <button class="button is-small" id="btn_reset_aux">${L('Reset aux')}</button>
         <br><br>
         
         <button class="button is-small" onclick="move_button([-1, 0, 0, 0])"><-</button>
         <button class="button is-small" onclick="move_button([ 1, 0, 0, 0])">-></button>
         <button class="button is-small" onclick="move_button([0, -1, 0, 0])">^</button>
         <button class="button is-small" onclick="move_button([0,  1, 0, 0])">v</button>
-        <button class="button is-small" onclick="move_button([0, 0,  1, 0])">Up</button>
-        <button class="button is-small" onclick="move_button([0, 0, -1, 0])">Down</button>
-        <button class="button is-small" onclick="move_button([0, 0, 0, -1])">CCW</button>
-        <button class="button is-small" onclick="move_button([0, 0, 0,  1])">CW</button>
+        <button class="button is-small" onclick="move_button([0, 0,  1, 0])">${L('Up')}</button>
+        <button class="button is-small" onclick="move_button([0, 0, -1, 0])">${L('Down')}</button>
+        <button class="button is-small" onclick="move_button([0, 0, 0, -1])">${L('CCW')}</button>
+        <button class="button is-small" onclick="move_button([0, 0, 0,  1])">${L('CW')}</button>
         &nbsp;
         <select id="move_speed">
             <option value="1">x1</option>
             <option value="2">x2</option>
             <option value="3" selected>x3</option>
             <option value="4">x4</option>
-        </select> Step size
+        </select> <span>${L('Step size')}</span>
         &nbsp;
         <select id="motor_speed" onchange="input_change()">
             <option value="0.1">10%</option>
@@ -66,90 +66,90 @@
             <option value="0.8">80%</option>
             <option value="0.9">90%</option>
             <option value="1">100%</option>
-        </select> Motor speed
+        </select> <span>${L('Motor speed')}</span>
         &nbsp;
-        <label class="checkbox"><input type="checkbox" id="less_detect" checked> Less detect</label>
+        <label class="checkbox"><input type="checkbox" id="less_detect" checked> <span>${L('Less detect')}</span></label>
         <br>
         <br>
-        <button class="button is-small" onclick="btn_select_step(0)" id="btn_step0">Show target</button> >
-        <button class="button is-small" onclick="btn_select_step(1)" id="btn_step1">Goto comp</button> >
-        <button class="button is-small" onclick="btn_select_step(2)" id="btn_step2">Snap</button> >
-        <button class="button is-small" onclick="btn_select_step(3)" id="btn_step3">Pickup</button> >
-        <button class="button is-small" onclick="btn_select_step(4)" id="btn_step4">Check</button> >
-        <button class="button is-small" onclick="btn_select_step(5)" id="btn_step5">Goto pcb</button> >
-        <button class="button is-small" onclick="btn_select_step(6)" id="btn_step6">Put down</button>
+        <button class="button is-small" onclick="btn_select_step(0)" id="btn_step0">${L('Show target')}</button> >
+        <button class="button is-small" onclick="btn_select_step(1)" id="btn_step1">${L('Goto comp')}</button> >
+        <button class="button is-small" onclick="btn_select_step(2)" id="btn_step2">${L('Snap')}</button> >
+        <button class="button is-small" onclick="btn_select_step(3)" id="btn_step3">${L('Pickup')}</button> >
+        <button class="button is-small" onclick="btn_select_step(4)" id="btn_step4">${L('Check')}</button> >
+        <button class="button is-small" onclick="btn_select_step(5)" id="btn_step5">${L('Goto pcb')}</button> >
+        <button class="button is-small" onclick="btn_select_step(6)" id="btn_step6">${L('Put down')}</button>
         &nbsp;|&nbsp;
-        <label class="checkbox"><input type="checkbox" id="pause_en"> Pause</label>
-        <button class="button is-small" id="btn_stop" disabled>Stop</button>
-        <button class="button is-small" id="btn_run">Run</button>
+        <label class="checkbox"><input type="checkbox" id="pause_en"> <span>${L('Pause')}</span></label>
+        <button class="button is-small" id="btn_stop" disabled>${L('Stop')}</button>
+        <button class="button is-small" id="btn_run">${L('Run')}</button>
         <br>
         
         
         <br>
-        <label class="checkbox"><input type="checkbox" id="pump_en"> Enable pump</label>
+        <label class="checkbox"><input type="checkbox" id="pump_en"> <span>${L('Enable pump')}</span></label>
         &nbsp;
-        Camera
+        <span>${L('Camera')}</span>
         <select id="camera_dev">
             <option value="1" selected>1</option>
             <option value="2">2</option>
         </select>
         <select id="camera_detect">
-            <option value="default" selected>Default</option>
-            <option value="limit_angle">Limit angle</option>
-            <option value="">-- None --</option>
-            <option value="cali_nozzle_13_4">Cali nozzle 502</option> <!-- Φ13mm ±4mm -->
-            <option value="cali_nozzle_22_4">Cali nozzle 503</option>
-            <option value="cali_nozzle_37_6">Cali nozzle 504</option>
-            <option value="cali_nozzle_49_6">Cali nozzle 506</option>
+            <option value="default" selected>${L('Default')}</option>
+            <option value="limit_angle">${L('Limit angle')}</option>
+            <option value="">-- ${L('None')} --</option>
+            <option value="cali_nozzle_13_4">${L('Cali nozzle')} 502</option> <!-- Φ13mm ±4mm -->
+            <option value="cali_nozzle_22_4">${L('Cali nozzle')} 503</option>
+            <option value="cali_nozzle_37_6">${L('Cali nozzle')} 504</option>
+            <option value="cali_nozzle_49_6">${L('Cali nozzle')} 506</option>
         </select>
-        <label class="checkbox"><input type="checkbox" id="camera_en"> Enable</label>
-        <label class="checkbox"><input type="checkbox" id="camera_light1">_<input type="checkbox" id="camera_light2"> Light</label>
-        <button class="button is-small" onclick="camera_update_bg()">New BG</button>
-        <button class="button is-small" onclick="camera_remove_bg()">Del BG</button>
+        <label class="checkbox"><input type="checkbox" id="camera_en"> <span>${L('Enable')}</span></label>
+        <label class="checkbox"><input type="checkbox" id="camera_light1">_<input type="checkbox" id="camera_light2"> <span>${L('Light')}</span></label>
+        <button class="button is-small" onclick="camera_update_bg()">${L('New BG')}</button>
+        <button class="button is-small" onclick="camera_remove_bg()">${L('Del BG')}</button>
         &nbsp;
-        <label class="checkbox"><input type="checkbox" id="show_target"> Show target</label>
-        <label class="checkbox"><input type="checkbox" id="check2_en"> 2nd check</label>
-        <label class="checkbox"><input type="checkbox" id="putdown_en" checked> Put down</label>
+        <label class="checkbox"><input type="checkbox" id="show_target"> <span>${L('Show target')}</span></label>
+        <label class="checkbox"><input type="checkbox" id="check2_en"> <span>${L('2nd check')}</span></label>
+        <label class="checkbox"><input type="checkbox" id="putdown_en" checked> <span>${L('Put down')}</span></label>
         
         <br>
-        <button class="button is-small goto_btn" id="btn_cali_offset">Calibration Offset</button> &nbsp;|&nbsp;
-        <button class="button is-small goto_btn" id="btn_cali_nozzle">Calibration Nozzle</button>
-        Exposure: <input type="text" size="5" id="nozzle_expos" onchange="input_change()">
-        Threshold: <input type="text" size="5" id="nozzle_thresh" onchange="input_change()">
-        <label class="checkbox"><input type="checkbox" id="vision_debug_en"> Debug</label>
-        <button class="button is-small goto_btn" id="btn_update_vision">Set</button>
+        <button class="button is-small goto_btn" id="btn_cali_offset">${L('Calibration Offset')}</button> &nbsp;|&nbsp;
+        <button class="button is-small goto_btn" id="btn_cali_nozzle">${L('Calibration Nozzle')}</button>
+        <span>${L('Exposure')}</span>: <input type="text" size="5" id="nozzle_expos" onchange="input_change()">
+        <span>${L('Threshold')}</span>: <input type="text" size="5" id="nozzle_thresh" onchange="input_change()">
+        <label class="checkbox"><input type="checkbox" id="vision_debug_en"> <span>${L('Debug')}</span></label>
+        <button class="button is-small goto_btn" id="btn_update_vision">${L('Set')}</button>
         <br>
-        <span style="display: inline-block; min-width: 138px;">Grab offset:</span>
+        <span style="display: inline-block; min-width: 138px;">${L('Grab offset')}:</span>
         <input type="text" id="grab_ofs" onchange="input_change()">
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(null, 1)"><-</button>
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(null, -1)">-></button>
         <br>
-        <span style="display: inline-block; min-width: 138px;">Nozzle cali (0°):</span>
+        <span style="display: inline-block; min-width: 138px;">${L('Nozzle cali')} (0°):</span>
         <input type="text" id="nozzle_cali" onchange="input_change()">
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(0, 1)"><-</button>
         <button class="button is-small goto_btn" onclick="btn_grab_ofs(0, -1)">-></button>
         <br>
         <div id="input_search"></div>
-        <span style="display: inline-block; min-width: 138px;">Camera delta z:</span>
+        <span style="display: inline-block; min-width: 138px;">${L('Camera delta z')}:</span>
         <input type="text" id="comp_cam_dz" onchange="input_change()">
         <br>
-        <span style="display: inline-block; min-width: 138px;">Comp base z:</span>
+        <span style="display: inline-block; min-width: 138px;">${L('Comp base z')}:</span>
         <input type="text" id="comp_base_z" onchange="input_change()">
-        <button class="button is-small goto_btn" onclick="btn_goto_z('comp_base_z')">Goto</button>
-        <button class="button is-small" onclick="btn_update_z('comp_base_z')">Update</button> &nbsp;|&nbsp;
-        <button class="button is-small goto_btn" onclick="btn_goto_z('comp_top_z')">Comp base + cam dz</button> &nbsp;|&nbsp;
-        <button class="button is-small goto_btn" onclick="btn_detect_z()">Detect bottom</button>
+        <button class="button is-small goto_btn" onclick="btn_goto_z('comp_base_z')">${L('Goto')}</button>
+        <button class="button is-small" onclick="btn_update_z('comp_base_z')">${L('Update')}</button> &nbsp;|&nbsp;
+        <button class="button is-small goto_btn" onclick="btn_goto_z('comp_top_z')">${L('Comp base')} + cam dz</button> &nbsp;|&nbsp;
+        <button class="button is-small goto_btn" onclick="btn_detect_z()">${L('Detect bottom')}</button>
         <br>
-        <span style="display: inline-block; min-width: 138px;">PCB base z:</span>
+        <span style="display: inline-block; min-width: 138px;">${L('PCB base z')}:</span>
         <input type="text" id="pcb_base_z" onchange="input_change()">
-        <button class="button is-small goto_btn" onclick="btn_goto_z('pcb_base_z')">Goto</button>
-        <button class="button is-small" onclick="btn_update_z('pcb_base_z')">Update</button> &nbsp;|&nbsp;
-        <button class="button is-small goto_btn" onclick="btn_goto_z('pcb_top_z')">PCB base + cam dz</button> &nbsp;|&nbsp;
-        <button class="button is-small goto_btn" onclick="btn_goto_z('inc_camera_dz')">Cur + cam dz</button>
-        <button class="button is-small goto_btn" onclick="btn_goto_z('dec_camera_dz')">Cur - cam dz</button>
+        <button class="button is-small goto_btn" onclick="btn_goto_z('pcb_base_z')">${L('Goto')}</button>
+        <button class="button is-small" onclick="btn_update_z('pcb_base_z')">${L('Update')}</button> &nbsp;|&nbsp;
+        <button class="button is-small goto_btn" onclick="btn_goto_z('pcb_top_z')">${L('PCB base')} + cam dz</button> &nbsp;|&nbsp;
+        <button class="button is-small goto_btn" onclick="btn_goto_z('inc_camera_dz')">${L('Cur')} + cam dz</button>
+        <button class="button is-small goto_btn" onclick="btn_goto_z('dec_camera_dz')">${L('Cur')} - cam dz</button>
         
         <div id="input_fiducial">
-            <span style="display: inline-block; min-width: 138px; padding-bottom: 0.1em;">Fiducial pcb:</span>
+            <span style="display: inline-block; min-width: 138px; padding-bottom: 0.1em;">${L('Fiducial pcb')}:</span>
             <input type="text" id="fiducial_pcb0" onchange="input_change()">
             <input type="text" id="fiducial_pcb1" onchange="input_change()">
         </div>
@@ -158,33 +158,33 @@
 
     <br>
     <div class="container">
-        <h1 class="title is-size-4">Preload <input type="checkbox" id="preload_en" onchange="input_change()" checked></h1>
+        <h1 class="title is-size-4"><span>${L('Preload')}</span> <input type="checkbox" id="preload_en" onchange="input_change()" checked></h1>
         <div class="content" style="font-size: 12px;">
             
-            <span style="display: inline-block; min-width: 100px;">Preload search:</span>
+            <span style="display: inline-block; min-width: 100px;">${L('Preload search')}:</span>
             <input type="text" id="pld_search" onchange="input_change()">
-            <button class="button is-small goto_btn" onclick="btn_goto_xy('pld_search')">Goto</button>
-            <button class="button is-small" onclick="btn_update_xy('pld_search')">Update</button>
+            <button class="button is-small goto_btn" onclick="btn_goto_xy('pld_search')">${L('Goto')}</button>
+            <button class="button is-small" onclick="btn_update_xy('pld_search')">${L('Update')}</button>
             <br>
-            <span style="display: inline-block; min-width: 100px;">Preload base z:</span>
+            <span style="display: inline-block; min-width: 100px;">${L('Preload base z')}:</span>
             <input type="text" id="pld_base_z" onchange="input_change()">
-            <button class="button is-small goto_btn" onclick="btn_goto_z('pld_base_z')">Goto</button>
-            <button class="button is-small" onclick="btn_update_z('pld_base_z')">Update</button> &nbsp;|&nbsp;
-            <button class="button is-small goto_btn" onclick="btn_goto_z('pld_top_z')">Preload base + cam dz</button>
+            <button class="button is-small goto_btn" onclick="btn_goto_z('pld_base_z')">${L('Goto')}</button>
+            <button class="button is-small" onclick="btn_update_z('pld_base_z')">${L('Update')}</button> &nbsp;|&nbsp;
+            <button class="button is-small goto_btn" onclick="btn_goto_z('pld_top_z')">${L('Preload base')} + cam dz</button>
             <br><br>
             
-            Comp offset: <input type="text" id="pld_comp_offset" onchange="input_change()" size="2" value="2"> mm &nbsp;|&nbsp;
+            <span>${L('Comp offset')}</span>: <input type="text" id="pld_comp_offset" onchange="input_change()" size="2" value="2"> mm &nbsp;|&nbsp;
             
-            Comp space: <input type="text" id="pld_comp_space" onchange="input_change()" size="2" value="1"> unit (4mm) &nbsp;|&nbsp;
+            <span>${L('Comp space')}</span>: <input type="text" id="pld_comp_space" onchange="input_change()" size="2" value="1"> <span>${L('unit')}</span> (4mm) &nbsp;|&nbsp;
             
-            Start at: <input type="text" id="pld_start_at" onchange="input_change()" size="2" value="0.5"> unit &nbsp;|&nbsp;
+            <span>${L('Start at')}</span>: <input type="text" id="pld_start_at" onchange="input_change()" size="2" value="0.5"> <span>${L('unit')}</span> &nbsp;|&nbsp;
             
-            Amount: <input type="text" id="pld_amount" size="2" value="--"> pcs
+            <span>${L('Amount')}</span>: <input type="text" id="pld_amount" size="2" value="--"> pcs
             <br><br>
             
-            Target grid: <input type="text" id="pld_tgt_grid" onchange="input_change()" size="2" value="2, 1.5"> mm &nbsp;|&nbsp;
+            <span>${L('Target grid')}</span>: <input type="text" id="pld_tgt_grid" onchange="input_change()" size="2" value="2, 1.5"> mm &nbsp;|&nbsp;
             
-            Rotate:
+            <span>${L('Rotate')}</span>:
             <select id="pld_rotate" onchange="input_change()">
                 <option value="0" selected>0</option>
                 <option value="90">90</option>
@@ -192,31 +192,32 @@
                 <option value="180">180</option>
             </select> &nbsp;|&nbsp;
             
-            Count: <input type="text" id="pld_count" size="2" value="0"> &nbsp;
-            <button class="button is-small" id="btn_pld_clear">Clear</button>  &nbsp;|&nbsp;
-            <button class="button is-small" id="btn_pld_stop" disabled>Stop</button>
-            <button class="button is-small" id="btn_pld_run">Run</button>
+            <span>${L('Count')}</span>: <input type="text" id="pld_count" size="2" value="0"> &nbsp;
+            <button class="button is-small" id="btn_pld_clear">${L('Clear')}</button>  &nbsp;|&nbsp;
+            <button class="button is-small" id="btn_pld_stop" disabled>${L('Stop')}</button>
+            <button class="button is-small" id="btn_pld_run">${L('Run')}</button>
             
         </div>
     </div>
 
     <br>
     <div class="container">
-        <h1 class="title is-size-4">Components</h1>
-        
-        Current: <span id="cur_progress">-- / --</span> &nbsp;|&nbsp;
-                 <span id="cur_comp">-- -- --</span> <span id="cur_board">--</span> &nbsp;|&nbsp;
-                 Height: <span id="cur_height">--</span>
-        <br>
-        Next: <span id="next_comp">-- -- --</span> &nbsp;|&nbsp; Amount: <span id="next_total">--</span>
+        <h1 class="title is-size-4"><span>${L('Components')}</span></h1>
+        <span>
+            ${L('Current')}: <span id="cur_progress">-- / --</span> &nbsp;|&nbsp;
+                     <span id="cur_comp">-- -- --</span> <span id="cur_board">--</span> &nbsp;|&nbsp;
+                     ${L('Height')}: <span id="cur_height">--</span>
+            <br>
+            ${L('Next')}: <span id="next_comp">-- -- --</span> &nbsp;|&nbsp; ${L('Amount')}: <span id="next_total">--</span>
+        </span>
         <br>
         
         <div class="content" style="font-size: 12px;">
               <table style="width: 80em;">
                   <thead>
                       <tr>
-                          <td style="width: 20em;">Footprint</td> <td>Offset</td>
-                          <td style="width: 20em;">Value</td> <td style="width: 10em;">Reference</td>
+                          <td style="width: 20em;">${L('Footprint')}</td> <td>${L('Offset')}</td>
+                          <td style="width: 20em;">${L('Value')}</td> <td style="width: 10em;">${L('Reference')}</td>
                           <td style="width: 7em;">X</td> <td style="width: 7em;">Y</td> <td style="width: 7em;">R</td>
                       </tr>
                   </thead>
@@ -228,12 +229,12 @@
 
     <br>
     <div class="container" disabled>
-        <h1 class="title is-size-4">Offsets</h1>
+        <h1 class="title is-size-4"><span>${L('Offsets')}</span></h1>
         <div class="content" style="font-size: 12px;">
             <textarea rows="5" cols="60" id="offset_config" onchange="input_change()"
                       placeholder="wildcard: grab_offs_x, y | pcb_offs_x, y"></textarea>
             <br>
-            <button class="button is-small" id="offset_apply">Apply</button> (or refresh page)
+            <button class="button is-small" id="offset_apply">${L('Apply')}</button> <span>(${L('or refresh page')})</span>
             
         </div>
     </div>

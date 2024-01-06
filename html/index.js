@@ -4,7 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './lang/lang.js'
+import { L } from './utils/lang.js'
 import { sleep, blob2dat, cpy, deep_merge } from './utils/helper.js';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
 import { Idb } from './utils/idb.js';
@@ -94,11 +94,11 @@ function cal_grab_ofs(angle, err=null) {
 document.getElementById('btn_run').onclick = async function() {
     let comp = get_comp_safe();
     if (!comp) {
-        alert("list empty!");
+        alert(L("list empty!"));
         return;
     }
     if (!document.getElementById('camera_detect').value) {
-        alert("please set camera vision detect method!");
+        alert(L("please set camera vision detect method!"));
         return;
     }
     if (document.getElementById('camera_dev').value != '1' || !document.getElementById('camera_en').checked) {
@@ -439,6 +439,14 @@ function init_ws() {
 
 window.addEventListener('load', async function() {
     console.log("load app");
+    
+    // apply translation
+    for (let tag of ['button', 'span', 'option', 'td']) {
+        let elems = document.getElementsByTagName(tag);
+        for (let e of elems)
+            e.innerHTML = eval("`" + e.innerHTML + "`");
+    }
+    
     db = await new Idb();
     init_ws();
     
