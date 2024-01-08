@@ -362,13 +362,7 @@ def pic_rx():
             dat_cnt = 0
 
 
-def cv_window():
-    while True:
-        cur_pic = cv_dat['img_queue'].get()
-        cv.imshow('image', cur_pic)
-        cv.waitKey(10)
-
-def pnp_cv_init(detect='default', local=True):
+def pnp_cv_start(detect='default', local=True):
     cv_dat['detect'] = detect
     cv_dat['local'] = local
     cv_dat['img_queue'] = queue.Queue(10)
@@ -377,6 +371,11 @@ def pnp_cv_init(detect='default', local=True):
         print(f'load bg_img from: {cur_path}/tmp/bg_invert.png ...')
         cv_dat['bg_img'] = cv.imread(f'{cur_path}/tmp/bg_invert.png')
     _thread.start_new_thread(pic_rx, ())
-    if cv_dat['local']:
-        _thread.start_new_thread(cv_window, ())
+    while True:
+        if cv_dat['local']:
+            cur_pic = cv_dat['img_queue'].get()
+            cv.imshow('image', cur_pic)
+            cv.waitKey(10)
+        else:
+            sleep(0.5)
 

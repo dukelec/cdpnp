@@ -29,7 +29,7 @@ from cdnet.utils.cd_args import CdArgs
 from cdnet.dev.cdbus_serial import CDBusSerial
 from cdnet.dispatch import *
 
-from pnp_cv import pnp_cv_init, cv_dat, cur_path
+from pnp_cv import pnp_cv_start, cv_dat, cur_path
 from pnp_xyz import *
 
 args = CdArgs()
@@ -54,7 +54,6 @@ logger = logging.getLogger(f'cdpnp')
 dev = CDBusSerial(dev_str) if dev_str != 'None' else None
 if dev:
     CDNetIntf(dev, mac=0x00)
-    pnp_cv_init()
     xyz_init()
 
 print('start...')
@@ -194,11 +193,18 @@ async def open_brower():
     logger.info('open brower done.')
 
 
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
+def start_loop():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.create_task(start_web())
     loop.create_task(dev_service())
     #csa['async_loop'].create_task(open_brower())
     logger.info('Please open url: http://localhost:8900')
     loop.run_forever()
+
+if dev:
+    _thread.start_new_thread(start_loop, ())
+    pnp_cv_start() # make cv gui in foreground thread (for macos)
+else:
+    start_loop()
 
