@@ -21,6 +21,7 @@ let csa_dft = {
     
     grab_ofs:    [33.53, 6.45], // camera to grab rotation center
     nozzle_cali: [-0.1, -0.05], // error vector at 0 degree
+    cam_angle: [0, 0],          // cam1 and cam2 err angle
     comp_search: [[55, 142], [65, 142]],
     cam_dz: 7,
     comp_base_z: -89.9,
@@ -46,7 +47,7 @@ let csa_dft = {
     pld_comp_offset: 3.5,
     pld_comp_space: 0.5,
     pld_start_at: -0.5,
-    pld_tgt_grid: [2, 1.5],
+    pld_tgt_grid: [2.0, 2.0],
     pld_rotate: 0,
     pld_enable: 0
 };
@@ -54,11 +55,11 @@ let csa_dft = {
 let csa = {};
 deep_merge(csa, csa_dft);
 
-let csa_need_save = ['grab_ofs', 'nozzle_cali', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed',
-                     'nozzle_expos', 'nozzle_thresh',
+let csa_need_save = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam',
+                     'user_pos', 'motor_speed', 'nozzle_expos', 'nozzle_thresh',
                      'offset_config', 'pld_search', 'pld_base_z', 'pld_comp_offset', 'pld_comp_space', 'pld_start_at', 'pld_tgt_grid', 'pld_rotate', 'pld_enable'];
 let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'offset_config'];
-let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
+let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
 
 let db = null;
 let ws_ns = new CDWebSocketNS('/');
@@ -213,6 +214,7 @@ document.getElementById('btn_run').onclick = async function() {
                 set_comp_search(search);
                 set_step(1);
             } else {
+                csa.cv_cur_r -= csa.cam_angle[0];
                 set_step(3);
             }
             continue;
@@ -308,7 +310,7 @@ document.getElementById('btn_run').onclick = async function() {
                 break;
             
             nozzle_err_vector = [cali_pos[0] - csa.cur_pos[0], cali_pos[1] - csa.cur_pos[1]];
-            nozzle_err_angle = csa.cur_pos[3];
+            nozzle_err_angle = csa.cur_pos[3] + csa.cam_angle[1];
 
             document.getElementById('camera_dev').value = 1;
             document.getElementById('camera_detect').value = detect_bk;
@@ -464,5 +466,5 @@ window.addEventListener('load', async function() {
 });
 
 export {
-    csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs
+    csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs, rotate_vector
 };

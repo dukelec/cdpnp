@@ -57,8 +57,7 @@ let trans_zh_cn = {
     
     '2nd check': '二次检查',
     
-    'Calibration Offset': '校准偏移',
-    'Calibration Nozzle': '校准吸嘴',
+    'Calibration': '校准',
     
     'Exposure': '爆光',
     'Threshold': '阈值',

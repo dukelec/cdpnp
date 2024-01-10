@@ -159,15 +159,17 @@ def goto_pos(pos, wait=0, s_speed=260000):
     xyz['old_pos'] = load_pos()
     delta = [pos[0]-xyz['old_pos'][0], pos[1]-xyz['old_pos'][1], pos[2]-xyz['old_pos'][2], pos[3]-xyz['old_pos'][3]]
     xyz['last_pos'] = [pos[0], pos[1], pos[2], pos[3]]
-    #xyz['logger'].debug(f"goto_pos: cur: {xyz['old_pos']}")
-    #xyz['logger'].debug(f"goto_pos: tgt: {xyz['last_pos']}")
-    #xyz['logger'].debug(f"goto_pos: dlt: {delta}")
+    xyz['logger'].debug(f"goto_pos: cur: {xyz['old_pos']}")
+    xyz['logger'].debug(f"goto_pos: tgt: {xyz['last_pos']}")
+    xyz['logger'].debug(f"goto_pos: dlt: {delta}")
     retry_cnt = 0
     done_flag = [0, 0, 0, 0, 0]
     dlt_max = max(abs(delta[0]), abs(delta[1]), abs(delta[2]), 0.01)
     # 360' / 4mm = 90, use 85 instead to avoid R axis waste time
     v_speed = [s_speed * abs(delta[0])/dlt_max, s_speed * abs(delta[1])/dlt_max, s_speed * abs(delta[2])/dlt_max, s_speed * abs(delta[3]/85)/dlt_max]
-    v_speed = [max(v_speed[0], 2000), max(v_speed[1], 2000), max(v_speed[2], 2000), min(s_speed/45, max(v_speed[3], 2000/85))] # avoid zero speed
+    xyz['logger'].debug(f"goto_pos: v_speed: {v_speed}, dlt_max: {dlt_max}")
+    v_speed = [max(v_speed[0], 2000), max(v_speed[1], 2000), max(v_speed[2], 2000), min(s_speed/45, max(v_speed[3], 500))] # avoid zero speed
+    xyz['logger'].debug(f"goto_pos: v_speed: {v_speed}")
     b_speed = [struct.pack("<i", round(v_speed[0])), struct.pack("<i", round(v_speed[1])), struct.pack("<i", round(v_speed[2])), struct.pack("<i", round(v_speed[3]))]
     accel = [cal_accel(v_speed[0]), cal_accel(v_speed[1]), cal_accel(v_speed[2]), cal_accel(v_speed[3]*85)/85]
     b_accel = [struct.pack("<i", round(accel[0])), struct.pack("<i", round(accel[1])), struct.pack("<i", round(accel[2])), struct.pack("<i", round(accel[3]))]

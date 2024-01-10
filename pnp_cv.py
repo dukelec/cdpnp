@@ -196,13 +196,14 @@ def cv_get_pad(img):
     gray = cv.morphologyEx(gray, cv.MORPH_OPEN, kernel)
 
     # Convert image to binary
-    _, bw = cv.threshold(gray, 100, 255, cv.THRESH_BINARY)
+    _, bw = cv.threshold(gray, 75, 255, cv.THRESH_BINARY)
     #cv.imwrite(f'{cur_path}/tmp/gray.png', gray) # for debug
     #cv.imwrite(f'{cur_path}/tmp/bw.png', bw)
 
     # Find all the contours in the thresholded image
     contours, _ = cv.findContours(bw, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
 
+    pads = []
     for i, c in enumerate(contours):
 
         # Calculate the area of each contour
@@ -221,13 +222,15 @@ def cv_get_pad(img):
         if bw[center[1], center[0]] != 255:   # skip black
             continue
         # todo: ignore contours too far away
+        
+        pads.append(center)
 
-        cam_height, cam_width = img.shape[:2]
-        cam_center = (round(cam_width/2), round(cam_height/2))
 
-        # connect all contours
-        cv.line(bw, center, cam_center, (255,255,255), 1)
-
+    if len(pads):
+        avg_center = [round(sum(list(zip(*pads))[0]) / len(pads)), round(sum(list(zip(*pads))[1]) / len(pads))]
+        for i in range(len(pads)):
+            # connect all contours
+            cv.line(bw, pads[i], avg_center, (255,255,255), 1)
 
     #cv.imwrite(f'{cur_path}/tmp/bw.png', bw)
 
@@ -241,8 +244,8 @@ def cv_get_pad(img):
         area = cv.contourArea(c)
 
         # Ignore contours that are too small or too large
-        #if area < 2*11 or 580*580 < area:
-        #  continue
+        if area < 2*2 or 580*580 < area:
+            continue
 
         # cv.minAreaRect returns:
         # (center(x, y), (width, height), angle of rotation) = cv2.minAreaRect(c)

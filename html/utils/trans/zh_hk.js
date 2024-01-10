@@ -56,8 +56,7 @@ let trans_zh_hk = {
     
     '2nd check': '二次檢查',
     
-    'Calibration Offset': '校準偏移',
-    'Calibration Nozzle': '校準吸嘴',
+    'Calibration': '校準',
     
     'Exposure': '爆光',
     'Threshold': '閾值',

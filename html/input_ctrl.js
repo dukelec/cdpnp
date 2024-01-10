@@ -69,6 +69,8 @@ function csa_to_page_input()
         `${readable_float(csa.grab_ofs[0])}, ${readable_float(csa.grab_ofs[1])}`;
     document.getElementById('nozzle_cali').value =
         `${readable_float(csa.nozzle_cali[0])}, ${readable_float(csa.nozzle_cali[1])}`;
+    document.getElementById('cam1_angle').value = `${readable_float(csa.cam_angle[0])}`;
+    document.getElementById('cam2_angle').value = `${readable_float(csa.cam_angle[1])}`;
     
     for (let i = 0; i < 8; i++) {
         if (i < csa.comp_search.length) {
@@ -127,6 +129,8 @@ function csa_from_page_input()
     csa.grab_ofs = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
     xy_str = document.getElementById('nozzle_cali').value;
     csa.nozzle_cali = [Number(xy_str.split(',')[0]), Number(xy_str.split(',')[1])];
+    csa.cam_angle = [Number(document.getElementById('cam1_angle').value),
+                     Number(document.getElementById('cam2_angle').value)];
     
     csa.comp_search = [];
     for (let i = 0; ; i++) {
