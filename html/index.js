@@ -296,14 +296,10 @@ document.getElementById('btn_run').onclick = async function() {
             if (csa.stop)
                 break;
             
-            let ret = await cam_comp_snap();
-            let v1 = rotate_vector(csa.cur_pos[3], csa.nozzle_cali);
+            await cam_comp_snap(3, 0.2);
             csa.cur_pos[3] -= csa.cv_cur_r;
-            let v2 = rotate_vector(csa.cur_pos[3], csa.nozzle_cali);
-            let v2to1 = [v1[0] - v2[0], v1[1] - v2[1]];
-            csa.cur_pos[0] += v2to1[0];
-            csa.cur_pos[1] += v2to1[1];
             await set_motor_pos(100);
+            await cam_comp_snap();
             
             if (!document.getElementById('putdown_en').checked) {
                 document.getElementById('pause_en').checked = true;
