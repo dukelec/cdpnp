@@ -5,6 +5,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
+// cat zh_cn.js | cconv -f UTF8 -t UTF8-HK
 let trans_zh_hk = {
     'Load': '加載',
     'Export': '導出',
@@ -57,6 +58,8 @@ let trans_zh_hk = {
     '2nd check': '二次檢查',
     
     'Calibration': '校準',
+    'Cam angle err': '相機角度誤差',
+    'Cali cam': '校準相機',
     
     'Exposure': '爆光',
     'Threshold': '閾值',

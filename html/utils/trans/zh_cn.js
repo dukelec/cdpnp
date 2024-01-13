@@ -58,6 +58,8 @@ let trans_zh_cn = {
     '2nd check': '二次检查',
     
     'Calibration': '校准',
+    'Cam angle err': '相机角度误差',
+    'Cali cam': '校准相机',
     
     'Exposure': '爆光',
     'Threshold': '阈值',
