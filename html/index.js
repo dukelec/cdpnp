@@ -259,6 +259,7 @@ document.getElementById('btn_run').onclick = async function() {
             if (document.getElementById('check2_en').checked) {
                 set_step(4);
             } else {
+                // nozzle angle and nozzle_err_vector when comp rotate to 0 degrees
                 nozzle_err_angle = -csa.cv_cur_r;
                 nozzle_err_vector = rotate_vector(nozzle_err_angle, csa.nozzle_cali)
                 set_step(5);
@@ -296,7 +297,12 @@ document.getElementById('btn_run').onclick = async function() {
                 break;
             
             let ret = await cam_comp_snap();
+            let v1 = rotate_vector(csa.cur_pos[3], csa.nozzle_cali);
             csa.cur_pos[3] -= csa.cv_cur_r;
+            let v2 = rotate_vector(csa.cur_pos[3], csa.nozzle_cali);
+            let v2to1 = [v1[0] - v2[0], v1[1] - v2[1]];
+            csa.cur_pos[0] += v2to1[0];
+            csa.cur_pos[1] += v2to1[1];
             await set_motor_pos(100);
             
             if (!document.getElementById('putdown_en').checked) {
@@ -310,7 +316,10 @@ document.getElementById('btn_run').onclick = async function() {
                 break;
             
             nozzle_err_vector = [cali_pos[0] - csa.cur_pos[0], cali_pos[1] - csa.cur_pos[1]];
-            nozzle_err_angle = csa.cur_pos[3] + csa.cam_angle[1];
+            nozzle_err_angle = csa.cur_pos[3];
+            
+            nozzle_err_angle += csa.cam_angle[1];
+            nozzle_err_vector = rotate_vector(csa.cam_angle[1], nozzle_err_vector);
 
             document.getElementById('camera_dev').value = 1;
             document.getElementById('camera_detect').value = detect_bk;
