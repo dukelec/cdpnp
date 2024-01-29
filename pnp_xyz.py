@@ -109,7 +109,7 @@ def load_pos(mask=0xf):
                     pos[2] = struct.unpack("<i", dat[1:])[0] * DIV_MM2STEP * -1
                     rx_num += 1
                 elif src[0] == '80:00:05':
-                    pos[3] = struct.unpack("<i", dat[1:])[0] * DIV_DEG2STEP * -1
+                    pos[3] = struct.unpack("<i", dat[1:])[0] * DIV_DEG2STEP
                     rx_num += 1
         if rx_num == tx_num:
             break
@@ -133,7 +133,7 @@ def wait_stop():
 def wait_finish(axis, wait):
     old = xyz['old_pos'][axis]
     last = xyz['last_pos'][axis]
-    #xyz['logger'].debug(f'wait_finish: old: {xyz["old_pos"]}, last: {xyz["last_pos"]}, axis: {axis}')
+    xyz['logger'].debug(f'wait_finish: old: {xyz["old_pos"]}, last: {xyz["last_pos"]}, axis: {axis}')
     dist = abs(last - old)
     while True:
         cur = load_pos(1 << axis)[axis]
