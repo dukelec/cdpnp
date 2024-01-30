@@ -132,9 +132,15 @@ document.getElementById('btn_pld_run').onclick = async function() {
     
     if (cam[0] != null && cam[1] != null) {
         let cam_delta = [cam[1][0]-cam[0][0], cam[1][1]-cam[0][1]];
-        let count = Math.round(cam_delta[1]/4) + 1;
-        console.log(`count: ${count} (${cam_delta[1]/4} + 1)`);
+        let delta_len = Math.sqrt(Math.pow(cam_delta[0], 2) + Math.pow(cam_delta[1], 2));
+        let count = Math.round(delta_len/4) + 1;
+        console.log(`count: ${count} (${delta_len/4} + 1)`);
         pcb[1][1] = (count - 1) * 4;
+        
+        if (delta_len < 2) {
+            alert('circle detection error!');
+            csa.pld_stop = true;
+        }
         
         /*
         for (let i = 0; i < count * 2; i++) {
