@@ -199,10 +199,9 @@ function readable_size(bytes, fixed=3, si=true) {
     return bytes.toFixed(fixed)+' '+units[u];
 }
 
-function readable_float(num, double=false) {
+function readable_float(num, fixed=6, double=true) {
     if (!isFinite(num))
         return num.toString();
-    let fixed = 12;
     if (!double)
         num = parseFloat(num.toPrecision(7)); // for 32-bit float
     let n = num.toFixed(fixed);

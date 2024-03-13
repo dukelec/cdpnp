@@ -11,6 +11,7 @@
 """
 
 import os, sys, subprocess
+from time import sleep
 from os.path import join as pjoin
 
 #cdbus_gui = '../../cdbus_gui'
@@ -72,7 +73,7 @@ for k in last_list:
             ret = invoke_cmd(f'{cdg_iap_path} --dev {k} --cfg {t_json_path} --in-file {t_hex_path}')
             if ret != 0:
                 exit(-1)
-            sleep(4)
+            sleep(2)
             print('\n')
         else:
             print('skip\n')
