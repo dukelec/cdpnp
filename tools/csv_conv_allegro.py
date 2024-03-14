@@ -58,7 +58,7 @@ for row in reader:
             'Footprint': row['COMP_PACKAGE'],
             'Center-X(mm)': float(row['SYM_X']) * -1,
             'Center-Y(mm)': float(row['SYM_Y']),
-            'Rotation': float(row['SYM_ROTATE']),
+            'Rotation': float(row['SYM_ROTATE']) - 180,
             'Layer': "BottomLayer"})
 
 if len(top_list):
