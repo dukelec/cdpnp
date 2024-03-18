@@ -27,10 +27,10 @@ last_list = {
     '80:00:11': ['80fc934', 'cdpump_v1_80fc934.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
 
     '80:00:21': ['f7cc721', 'cdcam_v2_v3_f7cc721.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
-    '80:00:22': ['f7cc721', 'cdcam_v2_v3_f7cc721.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
+   #'80:00:22': ['f7cc721', 'cdcam_v2_v3_f7cc721.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
 
-    #'80:00:21': ['1a0d1ce', 'cdcam_v1_1a0d1ce.hex',    'cdcam-v3.json', 'cdcam_21.mpk'],
-    #'80:00:22': ['1a0d1ce', 'cdcam_v1_1a0d1ce.hex',    'cdcam-v3.json', 'cdcam_22.mpk'],
+   #'80:00:21': ['1a0d1ce', 'cdcam_v1_1a0d1ce.hex',    'cdcam-v3.json', 'cdcam_21.mpk'],
+    '80:00:22': ['1a0d1ce', 'cdcam_v1_1a0d1ce.hex',    'cdcam-v3.json', 'cdcam_22.mpk'],
 }
 
 
@@ -55,8 +55,8 @@ for k in last_list:
     t_hex = last_list[k][1]
     t_json = last_list[k][2]
     t_mpk = last_list[k][3]
-    cdg_cmd_path = pjoin(cdbus_gui, 'tools', 'cdg_cmd.py')
-    cdg_iap_path = pjoin(cdbus_gui, 'tools', 'cdg_iap.py')
+    cdg_cmd_path = 'python ' + pjoin(cdbus_gui, 'tools', 'cdg_cmd.py') + ' --tty 0483:5740'
+    cdg_iap_path = 'python ' + pjoin(cdbus_gui, 'tools', 'cdg_iap.py') + ' --tty 0483:5740'
     t_json_path = pjoin(cdbus_gui, 'configs', t_json)
     t_hex_path = pjoin('firmware', t_hex)
     t_mpk_path = pjoin('cdbus_gui_configs', t_mpk)
