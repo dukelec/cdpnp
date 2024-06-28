@@ -76,7 +76,7 @@ def cv_get_pos(img):
         # (center(x, y), (width, height), angle of rotation) = cv2.minAreaRect(c)
         rect = cv.minAreaRect(c)
         box = cv.boxPoints(rect)
-        box = np.int0(np.around(box))
+        box = np.int_(np.around(box))
 
         # Retrieve the key parameters of the rotated bounding box
         center_f = (rect[0][0], rect[0][1])
@@ -251,7 +251,7 @@ def cv_get_pad(img):
         # (center(x, y), (width, height), angle of rotation) = cv2.minAreaRect(c)
         rect = cv.minAreaRect(c)
         box = cv.boxPoints(rect)
-        box = np.int0(np.around(box))
+        box = np.int_(np.around(box))
 
         # Retrieve the key parameters of the rotated bounding box
         center_f = (rect[0][0], rect[0][1])
