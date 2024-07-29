@@ -18,19 +18,19 @@ from os.path import join as pjoin
 cdbus_gui = pjoin('..', '..', 'cdbus_gui')
 
 last_list = {
-    '80:00:01': ['13ed3be', 'cdstep_v3_13ed3be.hex',    'cdstep-v6.json', 'cdstep_01.mpk'],
-    '80:00:02': ['13ed3be', 'cdstep_v3_13ed3be.hex',    'cdstep-v6.json', 'cdstep_02.mpk'],
-    '80:00:03': ['13ed3be', 'cdstep_v3_13ed3be.hex',    'cdstep-v6.json', 'cdstep_03.mpk'],
-    '80:00:04': ['90db4d7', 'cdstep_z_v3_90db4d7.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
-    '80:00:05': ['d4f7549', 'cdstep_r_v3_d4f7549.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
+    '80:00:01': ['772b910', 'cdstep_v3_772b910.hex',    'cdstep-v6.json', 'cdstep_01.mpk'],
+    '80:00:02': ['772b910', 'cdstep_v3_772b910.hex',    'cdstep-v6.json', 'cdstep_02.mpk'],
+    '80:00:03': ['772b910', 'cdstep_v3_772b910.hex',    'cdstep-v6.json', 'cdstep_03.mpk'],
+    '80:00:04': ['a49d731', 'cdstep_z_v3_a49d731.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
+    '80:00:05': ['5e0418f', 'cdstep_r_v3_5e0418f.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
 
-    '80:00:11': ['80fc934', 'cdpump_v1_80fc934.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
+    '80:00:11': ['67edf93', 'cdpump_v1_67edf93.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
 
-    '80:00:21': ['f7cc721', 'cdcam_v2_v3_f7cc721.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
-   #'80:00:22': ['f7cc721', 'cdcam_v2_v3_f7cc721.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
+    '80:00:21': ['09c0b67', 'cdcam_v2_v3_09c0b67.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
+   #'80:00:22': ['09c0b67', 'cdcam_v2_v3_09c0b67.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
 
-   #'80:00:21': ['1a0d1ce', 'cdcam_v1_1a0d1ce.hex',    'cdcam-v3.json', 'cdcam_21.mpk'],
-    '80:00:22': ['1a0d1ce', 'cdcam_v1_1a0d1ce.hex',    'cdcam-v3.json', 'cdcam_22.mpk'],
+   #'80:00:21': ['450b098', 'cdcam_v1_450b098.hex',    'cdcam-v3.json', 'cdcam_21.mpk'],
+    '80:00:22': ['450b098', 'cdcam_v1_450b098.hex',    'cdcam-v3.json', 'cdcam_22.mpk'],
 }
 
 
