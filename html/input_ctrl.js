@@ -316,9 +316,9 @@ window.btn_detect_z = async function() {
 document.getElementById('pump_en').onchange = async function() {
     let pump_en = document.getElementById('pump_en').checked;
     if (pump_en) {
-        await set_pump(2);
+        await set_pump(csa.pump_hw_ver == 'v1' ? 2 : -70);
     } else {
-        await set_pump(1);
+        await set_pump(csa.pump_hw_ver == 'v1' ? 1 : 0);
         await sleep(500);
         await set_pump(0);
     }

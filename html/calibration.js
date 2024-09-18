@@ -6,7 +6,7 @@
 
 import { L } from './utils/lang.js'
 import { readable_float, sleep } from './utils/helper.js';
-import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump, get_cv_cur,
+import { get_camera_cfg, get_motor_pos, set_motor_pos, check_suck_pressure, set_pump, get_cv_cur,
          z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, set_vision_cfg } from './dev_cmd.js';
 import { set_step, get_step_safe, set_comp_search, get_comp_search } from './pos_list.js';
 import { csa_to_page_input, input_change } from './input_ctrl.js';
@@ -120,7 +120,7 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             await enable_force();
             csa.cur_pos[2] = csa.comp_base_z - 1;
             await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
-            await set_pump(2);
+            await set_pump(csa.pump_hw_ver == 'v1' ? 2 : -70);
             if (csa.comp_height == null) {
                 await get_motor_pos();
                 csa.comp_height = Math.max(parseFloat((csa.cur_pos[2] - csa.comp_base_z).toFixed(3)), 0);
@@ -128,7 +128,8 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             }
             await sleep(600);
             await z_keep_high(70, 260000);
-            
+            if (await check_suck_pressure())
+                break;
             csa.cur_pos[3] = 180;
             await set_motor_pos(100);
             set_step(6);
@@ -145,7 +146,8 @@ document.getElementById('btn_cali_offset').onclick = async function() {
             await enable_force();
             csa.cur_pos[2] = csa.pcb_base_z - 1;
             await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
-            await set_pump(1);
+            await set_pump(csa.pump_hw_ver == 'v1' ? 1 : 0);
+
             await sleep(500);
             await z_keep_high(70);
             set_step(1);
@@ -163,6 +165,9 @@ document.getElementById('btn_cali_offset').onclick = async function() {
     document.getElementById('btn_pld_clear').onclick();
     await set_motor_pos();
     set_step(1);
+    
+    if (cali_cnt < 2)
+        return;
     
     let delta_x = (cali_dat[1][0] - cali_dat[0][0]) / 2;
     let delta_y = (cali_dat[1][1] - cali_dat[0][1]) / 2;
@@ -511,7 +516,7 @@ document.getElementById('btn_cali_cam2').onclick = async function() {
                 csa.cur_pos[2] = csa.comp_base_z - 1;
                 await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
             }
-            await set_pump(2);
+            await set_pump(csa.pump_hw_ver == 'v1' ? 2 : -70);
             if (csa.comp_height == null) {
                 await get_motor_pos();
                 csa.comp_height = Math.max(parseFloat((csa.cur_pos[2] - csa.comp_base_z).toFixed(3)), 0);
@@ -648,7 +653,7 @@ document.getElementById('btn_cali_cam2').onclick = async function() {
             await enable_force();
             csa.cur_pos[2] = csa.pcb_base_z - 1;
             await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
-            await set_pump(1);
+            await set_pump(csa.pump_hw_ver == 'v1' ? 1 : 0);
             await sleep(500);
             await z_keep_high(70);
             set_step(1);

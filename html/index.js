@@ -11,7 +11,7 @@ import { Idb } from './utils/idb.js';
 import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_comp_values, pos_to_page,
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
 import { input_init, csa_to_page_input } from './input_ctrl.js';
-import { get_camera_cfg, get_motor_pos, set_motor_pos, set_pump, pcb2xyz,
+import { get_camera_cfg, get_motor_pos, set_motor_pos, get_pump_hw_ver, check_suck_pressure, set_pump, pcb2xyz,
          z_keep_high, enable_force, cam_comp_snap, set_camera_cfg } from './dev_cmd.js';
 
 let csa_dft = {
@@ -49,7 +49,10 @@ let csa_dft = {
     pld_start_at: -0.5,
     pld_tgt_grid: [2.0, 2.0],
     pld_rotate: 0,
-    pld_enable: 0
+    pld_enable: 0,
+    
+    pump_hw_ver: null,
+    pump_suck_on: false
 };
 
 let csa = {};
@@ -143,6 +146,8 @@ document.getElementById('btn_run').onclick = async function() {
             await set_camera_cfg("");
             set_board(board);
             await move_to_comp(comp);
+            if (csa.pump_suck_on && !(await check_suck_pressure(true)))
+                await set_pump(0);
         }
         console.log(`parents: ${parents_pre} -> ${parents}`);
         
@@ -199,6 +204,14 @@ document.getElementById('btn_run').onclick = async function() {
             } else {
                 await set_motor_pos(100);
             }
+            if (csa.pump_suck_on) {
+                if (!(await check_suck_pressure(true))) {
+                    await set_pump(0);
+                } else {
+                    document.getElementById('pause_en').checked = true;
+                    continue;
+                }
+            }
             set_step(2);
             continue;
         }
@@ -247,7 +260,7 @@ document.getElementById('btn_run').onclick = async function() {
                 csa.cur_pos[2] = csa.comp_base_z - 1;
                 await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
             }
-            await set_pump(2);
+            await set_pump(csa.pump_hw_ver == 'v1' ? 2 : -70);
             if (csa.comp_height == null) {
                 await get_motor_pos();
                 csa.comp_height = Math.max(parseFloat((csa.cur_pos[2] - csa.comp_base_z).toFixed(3)), 0);
@@ -255,6 +268,12 @@ document.getElementById('btn_run').onclick = async function() {
             }
             await sleep(600);
             await z_keep_high(70, 260000);
+            if (await check_suck_pressure()) {
+                await set_pump(0);
+                document.getElementById('pause_en').checked = true;
+                set_step(1);
+                continue;
+            }
             
             if (document.getElementById('check2_en').checked) {
                 set_step(4);
@@ -360,7 +379,7 @@ document.getElementById('btn_run').onclick = async function() {
                 while (document.getElementById('pause_en').checked)
                     await sleep(100);
                 // manual select comp during putdown pause
-                await set_pump(1);
+                await set_pump(csa.pump_hw_ver == 'v1' ? 1 : 0);
                 await sleep(500);
                 await z_keep_high(70);
                 await set_pump(0);
@@ -376,10 +395,13 @@ document.getElementById('btn_run').onclick = async function() {
                     csa.cur_pos[2] = csa.pcb_base_z - 1;
                     await set_motor_pos(100, csa.motor_speed >= 0.6 ? 12000 : 6000);
                 }
-                await set_pump(1);
+                //await set_pump(csa.pump_hw_ver == 'v1' ? 1 : 30); // blow
+                await set_pump(csa.pump_hw_ver == 'v1' ? 1 : 0);
                 await sleep(500);
                 await z_keep_high(70);
                 await set_pump(0);
+                if (csa.pump_hw_ver != 'v1')
+                    await set_pump(-70); // check nozzle empty
             }
             set_step(Number(!document.getElementById('show_target').checked));
         }
@@ -424,6 +446,7 @@ function init_ws() {
         ws_ns.connections['server'] = ws;
         await get_motor_pos();
         await get_camera_cfg();
+        csa.pump_hw_ver = await get_pump_hw_ver();
     }
     ws.onmessage = async function(evt) {
         let dat = await blob2dat(evt.data);

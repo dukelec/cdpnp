@@ -4,6 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
+import { L } from './utils/lang.js'
 import { sleep } from './utils/helper.js';
 import { csa_to_page_pos } from './input_ctrl.js';
 import { csa, cmd_sock } from './index.js';
@@ -78,13 +79,47 @@ async function set_motor_pos(wait=0, speed=600000) {
     console.log('set_motor_pos ret', dat);
 }
 
-// 0: off, 1: valve on, 2: pump on
+async function get_pump_hw_ver() {
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'get_pump_hw_ver'}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(2000);
+    console.log(`get_pump_hw_ver ret`, dat);
+    return dat ? dat[0] : null;
+}
+
+async function get_pump_pressure() {
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'get_pump_pressure'}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(2000);
+    console.log(`get_pump_pressure ret`, dat);
+    return dat ? dat[0] : null;
+}
+
+async function check_suck_pressure(should_empty=false, threshold=-30) {
+    if (csa.pump_hw_ver == 'v1')
+        return false;
+    let val = await get_pump_pressure();
+    if (should_empty) {
+        if (val > threshold)
+            return false;
+        alert(L("suck not empty!"));
+    } else {
+        if (val <= threshold)
+            return false;
+        alert(L("suck empty!"));
+    }
+    return true;
+}
+
+// hw_v1: 0: off, 1: valve on, 2: pump on
+// hw_v2: target pressure
 async function set_pump(val) {
     cmd_sock.flush();
     await cmd_sock.sendto({'action': 'set_pump', 'val': val}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(2000);
     console.log(`set_pump ${val} ret`, dat);
     document.getElementById('pump_en').checked = val ? true : false;
+    csa.pump_suck_on = val < 0;
 }
 
 async function pcb2xyz(pcb, cam, x, y) {
@@ -157,6 +192,6 @@ async function cam_comp_snap(times=3, max_err=0.02) {
 
 
 export {
-    get_camera_cfg, set_camera_cfg, get_motor_pos, set_motor_pos, set_pump,
+    get_camera_cfg, set_camera_cfg, get_motor_pos, set_motor_pos, get_pump_hw_ver, get_pump_pressure, check_suck_pressure, set_pump,
     pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap, set_vision_cfg
 };

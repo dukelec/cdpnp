@@ -104,6 +104,17 @@ async def dev_service():
                 goto_pos(dat['pos'], dat['wait'], dat['speed'])
             await sock.sendto('succeeded', src)
         
+        elif dat['action'] == 'get_pump_hw_ver':
+            logger.info(f"get_pump_hw_ver: {xyz['pump_hw_ver']}")
+            await sock.sendto(xyz['pump_hw_ver'], src)
+        
+        elif dat['action'] == 'get_pump_pressure':
+            logger.info(f"get_pump_pressure")
+            pressure = 0.0
+            if dev:
+                pressure = get_pump_pressure()
+            await sock.sendto(pressure, src)
+        
         elif dat['action'] == 'set_pump':
             logger.info(f"set_pump {dat['val']}")
             if dev:

@@ -23,7 +23,8 @@ xyz = {
     'last_pos': None,
     'old_pos': None,
     'sock': None,
-    'sock_dbg': None
+    'sock_dbg': None,
+    'pump_hw_ver': 'v1'
 }
 
 
@@ -32,6 +33,21 @@ def dbg_echo():
         rx = xyz['sock_dbg'].recvfrom()
         xyz['logger'].info(f'#{rx[1][0][-2:]}  \x1b[0;37m' + rx[0][1:-1].decode() + '\x1b[0m')
 
+
+# for unicast only
+def cd_info_rd(dev_addr, timeout=0.8, retry=3):
+    for cnt in range(retry):
+        xyz['sock'].clear()
+        xyz['sock'].sendto(b'\x00', (dev_addr, 0x1))
+        dat, src = xyz['sock'].recvfrom(timeout=timeout)
+        if src:
+            if src[0] == dev_addr and src[1] == 0x1:
+                return dat
+            xyz['logger'].warning(f'cd_info_rd recv wrong src')
+        else:
+            xyz['logger'].warning(f'cd_info_rd timeout, dev: {dev_addr}')
+    raise Exception('info_rd retry error')
+    #return None
 
 # for unicast only
 def cd_reg_rw(dev_addr, reg_addr, write=None, read=0, timeout=0.8, retry=3):
@@ -53,11 +69,22 @@ def cd_reg_rw(dev_addr, reg_addr, write=None, read=0, timeout=0.8, retry=3):
     #return None
 
 
-# 0: off, 1: valve on, 2: pump on
+# hw_v1: 0: off, 1: valve on, 2: pump on
+# hw_v2: target pressure
 def set_pump(val):
     xyz['logger'].info(f'set pump... {val}')
-    rx = cd_reg_rw('80:00:11', 0x0036, struct.pack("<B", val))
+    if xyz['pump_hw_ver'] == 'v1':
+        rx = cd_reg_rw('80:00:11', 0x0036, struct.pack("<B", val))
+    else:
+        rx = cd_reg_rw('80:00:11', 0x00f8, struct.pack("<f", val))
     xyz['logger'].info('set pump ret: ' + rx.hex())
+
+def get_pump_pressure():
+    xyz['logger'].info(f'get_pump_pressure...')
+    rx = cd_reg_rw('80:00:11', 0x0124, read=4)
+    pressure = struct.unpack("<f", rx[1:])[0]
+    xyz['logger'].info(f'get_pump_pressure ret: {pressure}')
+    return pressure
 
 
 def enable_motor():
@@ -251,4 +278,11 @@ def xyz_init():
     enable_motor()
     if not all_enable:
         detect_origin()
+    
+    xyz['logger'].info(f'check pump hw version...')
+    rx = cd_info_rd('80:00:11')[1:].decode()
+    xyz['logger'].info(f'check pump hw version ret: {rx}')
+    if 'HW: ' in rx:
+        xyz['pump_hw_ver'] = rx.split('HW: ')[1][:2]
+    xyz['logger'].info(f'pump hw version: {xyz["pump_hw_ver"]}')
 

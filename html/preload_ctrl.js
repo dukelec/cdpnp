@@ -6,7 +6,7 @@
 
 import { L } from './utils/lang.js'
 import { readable_float, sleep } from './utils/helper.js';
-import { set_camera_cfg, set_motor_pos, set_pump, cam_comp_snap, pcb2xyz } from './dev_cmd.js';
+import { set_camera_cfg, set_motor_pos, check_suck_pressure, set_pump, cam_comp_snap, pcb2xyz } from './dev_cmd.js';
 import { get_comp_search } from './pos_list.js';
 import { csa, cal_grab_ofs } from './index.js';
 
@@ -168,7 +168,7 @@ document.getElementById('btn_pld_run').onclick = async function() {
             
             csa.cur_pos[2] = csa.pld_base_z - 0.5;
             await set_motor_pos(100);
-            await set_pump(2);
+            await set_pump(csa.pump_hw_ver == 'v1' ? 2 : -70);
             await sleep(600);
             csa.cur_pos[2] = top_z;
             await set_motor_pos(100);
@@ -184,7 +184,7 @@ document.getElementById('btn_pld_run').onclick = async function() {
             
             csa.cur_pos[2] = csa.comp_base_z + Math.abs(csa.pld_base_z - csa.comp_base_z) - 1.0;
             await set_motor_pos(100);
-            await set_pump(1);
+            await set_pump(csa.pump_hw_ver == 'v1' ? 1 : 0);
             await sleep(500);
             
             // go up with rotation, avoid sticking
