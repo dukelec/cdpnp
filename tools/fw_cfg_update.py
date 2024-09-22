@@ -24,13 +24,14 @@ last_list = {
     '80:00:04': ['a49d731', 'cdstep_z_v3_a49d731.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
     '80:00:05': ['5e0418f', 'cdstep_r_v3_5e0418f.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
 
-    '80:00:11': ['67edf93', 'cdpump_v1_67edf93.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
+    '80:00:11': ['0b11b45', 'cdpump_v2_0b11b45.hex',    'cdpump-v6.json', 'cdpump_v2_11.mpk'],
+   #'80:00:11': ['67edf93', 'cdpump_v1_67edf93.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
 
     '80:00:21': ['09c0b67', 'cdcam_v2_v3_09c0b67.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
    #'80:00:22': ['09c0b67', 'cdcam_v2_v3_09c0b67.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
 
-   #'80:00:21': ['450b098', 'cdcam_v1_450b098.hex',    'cdcam-v3.json', 'cdcam_21.mpk'],
-    '80:00:22': ['450b098', 'cdcam_v1_450b098.hex',    'cdcam-v3.json', 'cdcam_22.mpk'],
+   #'80:00:21': ['cea35ea', 'cdcam_v1_cea35ea.hex',    'cdcam-v3.json', 'cdcam_21.mpk'],
+    '80:00:22': ['cea35ea', 'cdcam_v1_cea35ea.hex',    'cdcam-v3.json', 'cdcam_22.mpk'],
 }
 
 
