@@ -266,6 +266,12 @@ def xyz_init():
     xyz['sock'] = CDNetSocket(('', 0xcdcd))
     xyz['sock_dbg'] = CDNetSocket(('', 9))
     _thread.start_new_thread(dbg_echo, ())
+    
+    rx = cd_reg_rw(f"80:00:21", 0x005f, struct.pack("<B", 0))
+    xyz['logger'].info('stop cam1 ret: ' + rx.hex())
+    rx = cd_reg_rw(f"80:00:22", 0x005f, struct.pack("<B", 0))
+    xyz['logger'].info('stop cam2 ret: ' + rx.hex())
+    
     xyz['last_pos'] = load_pos()
     
     all_enable = True
