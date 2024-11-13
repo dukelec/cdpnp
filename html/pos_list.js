@@ -314,7 +314,8 @@ function csv_to_pos(csv)
     let ref_cnt = {};
     let pos = {};
     for (let row of csv_list) {
-        if (!isFinite(row[5]) || !row[0].length)
+        console.log(row)
+        if (!isFinite(row[5]) || row[0] === undefined)
             continue;
         // avoid same reference name
         let ref = row[0];

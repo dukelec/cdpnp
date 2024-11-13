@@ -37,10 +37,8 @@ cv_dat = {
 }
 
 
-def cv_get_pos(img):
-    if not cv_dat['detect']:
-        return img
 
+def cv_get_pos(img, detect):
     # Convert image to grayscale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
@@ -63,7 +61,7 @@ def cv_get_pos(img):
         area = cv.contourArea(c)
 
         # Ignore contours that are too small or too large
-        if cv_dat['detect'][0:4] == "pld_":
+        if detect[0:4] == "pld_":
             if area < 42*42 or 57*57 < area:
                 continue
         else:
@@ -93,7 +91,7 @@ def cv_get_pos(img):
         else:
             angle = -angle
 
-        if cv_dat['detect'] == 'limit_angle':
+        if detect == 'limit_angle':
             if angle < -45:
                 angle += 90
             elif angle > 45:
@@ -104,16 +102,16 @@ def cv_get_pos(img):
         l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
         comps.append([center_f[0], center_f[1], angle, l_center])
 
-        label = str(angle) + (' !' if cv_dat['detect'] == 'limit_angle' else '')
+        label = str(angle) + (' !' if detect == 'limit_angle' else '')
         cv.drawContours(img,[box],0,(0,0,255),1)
-        if cv_dat['detect'][0:4] != "pld_":
+        if detect[0:4] != "pld_":
             cv.putText(img, label, (center[0]+14, center[1]), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0,200,255), 1, cv.LINE_AA)
         cv.drawMarker(img, (center[0],center[1]), color=(0,255,255), markerType=cv.MARKER_CROSS, thickness=1, markerSize=10)
 
     if len(comps):
-        if cv_dat['detect'] == "pld_first":
+        if detect == "pld_first":
             comps.sort(key = lambda e : e[1])
-        elif cv_dat['detect'] == "pld_last":
+        elif detect == "pld_last":
             comps.sort(key = lambda e : -e[1])
         else:
             comps.sort(key = lambda e : e[3])
@@ -124,10 +122,7 @@ def cv_get_pos(img):
     return img
 
 
-def cv_get_circle(img):
-    if not cv_dat['detect']:
-        return img
-
+def cv_get_circle(img, detect):
     # Convert image to grayscale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     gray = cv.medianBlur(gray, 3)
@@ -154,8 +149,8 @@ def cv_get_circle(img):
         center = (round(center_f[0]), round(center_f[1]))
         radius = round(radius, 1)
 
-        filter_radius = float(cv_dat['detect'].split("_")[2]) / 2
-        filter_delta = float(cv_dat['detect'].split("_")[3]) / 2
+        filter_radius = float(detect.split("_")[2]) / 2
+        filter_delta = float(detect.split("_")[3]) / 2
         if radius < filter_radius - filter_delta or filter_radius + filter_delta < radius: # filtering by nozzle hole size
             continue
         if bw[center[1], center[0]] != 0:   # skip white
@@ -183,10 +178,7 @@ def cv_get_circle(img):
     return img
 
 
-def cv_get_pad(img):
-    if not cv_dat['detect']:
-        return img
-
+def cv_get_pad(img, detect):
     # Convert image to grayscale
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     gray = cv.medianBlur(gray, 3)
@@ -294,6 +286,8 @@ def cv_get_pad(img):
 def pic_rx():
     rx_dat = None
     dat_cnt = 0
+    detect = cv_dat['detect']
+    dev_idx = cv_dat['dev']
 
     while True:
         rx = cv_dat['sock_pic'].recvfrom()
@@ -305,6 +299,8 @@ def pic_rx():
         if hdr == 0x50:     # first
             rx_dat = dat
             dat_cnt = 0
+            detect = cv_dat['detect']
+            dev_idx = cv_dat['dev']
 
         elif rx_dat is None:
             #print(f'skip incomplete image data, hdr: {hdr:02x}')
@@ -323,9 +319,10 @@ def pic_rx():
                     print(f'jpg header error: {rx_dat[0]:02x} {rx_dat[1]:02x}!')
                 inp = np.asarray(bytearray(rx_dat), dtype=np.uint8)
                 img = cv.imdecode(inp, cv.IMREAD_COLOR)
-                if cv_dat['dev'] == 2:
+
+                if dev_idx == 2:
                     img = cv.flip(img, 1)
-                if cv_dat['dev'] == 1:
+                else:
                     img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
                     if cv_dat['bg_capture']:
                         cv_dat['bg_capture'] = False
@@ -333,18 +330,19 @@ def pic_rx():
                         blur = cv.medianBlur(img, 15)
                         cv_dat['bg_img'] = np.invert(blur)
                         cv.imwrite(f'{cur_path}/tmp/bg_invert.png', cv_dat['bg_img'])
-                    if cv_dat['bg_img'] is not None:
-                        img = cv.addWeighted(img, 0.8, cv_dat['bg_img'], 0.6, 0)
+                    bg_img = cv_dat['bg_img']
+                    if bg_img is not None:
+                        img = cv.addWeighted(img, 0.8, bg_img, 0.6, 0)
                 cam_height, cam_width = img.shape[:2]
 
-                if cv_dat['detect'].startswith("cali_nozzle"):
-                    img = cv_get_circle(img)
-                elif cv_dat['detect'] == "cali_pad":
-                    img = cv_get_pad(img)
-                else:
-                    img = cv_get_pos(img)
+                if detect.startswith("cali_nozzle"):
+                    img = cv_get_circle(img, detect)
+                elif detect == "cali_pad":
+                    img = cv_get_pad(img, detect)
+                elif detect:
+                    img = cv_get_pos(img, detect)
 
-                if cv_dat['dev'] == 1:
+                if dev_idx == 1:
                     img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
                 else:
                     img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, markerSize=cam_height-20, thickness=1)
