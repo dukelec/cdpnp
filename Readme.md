@@ -1,62 +1,61 @@
 CDPnP
 =======================================
 
-The CDPnP is an SMT assistant tool, not a fully automatic SMT machine.
+CDPnP is a compact, desktop, semi-automatic SMT prototyping machine.
 
-Fully automatic SMT machines are much more complicated to configure,
-requiring the configuration of feeders and the configuration of components in the software,
-and the machine is much larger.
+Traditional SMT machines are cumbersome to configure. When making prototypes,
+setup often takes several hours, while the placement process only takes a few minutes.
 
-This semi-automatic machine is simple to configure, just import the KiCad generated position file,
-place one or more PCBs, use the camera to mark any two reference points on each PCB and you are ready to go.
-All components do not need to be configured in software.
+This semi-automatic machine is easy to set up: simply import the position file in KiCad .csv format (other software formats are also supported),
+place one or more PCBs, and use the camera to mark two reference points on each PCB. No component setup is required.
 
-For ICs with very dense pins, especially for BGA packages,
-it is recommended to check the position manually before putting them down and use the keyboard to adjust the position and angle.
-If you place them directly by hand, it is not easy to align them and they are prone to hand shake.
+For ICs with very dense pins, especially BGA packages,
+it is recommended to manually check the position before placement and use the keyboard to adjust the position and angle.
+Placing them by hand can make alignment difficult and may result in misplacement due to hand tremors.
 
-[Discussions](https://github.com/dukelec/cdpnp/discussions) for this project have been enabled, so feel free to join our discussions and get more information posted.
+[Discussions](https://github.com/dukelec/cdpnp/discussions) for this project are now enabled. Feel free to join and get more information.
 
 
 ### Hardware
 
-The hardware is modular in design. A CDBUS (RS-485) bus is used to connect all modules to the PC, including two cameras. (10 Mbps by default.)
+The hardware is modular in design, with a CDBUS (RS-485) bus connecting all modules to the PC, including two cameras (10 Mbps by default).
 
-The machine has four degrees of freedom: X, Y, Z, R (rotate, also with homing switch), and is controlled by multiple stepper motor controllers.
+The machine has four degrees of freedom: X, Y, Z, and R (rotation), each with a homing switch. It is controlled by multiple stepper motor controllers.
 
-The Y-axis is controlled by two motor controllers, synchronised by multicasting.
+The Y-axis is controlled by two motor controllers, synchronized via multicasting.
 
-The Z-axis contains a strain gauge-based force sensor, the sensor data is relayed through the R-axis controller, as the sensor is closest to the R-axis.
+The Z-axis contains a strain gauge-based force sensor, with sensor data relayed through the R-axis controller, as the sensor is located closest to the R-axis.
 
-The machine automatically picks up component from a pre-defined search areas and put it onto the PCB in the corresponding position.
+The machine automatically picks up components from predefined search areas and places them onto the PCB in the corresponding positions.  
+However, it does not recognize the component models on the tray, so the user must place the correct components according to the instructions.
 
-Whenever the machine has finished with the same value of components,
-it will automatically pause and wait for the user to change the components in the search area.
+Once the machine finishes placing components of the same model, it automatically pauses and waits for the user to replace the components in the search area.
+
+While the machine is placing components, the user can prepare the next few models on separate trays in advance and quickly replace the trays for loading,
+enabling parallel operation between the machine and the operator.
 
 <img src="doc/hardware.jpg">
 
 <img src="doc/work.jpg">
 
-The stepper motor controllers and camera mentioned above are all open source projects.
-Available at: https://github.com/dukelec/cdbus_gui
-
-In the future, it will be possible to move components as well as flip components by adding a flexible feeding device (3-axis vibration).
+The stepper motor controllers, cameras, and others are open-source projects available at: https://github.com/dukelec/cdbus_doc
 
 
 ### User Interface
 
-The components list can be dragged and sorted.
+The list of components can be dragged and sorted.
 
-Click on a component in the list and the camera will automatically move to it.
+Click on a component to move the camera automatically to its position.
 
-Click on the run button to start the semi-automatic SMT placement process.
+Press the run button to start the semi-automatic SMT placement process.
 
 <img src="doc/software.jpg">  
 
-Also supports more than two PCBs, which are automatically hidden in the picture.
+It also supports more than two PCBs, with additional blank items automatically hidden in the software.
 
-The following pictures show the recognition of the 0402, 0201 and sot23 footprints for reference only.
-In practice, only components with same value can be placed at any one time.
+The following images show the recognition of 0402, 0201, and SOT23 footprints for testing purposes only.
+In practice, only components of the same model can be placed at one time.
+
 
 <img src="doc/cv.jpg">  
 
@@ -73,11 +72,9 @@ Python version >= 3.8
 `pip3 install pythoncrc websockets pyserial u-msgpack-python aiohttp opencv-python scipy`
 
 #### Usage:
-Run `pnp_main.py` or `start.sh`, then open url in your web browser: http://localhost:8900
+Run `pnp_main.py` or `start.sh`, then open the following URL in your web browser: http://localhost:8900
 
 Test without hardware: `./pnp_main.py --debug --dev None`
 
 App shortcuts: [doc/shortcuts.md](doc/shortcuts.md)
-
-The protocols between mcu, python, and web page please refer to the [CDBUS_GUI](https://github.com/dukelec/cdbus_gui) project.
 

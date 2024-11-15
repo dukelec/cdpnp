@@ -10,6 +10,6 @@ Up   : Move up       : ' (")
 Down : Move down     : / (?)
 CW   : CW rotate     : , (<)
 CCW  : CCW rotate    : . (>)
-       Set speed     : 1, 2, 3, 4
+       Set move step : 1, 2, 3, 4
        Toggle pause  : Space
 ```
