@@ -419,14 +419,19 @@ document.getElementById('btn_run').onclick = async function() {
         }
     }
     console.log('all comp finished');
-    csa.stop = true;
-    document.getElementById('btn_run').disabled = false;
-    document.getElementById('btn_stop').disabled = true;
-    csa.comp_height = null;
-    document.getElementById('cur_height').innerText = `--`;
     csa.cur_pos[3] = 0;
     document.getElementById('btn_pld_clear').onclick();
     await set_motor_pos();
+    if (csa.pump_hw_ver != 'v1' && csa.pump_suck_on) {
+        await sleep(1000);
+        if (!(await check_suck_pressure(true)))
+            await set_pump(0);
+    }
+    csa.comp_height = null;
+    document.getElementById('cur_height').innerText = `--`;
+    csa.stop = true;
+    document.getElementById('btn_run').disabled = false;
+    document.getElementById('btn_stop').disabled = true;
 };
 
 document.getElementById('btn_stop').onclick = function() {
