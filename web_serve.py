@@ -9,8 +9,9 @@ import os
 import asyncio
 import mimetypes
 import umsgpack
-import websockets
 import logging
+import websockets
+from websockets.server import serve
 from http import HTTPStatus
 from cd_ws import CDWebSocket, CDWebSocketNS
 
@@ -18,37 +19,36 @@ ws_ns = CDWebSocketNS('server')
 logger = logging.getLogger(f'cdpnp.web')
 
 
-# https://gist.github.com/artizirk/04eb23d957d7916c01ca632bb27d5436
+async def http_file_server(path, request):
+    if "upgrade" in request.get("Connection", "").lower():
+        return None
+    path = path.split('?')[0]
+    if path == '/':
+        path = '/index.html'
+    response_headers = [
+        ('Server', 'asyncio'),
+        ('Connection', 'close'),
+    ]
+    server_root = os.path.join(os.getcwd(), 'html')
+    full_path = os.path.realpath(os.path.join(server_root, path[1:]))
+    log_str = f'GET {path}'
 
-class FileServer(websockets.WebSocketServerProtocol):
-    async def process_request(self, path, request_headers):
-        if "Upgrade" in request_headers:
-            return  # Probably a WebSocket connection
-        path = path.split('?')[0]
-        if path == '/':
-            path = '/index.html'
-        response_headers = [
-            ('Server', 'asyncio'),
-            ('Connection', 'close'),
-        ]
-        server_root = os.path.join(os.getcwd(), 'html')
-        full_path = os.path.realpath(os.path.join(server_root, path[1:]))
-        log_str = f'GET {path}'
+    # Validate the path
+    if os.path.commonpath((server_root, full_path)) != server_root or \
+            not os.path.exists(full_path) or not os.path.isfile(full_path):
+        logger.warning(f'{log_str} 404 NOT FOUND')
+        return HTTPStatus.NOT_FOUND, response_headers, b'404 NOT FOUND'
 
-        # Validate the path
-        if os.path.commonpath((server_root, full_path)) != server_root or \
-                not os.path.exists(full_path) or not os.path.isfile(full_path):
-            logger.warning(f'{log_str} 404 NOT FOUND')
-            return HTTPStatus.NOT_FOUND, [], b'404 NOT FOUND'
-
-        logger.info(f'{log_str} 200 OK')
-        body = open(full_path, 'rb').read()
-        response_headers.append(('Content-Length', str(len(body))))
-        response_headers.append(('Content-Type', mimetypes.MimeTypes().guess_type(full_path)[0]))
-        return HTTPStatus.OK, response_headers, body
+    logger.info(f'{log_str} 200 OK')
+    with open(full_path, 'rb') as f:
+        body = f.read()
+    response_headers.append(('Content-Length', str(len(body))))
+    response_headers.append(('Content-Type', mimetypes.MimeTypes().guess_type(full_path)[0] or \
+            'application/octet-stream'))
+    return HTTPStatus.OK, response_headers, body
 
 
-async def serve(ws, path):
+async def ws_handler(ws, path):
     try:
         logger.info(f'ws: connect, path: {path}')
         if path in ws_ns.connections:
@@ -73,7 +73,7 @@ async def serve(ws, path):
     logger.info(f'ws: disconnect, path: {path}')
 
 
-async def start_web(addr='localhost', port=8900):                                                                                           
-    server = await websockets.serve(serve, addr, port, create_protocol=FileServer)
+async def start_web(addr='localhost', port=8900):                                                     
+    server = await serve(ws_handler, addr, port, process_request=http_file_server)
     await server.wait_closed()
 
