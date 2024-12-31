@@ -18,20 +18,20 @@ from os.path import join as pjoin
 cdbus_gui = pjoin('..', '..', 'cdbus_gui')
 
 last_list = {
-    '80:00:01': ['772b910', 'cdstep_v3_772b910.hex',    'cdstep-v6.json', 'cdstep_01.mpk'],
-    '80:00:02': ['772b910', 'cdstep_v3_772b910.hex',    'cdstep-v6.json', 'cdstep_02.mpk'],
-    '80:00:03': ['772b910', 'cdstep_v3_772b910.hex',    'cdstep-v6.json', 'cdstep_03.mpk'],
-    '80:00:04': ['a49d731', 'cdstep_z_v3_a49d731.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
-    '80:00:05': ['5e0418f', 'cdstep_r_v3_5e0418f.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
+    '80:00:01': ['1aa6d4d', 'cdstep_v3_1aa6d4d.hex',    'cdstep-v6.json', 'cdstep_01.mpk'],
+    '80:00:02': ['1aa6d4d', 'cdstep_v3_1aa6d4d.hex',    'cdstep-v6.json', 'cdstep_02.mpk'],
+    '80:00:03': ['1aa6d4d', 'cdstep_v3_1aa6d4d.hex',    'cdstep-v6.json', 'cdstep_03.mpk'],
+    '80:00:04': ['984a756', 'cdstep_z_v3_984a756.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
+    '80:00:05': ['5721673', 'cdstep_r_v3_5721673.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
 
-    '80:00:11': ['0b11b45', 'cdpump_v2_0b11b45.hex',    'cdpump-v6.json', 'cdpump_v2_11.mpk'],
+    '80:00:11': ['e47e353', 'cdpump_v2_e47e353.hex',    'cdpump-v6.json', 'cdpump_v2_11.mpk'],
    #'80:00:11': ['67edf93', 'cdpump_v1_67edf93.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
 
-    '80:00:21': ['09c0b67', 'cdcam_v2_v3_09c0b67.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
-   #'80:00:22': ['09c0b67', 'cdcam_v2_v3_09c0b67.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
+    '80:00:21': ['bf3a53b', 'cdcam_v2_v3_bf3a53b.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
+   #'80:00:21': ['0da10e6', 'cdcam_v1_0da10e6.hex',     'cdcam-v3.json', 'cdcam_21.mpk'],
 
-   #'80:00:21': ['cea35ea', 'cdcam_v1_cea35ea.hex',    'cdcam-v3.json', 'cdcam_21.mpk'],
-    '80:00:22': ['cea35ea', 'cdcam_v1_cea35ea.hex',    'cdcam-v3.json', 'cdcam_22.mpk'],
+    '80:00:22': ['0da10e6', 'cdcam_v1_0da10e6.hex',     'cdcam-v3.json', 'cdcam_22.mpk'],
+   #'80:00:22': ['bf3a53b', 'cdcam_v2_v3_bf3a53b.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
 }
 
 
