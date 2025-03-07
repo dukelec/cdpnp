@@ -316,9 +316,13 @@ def pic_rx():
             if dat_cnt == (hdr & 0xf):
                 #print('pic received!')
                 if rx_dat[0] != 0xff or rx_dat[1] != 0xd8:
-                    print(f'jpg header error: {rx_dat[0]:02x} {rx_dat[1]:02x}!')
+                    print(f'pic error: jpg header: {rx_dat[0]:02x} {rx_dat[1]:02x}!')
+                    continue
                 inp = np.asarray(bytearray(rx_dat), dtype=np.uint8)
                 img = cv.imdecode(inp, cv.IMREAD_COLOR)
+                if img is None:
+                    print(f'pic error: img is none!')
+                    continue
 
                 if dev_idx == 2:
                     img = cv.flip(img, 1)

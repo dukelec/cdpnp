@@ -18,7 +18,6 @@ import asyncio, aiohttp, websockets
 import math
 import numpy as np
 from scipy.optimize import fsolve
-from serial.tools import list_ports
 from cd_ws import CDWebSocket, CDWebSocketNS
 from web_serve import ws_ns, start_web
 
@@ -26,6 +25,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'pycdnet'))
 
 from cdnet.utils.log import *
 from cdnet.utils.cd_args import CdArgs
+from cdnet.utils.serial_get_port import *
 from cdnet.dev.cdbus_serial import CDBusSerial
 from cdnet.dispatch import *
 
@@ -33,8 +33,7 @@ from pnp_cv import pnp_cv_start, cv_dat, cur_path
 from pnp_xyz import *
 
 args = CdArgs()
-#dev_str = args.get("--dev", dft="ttyACM0")
-dev_str = args.get("--dev", dft="0483:5740")
+dev_str = args.get("--dev", dft=":5740")
 
 if args.get("--help", "-h") != None:
     print(__doc__)
@@ -49,6 +48,16 @@ elif args.get("--info", "-i") != None:
 
 logging.getLogger('websockets').setLevel(logging.WARNING)
 logger = logging.getLogger(f'cdpnp')
+
+if dev_str == ':5740':
+    if get_port('2E3C:5740'):
+        dev_str = '2E3C:5740' # bridge hw v5
+    elif get_port('0483:5740'):
+        dev_str = '0483:5740' # bridge hw v6
+    else:
+        logger.error(f'cdbus bridge not found, serial ports:')
+        dump_ports()
+        exit()
 
 # baudrate ignored for cdbus bridge
 dev = CDBusSerial(dev_str) if dev_str != 'None' else None
