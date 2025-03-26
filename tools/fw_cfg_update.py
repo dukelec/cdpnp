@@ -17,21 +17,24 @@ from os.path import join as pjoin
 #cdbus_gui = '../../cdbus_gui'
 cdbus_gui = pjoin('..', '..', 'cdbus_gui')
 
-last_list = {
-    '80:00:01': ['1aa6d4d', 'cdstep_v3_1aa6d4d.hex',    'cdstep-v6.json', 'cdstep_01.mpk'],
-    '80:00:02': ['1aa6d4d', 'cdstep_v3_1aa6d4d.hex',    'cdstep-v6.json', 'cdstep_02.mpk'],
-    '80:00:03': ['1aa6d4d', 'cdstep_v3_1aa6d4d.hex',    'cdstep-v6.json', 'cdstep_03.mpk'],
-    '80:00:04': ['984a756', 'cdstep_z_v3_984a756.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
-    '80:00:05': ['5721673', 'cdstep_r_v3_5721673.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
+dev_str = '2E3C:5740' # bridge hw v6
+#dev_str = '0483:5740' # bridge hw v5
 
-    '80:00:11': ['e47e353', 'cdpump_v2_e47e353.hex',    'cdpump-v6.json', 'cdpump_v2_11.mpk'],
+last_list = {
+    '80:00:01': ['ee1d4bc', 'cdstep_v3_ee1d4bc.hex',    'cdstep-v6.json', 'cdstep_01.mpk'],
+    '80:00:02': ['ee1d4bc', 'cdstep_v3_ee1d4bc.hex',    'cdstep-v6.json', 'cdstep_02.mpk'],
+    '80:00:03': ['ee1d4bc', 'cdstep_v3_ee1d4bc.hex',    'cdstep-v6.json', 'cdstep_03.mpk'],
+    '80:00:04': ['efbb9a9', 'cdstep_z_v3_efbb9a9.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
+    '80:00:05': ['72abac5', 'cdstep_r_v3_72abac5.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
+
+    '80:00:11': ['6e45f85', 'cdpump_v2_6e45f85.hex',    'cdpump-v6.json', 'cdpump_v2_11.mpk'],
    #'80:00:11': ['67edf93', 'cdpump_v1_67edf93.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
 
-    '80:00:21': ['bf3a53b', 'cdcam_v2_v3_bf3a53b.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
-   #'80:00:21': ['0da10e6', 'cdcam_v1_0da10e6.hex',     'cdcam-v3.json', 'cdcam_21.mpk'],
+    '80:00:21': ['fb06e57', 'cdcam_v2_v3_fb06e57.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
+   #'80:00:21': ['e11ff15', 'cdcam_v1_e11ff15.hex',     'cdcam-v3.json', 'cdcam_21.mpk'],
 
-    '80:00:22': ['0da10e6', 'cdcam_v1_0da10e6.hex',     'cdcam-v3.json', 'cdcam_22.mpk'],
-   #'80:00:22': ['bf3a53b', 'cdcam_v2_v3_bf3a53b.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
+    '80:00:22': ['e11ff15', 'cdcam_v1_e11ff15.hex',     'cdcam-v3.json', 'cdcam_22.mpk'],
+   #'80:00:22': ['fb06e57', 'cdcam_v2_v3_fb06e57.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
 }
 
 
@@ -56,8 +59,8 @@ for k in last_list:
     t_hex = last_list[k][1]
     t_json = last_list[k][2]
     t_mpk = last_list[k][3]
-    cdg_cmd_path = 'python ' + pjoin(cdbus_gui, 'tools', 'cdg_cmd.py') + ' --tty 0483:5740'
-    cdg_iap_path = 'python ' + pjoin(cdbus_gui, 'tools', 'cdg_iap.py') + ' --tty 0483:5740'
+    cdg_cmd_path = 'python ' + pjoin(cdbus_gui, 'tools', 'cdg_cmd.py') + f' --tty {dev_str}'
+    cdg_iap_path = 'python ' + pjoin(cdbus_gui, 'tools', 'cdg_iap.py') + f' --tty {dev_str}'
     t_json_path = pjoin(cdbus_gui, 'configs', t_json)
     t_hex_path = pjoin('firmware', t_hex)
     t_mpk_path = pjoin('cdbus_gui_configs', t_mpk)

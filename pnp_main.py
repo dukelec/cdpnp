@@ -51,9 +51,9 @@ logger = logging.getLogger(f'cdpnp')
 
 if dev_str == ':5740':
     if get_port('2E3C:5740'):
-        dev_str = '2E3C:5740' # bridge hw v5
+        dev_str = '2E3C:5740' # bridge hw v6
     elif get_port('0483:5740'):
-        dev_str = '0483:5740' # bridge hw v6
+        dev_str = '0483:5740' # bridge hw v5
     else:
         logger.error(f'cdbus bridge not found, serial ports:')
         dump_ports()
