@@ -239,8 +239,20 @@ def goto_pos(pos, wait=0, s_speed=260000):
 
 
 def detect_origin():
-    xyz['logger'].info(f'detecting origin, please wait...')
-    goto_pos([2, 2, -2, 30], 100, 100000)
+    # detect z axis
+    xyz['logger'].info(f'detecting z origin, please wait...')
+    goto_pos([0, 0, -1, 0], 100, 100000)
+    goto_pos([0, 0, 110, 0], 100, 50000)
+    for i in range(4):
+        xyz['logger'].info(f'motor set origin: #{i+1}')
+        rx = cd_reg_rw(f'80:00:0{i+1}', 0x00b1, struct.pack("<B", 1)) # set origin
+        xyz['logger'].info('motor set origin ret: ' + rx.hex())
+    sleep(0.5)
+    xyz['last_pos'] = load_pos()
+    
+    # detect all axis
+    xyz['logger'].info(f'detecting all origin, please wait...')
+    goto_pos([1, 1, -1, 30], 100, 100000)
     goto_pos([-315, -265, 110, -375], 100, 50000)
     for i in range(5):
         xyz['logger'].info(f'motor set origin: #{i+1}')
