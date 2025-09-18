@@ -59,8 +59,7 @@ if dev_str == ':5740':
         dump_ports()
         exit()
 
-# baudrate ignored for cdbus bridge
-dev = CDBusSerial(dev_str) if dev_str != 'None' else None
+dev = CDBusSerial(dev_str, 10000000) if dev_str != 'None' else None
 if dev:
     CDNetIntf(dev, mac=0x00)
     xyz_init()
