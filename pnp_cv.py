@@ -290,11 +290,8 @@ def pic_rx():
     dev_idx = cv_dat['dev']
 
     while True:
-        rx = cv_dat['sock_pic'].recvfrom()
-        #print('\x1b[0;37m  ' + re.sub(br'[^\x20-\x7e]',br'.', rx[0]).decode() + '\x1b[0m')
-
-        hdr = rx[0][0]  # [5:4] FRAGMENT: 00: error, 01: first, 10: more, 11: last, [3:0]: cnt
-        dat = rx[0][1:]
+        dat, src = cv_dat['sock_pic'].recvfrom()
+        hdr = src[1]  # [5:4] FRAGMENT: 00: error, 01: first, 10: more, 11: last, [3:0]: cnt
 
         if hdr == 0x50:     # first
             rx_dat = dat

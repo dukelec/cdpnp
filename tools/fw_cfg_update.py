@@ -21,20 +21,20 @@ dev_str = '2E3C:5740' # bridge hw v6
 #dev_str = '0483:5740' # bridge hw v5
 
 last_list = {
-    '80:00:01': ['ee1d4bc', 'cdstep_v3_ee1d4bc.hex',    'cdstep-v6.json', 'cdstep_01.mpk'],
-    '80:00:02': ['ee1d4bc', 'cdstep_v3_ee1d4bc.hex',    'cdstep-v6.json', 'cdstep_02.mpk'],
-    '80:00:03': ['ee1d4bc', 'cdstep_v3_ee1d4bc.hex',    'cdstep-v6.json', 'cdstep_03.mpk'],
-    '80:00:04': ['efbb9a9', 'cdstep_z_v3_efbb9a9.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
-    '80:00:05': ['72abac5', 'cdstep_r_v3_72abac5.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
+    '00:00:01': ['81dc157', 'cdstep_v3_81dc157.hex',    'cdstep-v6.json', 'cdstep_01.mpk'],
+    '00:00:02': ['81dc157', 'cdstep_v3_81dc157.hex',    'cdstep-v6.json', 'cdstep_02.mpk'],
+    '00:00:03': ['81dc157', 'cdstep_v3_81dc157.hex',    'cdstep-v6.json', 'cdstep_03.mpk'],
+    '00:00:04': ['f3cb10d', 'cdstep_z_v3_f3cb10d.hex',  'cdstep-v6.json', 'cdstep_04.mpk'],
+    '00:00:05': ['38ca679', 'cdstep_r_v3_38ca679.hex',  'cdstep-v6.json', 'cdstep_05.mpk'],
 
-    '80:00:11': ['6e45f85', 'cdpump_v2_6e45f85.hex',    'cdpump-v6.json', 'cdpump_v2_11.mpk'],
-   #'80:00:11': ['476ead2', 'cdpump_v1_476ead2.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
+    '00:00:11': ['1a47f00', 'cdpump_v2_1a47f00.hex',    'cdpump-v6.json', 'cdpump_v2_11.mpk'],
+   #'00:00:11': ['545593d', 'cdpump_v1_545593d.hex',    'cdpump-v5.json', 'cdpump_11.mpk'],
 
-    '80:00:21': ['fb06e57', 'cdcam_v2_v3_fb06e57.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
-   #'80:00:21': ['e11ff15', 'cdcam_v1_e11ff15.hex',     'cdcam-v3.json', 'cdcam_21.mpk'],
+    '00:00:21': ['5561abc', 'cdcam_v2_v3_5561abc.hex',  'cdcam-v3.json', 'cdcam_21.mpk'],
+   #'00:00:21': ['d9529f5', 'cdcam_v1_d9529f5.hex',     'cdcam-v3.json', 'cdcam_21.mpk'],
 
-    '80:00:22': ['e11ff15', 'cdcam_v1_e11ff15.hex',     'cdcam-v3.json', 'cdcam_22.mpk'],
-   #'80:00:22': ['fb06e57', 'cdcam_v2_v3_fb06e57.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
+    '00:00:22': ['d9529f5', 'cdcam_v1_d9529f5.hex',     'cdcam-v3.json', 'cdcam_22.mpk'],
+   #'00:00:22': ['5561abc', 'cdcam_v2_v3_5561abc.hex',  'cdcam-v3.json', 'cdcam_22.mpk'],
 }
 
 
