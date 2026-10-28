@@ -33,7 +33,8 @@ cv_dat = {
     'nozzle_thresh': 199,
     'debug': False,
 
-    'sock_pic': None
+    'sock_pic': None,
+    'bad_cnt': 0    # broken jpg counter, for file name of tmp/bad_N.jpg
 }
 
 
@@ -283,8 +284,19 @@ def cv_get_pad(img, detect):
 
 
 
+def pic_save_bad(rx_dat, reason):
+    # save broken jpg for offline analysis, keep at most 10 files
+    n = cv_dat['bad_cnt']
+    cv_dat['bad_cnt'] = n + 1
+    path = f'{cur_path}/tmp/bad_{n % 10}.jpg'
+    with open(path, 'wb') as f:
+        f.write(rx_dat)
+    print(f'pic error: {reason}, len: {len(rx_dat)}, tail: {rx_dat[-2:].hex()}, saved to: {path}')
+
+
 def pic_rx():
     rx_dat = None
+    rx_src = None   # address of current camera, drop fragments from the other camera
     dat_cnt = 0
     detect = cv_dat['detect']
     dev_idx = cv_dat['dev']
@@ -295,6 +307,7 @@ def pic_rx():
 
         if hdr == 0x50:     # first
             rx_dat = dat
+            rx_src = src[0]
             dat_cnt = 0
             detect = cv_dat['detect']
             dev_idx = cv_dat['dev']
@@ -302,6 +315,9 @@ def pic_rx():
         elif rx_dat is None:
             #print(f'skip incomplete image data, hdr: {hdr:02x}')
             continue
+
+        elif src[0] != rx_src:
+            continue # fragment from the other camera, keep dat_cnt untouched
 
         elif (hdr & 0xf0) == 0x60: # more
             if dat_cnt == (hdr & 0xf):
@@ -311,14 +327,17 @@ def pic_rx():
 
         elif (hdr & 0xf0) == 0x70: # end
             if dat_cnt == (hdr & 0xf):
+                rx_dat += dat # the last fragment also carries data
                 #print('pic received!')
-                if rx_dat[0] != 0xff or rx_dat[1] != 0xd8:
-                    print(f'pic error: jpg header: {rx_dat[0]:02x} {rx_dat[1]:02x}!')
+                if len(rx_dat) < 4 or rx_dat[0] != 0xff or rx_dat[1] != 0xd8:
+                    pic_save_bad(rx_dat, 'wrong jpg header')
+                    rx_dat = None
                     continue
                 inp = np.asarray(bytearray(rx_dat), dtype=np.uint8)
                 img = cv.imdecode(inp, cv.IMREAD_COLOR)
                 if img is None:
-                    print(f'pic error: img is none!')
+                    pic_save_bad(rx_dat, 'img is none')
+                    rx_dat = None
                     continue
 
                 if dev_idx == 2:
@@ -352,12 +371,15 @@ def pic_rx():
                     if not cv_dat['local']:
                         img = cv.imencode('.png', img)[1].tobytes()
                     cv_dat['img_queue'].put_nowait(img)
+                rx_dat = None
+            else:
+                print(f'pic drop: wrong cnt at end, local: {dat_cnt} != rx: {hdr & 0xf}, len: {len(rx_dat)}')
+                rx_dat = None
 
-            #else:
-            #    print(f'pic, wrong cnt at end, local: {dat_cnt} != rx: {hdr & 0xf}, dat len: {len(dat)}')
-
-        #else:
-        #    print(f'pic, receive err, local: {dat_cnt}, rx: {hdr & 0xf}, all len: {len(img_dat)}')
+        else: # error type: fragment lost between fpga and mcu, reported by firmware
+            print(f'pic drop: err fragment from firmware, hdr: {hdr:02x}, len: {len(rx_dat)}')
+            rx_dat = None
+            continue
 
         dat_cnt += 1
         if dat_cnt == 0x10:
