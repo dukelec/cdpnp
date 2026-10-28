@@ -1,6 +1,9 @@
 CDPnP
 =======================================
 
+> **Note:** This branch requires module firmware using the CDNET v2 protocol (included in `tools/firmware`).
+> For old firmware using CDNET v1, please use the `cdnet_v1_legacy` branch, which only receives important bug fixes.
+
 CDPnP is a compact, desktop, semi-automatic SMT prototyping machine.
 
 Traditional SMT machines are cumbersome to configure. When making prototypes,
