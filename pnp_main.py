@@ -33,7 +33,7 @@ from pnp_cv import pnp_cv_start, cv_dat, cur_path
 from pnp_xyz import *
 
 args = CdArgs()
-dev_str = args.get("--dev", dft=":5740")
+dev_str = args.get("--dev", dft=":574")
 
 if args.get("--help", "-h") != None:
     print(__doc__)
@@ -49,11 +49,11 @@ elif args.get("--info", "-i") != None:
 logging.getLogger('websockets').setLevel(logging.WARNING)
 logger = logging.getLogger(f'cdpnp')
 
-if dev_str == ':5740':
-    if get_port('2E3C:5740'):
-        dev_str = '2E3C:5740' # bridge hw v6
-    elif get_port('0483:5740'):
-        dev_str = '0483:5740' # bridge hw v5
+if dev_str == ':574':
+    if get_port('2E3C:574'):
+        dev_str = '2E3C:574' # bridge hw v6
+    elif get_port('0483:574'):
+        dev_str = '0483:574' # bridge hw v5
     else:
         logger.error(f'cdbus bridge not found, serial ports:')
         dump_ports()
