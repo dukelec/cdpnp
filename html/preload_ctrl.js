@@ -4,11 +4,11 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './utils/lang.js'
-import { readable_float, sleep } from './utils/helper.js';
-import { set_camera_cfg, set_motor_pos, check_suck_pressure, set_pump, cam_comp_snap, pcb2xyz } from './dev_cmd.js';
-import { get_comp_search } from './pos_list.js';
-import { csa, cal_grab_ofs } from './index.js';
+import { L } from './utils/lang.js?v=__V__';
+import { readable_float, sleep } from './utils/helper.js?v=__V__';
+import { set_camera_cfg, set_motor_pos, check_suck_pressure, set_pump, cam_comp_snap, pcb2xyz } from './dev_cmd.js?v=__V__';
+import { get_comp_search } from './pos_list.js?v=__V__';
+import { csa, cal_grab_ofs } from './index.js?v=__V__';
 
 
 function pld_get_grid(idx)

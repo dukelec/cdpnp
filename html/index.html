@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--link rel="icon" type="image/png" href="./img/icon.png" /-->
-<title>CDPNP Tools - V3.12</title>
+<title>CDPNP Tools</title>
 
 <link rel="stylesheet" href="./libs/bulma-0.9.4.css">
 <!-- fix sub border missing by override bulma css -->
@@ -22,7 +22,8 @@
 
 <section class="section">
     <div class="container">
-        <h1 class="title is-size-4">CDPnP</h1>
+        <h1 class="title is-size-4">CDPnP <span class="has-text-grey has-text-weight-normal is-size-7" id="version"></span></h1>
+        <div class="notification is-danger is-light" id="ws_banner" style="display: none;"></div>
         <button class="button is-small" id="btn_load_csv">${L('Load')} CSV</button>
         <button class="button is-small" id="btn_export_prj">${L('Export')} ${L('Project')}</button>
         <button class="button is-small" id="btn_import_prj">${L('Import')} ${L('Project')}</button> &nbsp;|&nbsp;
@@ -256,5 +257,5 @@
 </body>
 <script src="./libs/html5sortable-3dac3ba.min.js" defer></script>
 <script src="./libs/msgpack-ygoe-9045d01.min.js" defer></script>
-<script type="module" src="./index.js"></script>
+<script type="module" src="./index.js?v=__V__"></script>
 </html>

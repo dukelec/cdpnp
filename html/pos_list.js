@@ -4,11 +4,11 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './utils/lang.js'
-import { csv_parser, read_file, readable_float } from './utils/helper.js';
-import { set_motor_pos, pcb2xyz } from './dev_cmd.js';
-import { csa, db } from './index.js';
-import { disable_goto_btn, offset_apply } from './input_ctrl.js';
+import { L } from './utils/lang.js?v=__V__';
+import { csv_parser, read_file, readable_float } from './utils/helper.js?v=__V__';
+import { set_motor_pos, pcb2xyz } from './dev_cmd.js?v=__V__';
+import { csa, db } from './index.js?v=__V__';
+import { disable_goto_btn, offset_apply } from './input_ctrl.js?v=__V__';
 
 
 function get_comp_values(comp)

@@ -11,14 +11,12 @@
 """
 
 import sys, os, _thread
-import struct, re
-from time import sleep
-import copy
-import asyncio, aiohttp, websockets
+import struct
+import asyncio
 import math
 import numpy as np
 from scipy.optimize import fsolve
-from cd_ws import CDWebSocket, CDWebSocketNS
+from cd_ws import CDWebSocket
 from web_serve import ws_ns, start_web
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'pycdnet'))
@@ -43,7 +41,7 @@ if args.get("--verbose", "-v") != None:
     logger_init(logging.VERBOSE)
 elif args.get("--debug", "-d") != None:
     logger_init(logging.DEBUG)
-elif args.get("--info", "-i") != None:
+else:
     logger_init(logging.INFO)
 
 logging.getLogger('websockets').setLevel(logging.WARNING)
@@ -94,114 +92,122 @@ def update_coeff():
 
 
 async def dev_service():
-    global coeff, fiducial_pcb, fiducial_cam
-    
     sock = CDWebSocket(ws_ns, 'dev')
     while True:
         dat, src = await sock.recvfrom()
         logger.debug(f'dev ser: {dat}')
-        
-        if dat['action'] == 'get_motor_pos':
-            logger.info('get_motor_pos')
-            p = load_pos() if dev else [0, 0, 0, 0]
-            await sock.sendto(p, src)
-        
-        elif dat['action'] == 'set_motor_pos':
-            logger.info('set_motor_pos')
-            if dev:
-                goto_pos(dat['pos'], dat['wait'], dat['speed'])
-            await sock.sendto('succeeded', src)
-        
-        elif dat['action'] == 'get_pump_hw_ver':
-            logger.info(f"get_pump_hw_ver: {xyz['pump_hw_ver']}")
-            await sock.sendto(xyz['pump_hw_ver'], src)
-        
-        elif dat['action'] == 'get_pump_pressure':
-            logger.info(f"get_pump_pressure")
-            pressure = 0.0
-            if dev:
-                pressure = get_pump_pressure()
-            await sock.sendto(pressure, src)
-        
-        elif dat['action'] == 'set_pump':
-            logger.info(f"set_pump {dat['val']}")
-            if dev:
-                set_pump(dat['val'])
-            await sock.sendto('succeeded', src)
-        
-        elif dat['action'] == 'set_camera':
-            logger.info(f"set_camera {dat['val']}")
-            if dev:
-                rx = cd_reg_rw(f"00:00:2{cv_dat['dev']}", 0x005f, struct.pack("<B", 255 if dat['val'] else 0))
-                print('set cam ret: ' + rx.hex())
-            await sock.sendto('succeeded', src)
-        
-        elif dat['action'] == 'set_camera_cfg':
-            logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}, light: {dat['light1']}_{dat['light2']}, expos: {dat['expos']}")
-            cv_dat['dev'] = dat['dev']
-            cv_dat['detect'] = dat['detect']
+        try:
+            await dev_handle(sock, dat, src)
+        except Exception as err: # one bad request must not take the service down with it
+            logger.error(f'dev ser: {dat.get("action") if isinstance(dat, dict) else dat}: {err!r}')
+            await sock.sendto(f'err: dev: {err}', src)
+
+
+async def dev_handle(sock, dat, src):
+    global coeff, fiducial_pcb, fiducial_cam
+    
+    if dat['action'] == 'get_motor_pos':
+        logger.info('get_motor_pos')
+        p = load_pos() if dev else [0, 0, 0, 0]
+        await sock.sendto(p, src)
+    
+    elif dat['action'] == 'set_motor_pos':
+        logger.info('set_motor_pos')
+        if dev:
+            goto_pos(dat['pos'], dat['wait'], dat['speed'])
+        await sock.sendto('succeeded', src)
+    
+    elif dat['action'] == 'get_pump_hw_ver':
+        logger.info(f"get_pump_hw_ver: {xyz['pump_hw_ver']}")
+        await sock.sendto(xyz['pump_hw_ver'], src)
+    
+    elif dat['action'] == 'get_pump_pressure':
+        logger.info(f"get_pump_pressure")
+        pressure = 0.0
+        if dev:
+            pressure = get_pump_pressure()
+        await sock.sendto(pressure, src)
+    
+    elif dat['action'] == 'set_pump':
+        logger.info(f"set_pump {dat['val']}")
+        if dev:
+            set_pump(dat['val'])
+        await sock.sendto('succeeded', src)
+    
+    elif dat['action'] == 'set_camera':
+        logger.info(f"set_camera {dat['val']}")
+        if dev:
+            rx = cd_reg_rw(f"00:00:2{cv_dat['dev']}", 0x005f, struct.pack("<B", 255 if dat['val'] else 0))
+            logger.info('set cam ret: ' + rx.hex())
+        await sock.sendto('succeeded', src)
+    
+    elif dat['action'] == 'set_camera_cfg':
+        logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}, light: {dat['light1']}_{dat['light2']}, expos: {dat['expos']}")
+        cv_dat['dev'] = dat['dev']
+        cv_dat['detect'] = dat['detect']
+        if dev:
             rx = cd_reg_rw(f"00:00:21", 0x0069, struct.pack("<b", 1 if dat['light1'] else 0))
-            print('set cam_light1 ret: ' + rx.hex())
+            logger.info('set cam_light1 ret: ' + rx.hex())
             rx = cd_reg_rw(f"00:00:22", 0x0069, struct.pack("<b", 1 if dat['light2'] else 0))
-            print('set cam_light2 ret: ' + rx.hex())
+            logger.info('set cam_light2 ret: ' + rx.hex())
             rx = cd_reg_rw(f"00:00:2{cv_dat['dev']}", 0x0044, struct.pack("<H", dat['expos']))
-            print('set exposure ret: ' + rx.hex())
-            await sock.sendto('succeeded', src)
-        
-        elif dat['action'] == 'get_camera_cfg':
-            logger.info('get_camera_cfg')
-            rx0 = cd_reg_rw(f"00:00:2{cv_dat['dev']}", 0x005f, read=1) if dev else bytes([0x00, 0x00])
-            print('get_camera_cfg ret: ' + rx0.hex())
-            rx1 = cd_reg_rw(f"00:00:21", 0x0069, read=1) if dev else bytes([0x00, 0x00])
-            print('get_camera_light1 ret: ' + rx1.hex())
-            rx2 = cd_reg_rw(f"00:00:22", 0x0069, read=1) if dev else bytes([0x00, 0x00])
-            print('get_camera_light2 ret: ' + rx2.hex())
-            await sock.sendto({'enable': rx0[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect'], 'light1': rx1[1], 'light2': rx2[1]}, src)
-        
-        elif dat['action'] == 'set_vision_cfg':
-            logger.info(f"set_vision_cfg nozzle_thresh: {dat['nozzle_thresh']}, debug: {dat['debug']}")
-            cv_dat['nozzle_thresh'] = dat['nozzle_thresh']
-            cv_dat['debug'] = dat['debug']
-            await sock.sendto('succeeded', src)
-        
-        elif dat['action'] == 'update_camera_bg':
-            logger.info(f"update_camera_bg...")
-            cv_dat['bg_capture'] = True
-            await sock.sendto('succeeded', src)
-        
-        elif dat['action'] == 'remove_camera_bg':
-            logger.info(f"remove_camera_bg...")
-            cv_dat['bg_img'] = None
-            if os.path.exists(f'{cur_path}/tmp/bg_invert.png'):
-                os.remove(f'{cur_path}/tmp/bg_invert.png')
-            await sock.sendto('succeeded', src)
-        
-        elif dat['action'] == 'pcb2xyz':
-            logger.info(f"pcb2xyz")
-            fiducial_pcb = dat['pcb']
-            fiducial_cam = dat['cam']
-            update_coeff()
-            p_xy = pcb2xyz(coeff, (dat['x'], dat['y']))
-            await sock.sendto(p_xy, src)
-        
-        elif dat['action'] == 'get_cv_cur':
-            logger.info(f"get_cv_cur")
-            await sock.sendto(cv_dat['cur'], src)
-        
-        elif dat['action'] == 'wait_stop':
-            logger.info(f"wait_stop")
-            if dev:
-                wait_stop()
-            await sock.sendto('succeeded', src)
-        
-        elif dat['action'] == 'enable_force':
-            logger.info(f"enable_force")
-            if dev:
-                enable_force()
-            await sock.sendto('succeeded', src)
-        
-        else:
-            await sock.sendto('err: dev: unknown cmd', src)
+            logger.info('set exposure ret: ' + rx.hex())
+        await sock.sendto('succeeded', src)
+    
+    elif dat['action'] == 'get_camera_cfg':
+        logger.info('get_camera_cfg')
+        rx0 = cd_reg_rw(f"00:00:2{cv_dat['dev']}", 0x005f, read=1) if dev else bytes([0x00, 0x00])
+        logger.info('get_camera_cfg ret: ' + rx0.hex())
+        rx1 = cd_reg_rw(f"00:00:21", 0x0069, read=1) if dev else bytes([0x00, 0x00])
+        logger.info('get_camera_light1 ret: ' + rx1.hex())
+        rx2 = cd_reg_rw(f"00:00:22", 0x0069, read=1) if dev else bytes([0x00, 0x00])
+        logger.info('get_camera_light2 ret: ' + rx2.hex())
+        await sock.sendto({'enable': rx0[1], 'dev': cv_dat['dev'], 'detect': cv_dat['detect'], 'light1': rx1[1], 'light2': rx2[1]}, src)
+    
+    elif dat['action'] == 'set_vision_cfg':
+        logger.info(f"set_vision_cfg nozzle_thresh: {dat['nozzle_thresh']}, debug: {dat['debug']}")
+        cv_dat['nozzle_thresh'] = dat['nozzle_thresh']
+        cv_dat['debug'] = dat['debug']
+        await sock.sendto('succeeded', src)
+    
+    elif dat['action'] == 'update_camera_bg':
+        logger.info(f"update_camera_bg...")
+        cv_dat['bg_capture'] = True
+        await sock.sendto('succeeded', src)
+    
+    elif dat['action'] == 'remove_camera_bg':
+        logger.info(f"remove_camera_bg...")
+        cv_dat['bg_img'] = None
+        if os.path.exists(f'{cur_path}/tmp/bg_invert.png'):
+            os.remove(f'{cur_path}/tmp/bg_invert.png')
+        await sock.sendto('succeeded', src)
+    
+    elif dat['action'] == 'pcb2xyz':
+        logger.info(f"pcb2xyz")
+        fiducial_pcb = dat['pcb']
+        fiducial_cam = dat['cam']
+        update_coeff()
+        p_xy = pcb2xyz(coeff, (dat['x'], dat['y']))
+        await sock.sendto(p_xy, src)
+    
+    elif dat['action'] == 'get_cv_cur':
+        logger.info(f"get_cv_cur")
+        await sock.sendto(cv_dat['cur'], src)
+    
+    elif dat['action'] == 'wait_stop':
+        logger.info(f"wait_stop")
+        if dev:
+            wait_stop()
+        await sock.sendto('succeeded', src)
+    
+    elif dat['action'] == 'enable_force':
+        logger.info(f"enable_force")
+        if dev:
+            enable_force()
+        await sock.sendto('succeeded', src)
+    
+    else:
+        await sock.sendto('err: dev: unknown cmd', src)
 
 
 async def open_brower():

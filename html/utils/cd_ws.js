@@ -4,7 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { Queue } from './helper.js'
+import { Queue } from './helper.js?v=__V__'
 
 // packet format:
 //   {

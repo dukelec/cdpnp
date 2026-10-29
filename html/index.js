@@ -4,15 +4,15 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './utils/lang.js'
-import { sleep, blob2dat, cpy, deep_merge } from './utils/helper.js';
-import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js';
-import { Idb } from './utils/idb.js';
+import { L } from './utils/lang.js?v=__V__';
+import { sleep, blob2dat, cpy, deep_merge } from './utils/helper.js?v=__V__';
+import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js?v=__V__';
+import { Idb } from './utils/idb.js?v=__V__';
 import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_comp_values, pos_to_page,
-         set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js';
-import { input_init, csa_to_page_input } from './input_ctrl.js';
+         set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js?v=__V__';
+import { input_init, csa_to_page_input } from './input_ctrl.js?v=__V__';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, get_pump_hw_ver, check_suck_pressure, set_pump, pcb2xyz,
-         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg } from './dev_cmd.js';
+         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg } from './dev_cmd.js?v=__V__';
 
 let csa_dft = {
     cur_pos: [0, 0, 0, 0],
@@ -63,6 +63,14 @@ let csa_need_save = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'comp_search', 'cam
                      'offset_config', 'pld_search', 'pld_base_z', 'pld_comp_offset', 'pld_comp_space', 'pld_start_at', 'pld_tgt_grid', 'pld_rotate', 'pld_enable'];
 let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'offset_config'];
 let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
+
+const WS_CLOSE_DUPLICATE = 4001; // server close code: the page is already opened in another window
+
+const VERSION = 'v3.13';    // shown in the title, web_serve.py reads it from here
+// replaced by web_serve.py with "<VERSION>-<hash of all own front end files>", the same
+// string the ?v= of every own js url carries, so a changed front end means changed urls
+// and the browser is bound to fetch the new files
+const ASSET_VER = '__V__';
 
 let db = null;
 let ws_ns = new CDWebSocketNS('/');
@@ -442,8 +450,21 @@ document.getElementById('btn_stop').onclick = function() {
 };
 
 
+// grey the page out and say why: the backend is gone, or this page is a duplicate
+function ws_closed(evt) {
+    document.body.style.backgroundColor = "gray";
+    let banner = document.getElementById('ws_banner');
+    if (evt && evt.code == WS_CLOSE_DUPLICATE)
+        banner.innerText = L('The page is already opened in another window, only one page is allowed.') + ' ' +
+                           L('Close this window and use the existing one. (If the existing one was just closed, wait a few seconds and reload.)');
+    else
+        banner.innerText = L('WebSocket disconnected') + ': ' +
+                           L('The backend may have exited or the connection was lost, please check the backend log and reload the page.');
+    banner.style.display = 'block';
+}
+
 function init_ws() {
-    let ws_url = 'ws://' + window.location.hostname + ':8900';
+    let ws_url = `ws://${window.location.hostname}:${window.location.port}/`;
     let ws = new WebSocket(ws_url);
     
     ws.onopen = async function(evt) {
@@ -457,23 +478,30 @@ function init_ws() {
         let dat = await blob2dat(evt.data);
         var msg = msgpack.deserialize(dat);
         //console.log("Received dat", msg);
-        var sock = ws_ns.sockets[msg['dst'][1]];
-        sock.recv_q.put([msg['dat'], msg['src']]);
+        if (msg['dst'][1] in ws_ns.sockets) {
+            let sock = ws_ns.sockets[msg['dst'][1]];
+            sock.recv_q.put([msg['dat'], msg['src']]);
+        } else {
+            console.log("ws drop msg:", msg);
+        }
     }
     ws.onerror = function(evt) {
         console.log("ws onerror: ", evt);
-        document.body.style.backgroundColor = "gray";
     }
     ws.onclose = function(evt) {
         delete ws_ns.connections['server'];
-        console.log('ws disconnected');
-        document.body.style.backgroundColor = "gray";
+        console.log('ws disconnected', evt.code, evt.reason);
+        ws_closed(evt);
     }
 }
 
 
 window.addEventListener('load', async function() {
     console.log("load app");
+    let ver = ASSET_VER.startsWith(`${VERSION}-`) ? ASSET_VER : VERSION;  // full one only when served
+    document.title = `CDPNP Tools - ${VERSION}`;
+    document.getElementById('version').innerText = VERSION;
+    document.getElementById('version').title = ver;
     
     // apply translation
     for (let tag of ['button', 'span', 'option', 'td']) {

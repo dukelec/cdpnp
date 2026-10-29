@@ -4,13 +4,13 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './utils/lang.js'
-import { readable_float, sleep } from './utils/helper.js';
+import { L } from './utils/lang.js?v=__V__';
+import { readable_float, sleep } from './utils/helper.js?v=__V__';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, check_suck_pressure, set_pump, get_cv_cur,
-         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, set_vision_cfg } from './dev_cmd.js';
-import { set_step, get_step_safe, set_comp_search, get_comp_search } from './pos_list.js';
-import { csa_to_page_input, input_change } from './input_ctrl.js';
-import { csa, cal_grab_ofs, rotate_vector } from './index.js';
+         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, set_vision_cfg } from './dev_cmd.js?v=__V__';
+import { set_step, get_step_safe, set_comp_search, get_comp_search } from './pos_list.js?v=__V__';
+import { csa_to_page_input, input_change } from './input_ctrl.js?v=__V__';
+import { csa, cal_grab_ofs, rotate_vector } from './index.js?v=__V__';
 
 
 document.getElementById('btn_cali_offset').onclick = async function() {

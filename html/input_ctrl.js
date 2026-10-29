@@ -4,13 +4,13 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './utils/lang.js'
-import { read_file, download, readable_float, cpy, sleep, wildcard_test } from './utils/helper.js';
-import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js';
-import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs } from './index.js';
-import { pld_csa_to_page, pld_csa_from_page } from './preload_ctrl.js';
-import { pos_to_page, pos_from_page } from './pos_list.js';
-import { } from './calibration.js';
+import { L } from './utils/lang.js?v=__V__';
+import { read_file, download, readable_float, cpy, sleep, wildcard_test } from './utils/helper.js?v=__V__';
+import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js?v=__V__';
+import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs } from './index.js?v=__V__';
+import { pld_csa_to_page, pld_csa_from_page } from './preload_ctrl.js?v=__V__';
+import { pos_to_page, pos_from_page } from './pos_list.js?v=__V__';
+import { } from './calibration.js?v=__V__';
 
 
 function disable_goto_btn(val) {

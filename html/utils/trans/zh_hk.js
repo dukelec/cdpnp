@@ -132,7 +132,13 @@ let trans_zh_hk = {
     'Distance from the camera center to the nozzle rotation center': '相機中心 到 吸嘴旋轉中心 的位移',
     'Offset from the nozzle rotation center to nozzle at 0 degrees': '吸嘴旋轉中心 到 吸嘴位於 0 度時的偏移',
     'Height of nozzle to target when focusing (better not modify this)': '相機對焦時，吸嘴到目標的高度 (建議不要修改)',
-    'Fiducial coordinates in PCB file': '定位點在 PCB 軟件中的座標'
+    'Fiducial coordinates in PCB file': '定位點在 PCB 軟件中的座標',
+    
+    // websocket banner
+    'The page is already opened in another window, only one page is allowed.': '頁面已在其他窗口打開中，只能打開一個頁面。',
+    'Close this window and use the existing one. (If the existing one was just closed, wait a few seconds and reload.)': '請關閉本窗口，使用已打開的窗口。（如果已打開的窗口剛剛關閉，請等幾秒後刷新本頁。）',
+    'WebSocket disconnected': 'WebSocket 已斷開',
+    'The backend may have exited or the connection was lost, please check the backend log and reload the page.': '後台程序可能已退出或連接已斷開，請檢查後台日誌後刷新頁面。'
 };
 
 export { trans_zh_hk };

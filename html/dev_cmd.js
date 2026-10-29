@@ -4,10 +4,10 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './utils/lang.js'
-import { sleep } from './utils/helper.js';
-import { csa_to_page_pos } from './input_ctrl.js';
-import { csa, cmd_sock } from './index.js';
+import { L } from './utils/lang.js?v=__V__';
+import { sleep } from './utils/helper.js?v=__V__';
+import { csa_to_page_pos } from './input_ctrl.js?v=__V__';
+import { csa, cmd_sock } from './index.js?v=__V__';
 
 
 function update_aux() {

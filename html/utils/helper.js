@@ -66,13 +66,15 @@ function dat2hex(dat, join='', le=false) {
 
 function hex2dat(hex, le=false) {
     hex = hex.replace('0x', '').replace(/\s/g,'')
-    let ret = new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    let ret = new Uint8Array((hex.match(/.{1,2}/g) || []).map(byte => parseInt(byte, 16)));
     if (le)
         return ret.reverse();
     return ret;
 }
 
 function dat2str(dat) {
+    if (dat.indexOf(0) >= 0)
+        dat = dat.slice(0, dat.indexOf(0));
     return new TextDecoder().decode(dat);
 }
 
@@ -82,8 +84,11 @@ function str2dat(str) {
 }
 
 function val2hex(val, fixed=4, prefix=false, upper=false, float=false) {
-    let sign = Math.sign(val);
-    val = Math.abs(val);
+    let sign = 1;
+    if (val < 0) {
+        sign = -1;
+        val = -val;
+    }
     let str = upper ? val.toString(16).toUpperCase() : val.toString(16);
     let arr = str.split('.');
     if (arr[0].length < fixed)
@@ -110,16 +115,20 @@ function cpy(dst, src, list, map = {}) {
     }
 }
 
+// Each get() waits on an entry of its own, so a second get() on the same queue does not
+// take the place of the first: with a single wakeup slot the first one was left waiting for
+// good, and its timeout then fired on a slot that was no longer there.
 class Queue {
     constructor() {
         this.fifo = [];
-        this.wakeup = null;
+        this.waiters = [];  // oldest first, each {wake, timer}
     }
     
     put(t) {
         this.fifo.push(t);
-        if (this.wakeup)
-            this.wakeup();
+        let w = this.waiters.shift();
+        if (w)
+            w.wake();
     }
     
     async get(timeout=null) {
@@ -128,30 +137,34 @@ class Queue {
         if (timeout == 0)
             return null;
         
-        let p = new Promise(resolve => { this.wakeup = resolve; });
-        let t;
+        let w = { timer: null };
+        let p = new Promise(resolve => {
+            w.wake = () => {
+                clearTimeout(w.timer);
+                let i = this.waiters.indexOf(w);
+                if (i >= 0)
+                    this.waiters.splice(i, 1);
+                resolve();
+            };
+        });
         if (timeout)
-            t = setTimeout(() => { this.wakeup(); }, timeout, null); // unit: ms
+            w.timer = setTimeout(w.wake, timeout); // unit: ms
+        this.waiters.push(w);
         
         await p;
         
-        this.wakeup = null;
-        if (timeout)
-            clearTimeout(t);
         if (this.fifo.length)
             return this.fifo.shift();
         return null;
     }
     
-    // now some utilities:
-    size() {
+    qsize() {
         return this.fifo.length;
     }
     flush() {
         this.fifo = [];
-        if (this.wakeup)
-            this.wakeup();
-        this.wakeup = null;
+        for (let w of this.waiters.slice()) // every waiter gets a null, as a timeout would
+            w.wake();
     }
 }
 

@@ -41,6 +41,14 @@ class CDWebSocket():
         else:
             return 'no route'
     
+    async def broadcast(self, dat, port):
+        # send dat to the same port of all connected pages
+        for path in list(self.ns.connections.keys()):
+            try:
+                await self.sendto(dat, (path, port))
+            except Exception:
+                pass
+    
     async def recvfrom(self, timeout=None):
         # throw asyncio.TimeoutError if timeout
         return await asyncio.wait_for(self.recv_q.get(), timeout=timeout)
