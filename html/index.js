@@ -451,17 +451,39 @@ document.getElementById('btn_stop').onclick = function() {
 };
 
 
-// grey the page out and say why: the backend is gone, or this page is a duplicate
+// a notice that sticks to the top of the page, over the content, as cdbus_gui shows it
+function show_banner(id, html, cls='is-danger') {
+    let elem = document.getElementById(id);
+    if (!elem) {
+        let box = document.getElementById('banner_box');
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'banner_box';
+            box.style.cssText = 'position: sticky; top: 0; z-index: 100;';
+            document.body.prepend(box);
+        }
+        elem = document.createElement('div');
+        elem.id = id;
+        // the text color is what bulma 1.0 gives cdbus_gui (hsl(348, 100%, 5%)), bulma 0.9 would make it white
+        elem.style.cssText = 'margin: 0; border-radius: 0; white-space: pre-wrap; ' +
+                             'border-bottom: 1px solid #0000001a; color: hsl(348, 100%, 5%); ' +
+                             'background-color: #F5B7B180; backdrop-filter: blur(8px); ' +
+                             '-webkit-backdrop-filter: blur(8px);';
+        box.prepend(elem);
+    }
+    elem.className = `notification ${cls}`;
+    elem.innerHTML = html;
+    elem.style.display = html ? '' : 'none';
+}
+
+// say why the page lost its backend: it is gone, or this page is a duplicate
 function ws_closed(evt) {
-    document.body.style.backgroundColor = "gray";
-    let banner = document.getElementById('ws_banner');
     if (evt && evt.code == WS_CLOSE_DUPLICATE)
-        banner.innerText = L('The page is already opened in another window, only one page is allowed.') + ' ' +
-                           L('Close this window and use the existing one. (If the existing one was just closed, wait a few seconds and reload.)');
+        show_banner('ws_banner', `<b>${L('The page is already opened in another window, only one page is allowed.')}</b>\n` +
+                    L('Close this window and use the existing one. (If the existing one was just closed, wait a few seconds and reload.)'));
     else
-        banner.innerText = L('WebSocket disconnected') + ': ' +
-                           L('The backend may have exited or the connection was lost, please check the backend log and reload the page.');
-    banner.style.display = 'block';
+        show_banner('ws_banner', `<b>${L('WebSocket disconnected')}</b>\n` +
+                    L('The backend may have exited or the connection was lost, please check the backend log and reload the page.'));
 }
 
 function init_ws() {
@@ -537,5 +559,5 @@ window.addEventListener('load', async function() {
 });
 
 export {
-    csa_dft, csa, cmd_sock, db, ws_ns, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs, rotate_vector, VERSION
+    csa_dft, csa, cmd_sock, db, ws_ns, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs, rotate_vector, VERSION, show_banner
 };
