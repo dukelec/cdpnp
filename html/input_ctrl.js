@@ -592,5 +592,5 @@ function input_init() {
 }
 
 export {
-    input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input, disable_goto_btn, offset_apply, input_change
+    input_init, csa_to_page_pos, csa_to_page_input, csa_from_page_input, disable_goto_btn, offset_apply, input_change, save_cfg
 };

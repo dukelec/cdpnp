@@ -72,12 +72,23 @@ In practice, only components of the same model can be placed at one time.
 
 #### Dependence:
 Python version >= 3.8  
-`pip3 install websockets pyserial u-msgpack-python opencv-python scipy`
+`pip3 install websockets pyserial u-msgpack-python aiohttp opencv-python scipy`
 
 #### Usage:
 Run `pnp_main.py` or `start.sh`, then open the following URL in your web browser: http://localhost:8900
 
 Test without hardware: `./pnp_main.py --debug --dev None`
+
+
+### External API
+
+The backend also serves an HTTP API on `localhost:8901` for scripts and AI
+agents: move the machine, drive the pump and the cameras, fetch the camera
+frames (raw and annotated) and what the vision code found in them, and reach
+the page's config, component list and run state. `GET http://localhost:8901/`
+prints the endpoint list, `tools/pnp_api.py` wraps it for python.
+
+See [doc/api.md](doc/api.md) for the endpoints and how to use them.
 
 App shortcuts: [doc/shortcuts.md](doc/shortcuts.md)
 

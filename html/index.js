@@ -13,6 +13,7 @@ import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_c
 import { input_init, csa_to_page_input } from './input_ctrl.js?v=__V__';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, get_pump_hw_ver, check_suck_pressure, set_pump, pcb2xyz,
          z_keep_high, enable_force, cam_comp_snap, set_camera_cfg } from './dev_cmd.js?v=__V__';
+import { init_api } from './api.js?v=__V__';
 
 let csa_dft = {
     cur_pos: [0, 0, 0, 0],
@@ -66,7 +67,7 @@ let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'comp_search', 'ca
 
 const WS_CLOSE_DUPLICATE = 4001; // server close code: the page is already opened in another window
 
-const VERSION = 'v3.13';    // shown in the title, web_serve.py reads it from here
+const VERSION = 'v3.14';    // shown in the title, web_serve.py reads it from here
 // replaced by web_serve.py with "<VERSION>-<hash of all own front end files>", the same
 // string the ?v= of every own js url carries, so a changed front end means changed urls
 // and the browser is bound to fetch the new files
@@ -473,6 +474,7 @@ function init_ws() {
         await get_motor_pos();
         await get_camera_cfg();
         csa.pump_hw_ver = await get_pump_hw_ver();
+        await init_api();   // the external api may now relay commands to this page
     }
     ws.onmessage = async function(evt) {
         let dat = await blob2dat(evt.data);
@@ -535,5 +537,5 @@ window.addEventListener('load', async function() {
 });
 
 export {
-    csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs, rotate_vector
+    csa_dft, csa, cmd_sock, db, ws_ns, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs, rotate_vector, VERSION
 };

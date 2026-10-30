@@ -6,7 +6,7 @@
 
 import sys, os, _thread
 import struct, queue, re
-from time import sleep
+from time import sleep, time
 
 from cdnet.utils.log import *
 from cdnet.dispatch import *
@@ -34,7 +34,15 @@ cv_dat = {
     'debug': False,
 
     'sock_pic': None,
-    'bad_cnt': 0    # broken jpg counter, for file name of tmp/bad_N.jpg
+    'bad_cnt': 0,   # broken jpg counter, for file name of tmp/bad_N.jpg
+
+    'expos': 20,    # last exposure written to the camera, for the api to read back
+
+    # the last frame, for the external api (api_serve.py): one dict swapped in whole, so a reader
+    # on another thread always sees a raw jpg, its annotated image and its detection together
+    #   {'seq': N, 'ts': time.time(), 'dev': 1 | 2, 'detect': str, 'raw': jpg bytes,
+    #    'img': annotated bgr ndarray, 'cur': [x, y, angle, dist] | None}
+    'last': None
 }
 
 
@@ -366,6 +374,10 @@ def pic_rx():
                     img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
                 else:
                     img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, markerSize=cam_height-20, thickness=1)
+
+                last = cv_dat['last']
+                cv_dat['last'] = {'seq': (last['seq'] + 1) if last else 1, 'ts': time(), 'dev': dev_idx,
+                                  'detect': detect, 'raw': rx_dat, 'img': img, 'cur': cv_dat['cur']}
 
                 if not cv_dat['img_queue'].full():
                     if not cv_dat['local']:

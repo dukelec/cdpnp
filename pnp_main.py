@@ -8,6 +8,12 @@
 
 """CDPNP GUI tool
 
+Args:
+  --help    | -h        # this help message
+  --verbose | -v        # debug level: verbose
+  --debug   | -d        # debug level: debug
+  --dev DEV             # serial port filter, default: the cdbus bridge (:574), None: no hardware
+  --api-port API_PORT   # external api (for scripts and ai agents), default: 8901, 0: disable
 """
 
 import sys, os, _thread
@@ -32,6 +38,7 @@ from pnp_xyz import *
 
 args = CdArgs()
 dev_str = args.get("--dev", dft=":574")
+api_port = int(args.get("--api-port", dft="8901"), 0)
 
 if args.get("--help", "-h") != None:
     print(__doc__)
@@ -145,6 +152,7 @@ async def dev_handle(sock, dat, src):
         logger.info(f"set_camera_cfg dev: {dat['dev']}, detect: {dat['detect']}, light: {dat['light1']}_{dat['light2']}, expos: {dat['expos']}")
         cv_dat['dev'] = dat['dev']
         cv_dat['detect'] = dat['detect']
+        cv_dat['expos'] = dat['expos']
         if dev:
             rx = cd_reg_rw(f"00:00:21", 0x0069, struct.pack("<b", 1 if dat['light1'] else 0))
             logger.info('set cam_light1 ret: ' + rx.hex())
@@ -223,6 +231,9 @@ def start_loop():
     asyncio.set_event_loop(loop)
     loop.create_task(start_web())
     loop.create_task(dev_service())
+    if api_port:
+        from api_serve import api_init
+        api_init(dev is not None, port=api_port)
     #csa['async_loop'].create_task(open_brower())
     logger.info('Please open url: http://localhost:8900')
     loop.run_forever()
