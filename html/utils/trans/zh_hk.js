@@ -7,6 +7,8 @@
 
 // cat zh_cn.js | cconv -f UTF8 -t UTF8-HK
 let trans_zh_hk = {
+    'Language': '語言',
+    'Auto': '自動',
     'Load': '加載',
     'Export': '導出',
     'Import': '導入',

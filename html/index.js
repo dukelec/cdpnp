@@ -4,7 +4,7 @@
  * Author: Duke Fong <d@d-l.io>
  */
 
-import { L } from './utils/lang.js?v=__V__';
+import { L, LANGS, lang_pref, set_lang } from './utils/lang.js?v=__V__';
 import { sleep, blob2dat, cpy, deep_merge } from './utils/helper.js?v=__V__';
 import { CDWebSocket, CDWebSocketNS } from './utils/cd_ws.js?v=__V__';
 import { Idb } from './utils/idb.js?v=__V__';
@@ -504,14 +504,22 @@ window.addEventListener('load', async function() {
     document.getElementById('version').title = ver;
     
     // apply translation
-    for (let tag of ['button', 'span', 'option', 'td']) {
+    for (let tag of ['button', 'span', 'option', 'td', 'div']) {
         let elems = document.getElementsByTagName(tag);
         for (let e of elems) {
-            e.innerHTML = eval("`" + e.innerHTML + "`");
             if (e.title)
                 e.title = eval("`" + e.title + "`");
+            if (tag == 'div')
+                continue;
+            e.innerHTML = eval("`" + e.innerHTML + "`");
         }
     }
+    // the language picker, '' follows the browser; L() is fixed when the modules load,
+    // so just remember the choice and reload the page
+    let lang_sel = document.getElementById('lang_sel');
+    lang_sel.innerHTML = LANGS.map(([v, t]) =>
+        `<option value="${v}" ${v == lang_pref() ? 'selected' : ''}>${v ? t : L('Auto')}</option>`).join('');
+    lang_sel.onchange = e => { set_lang(e.target.value); location.reload(); };
     
     db = await new Idb();
     init_ws();
