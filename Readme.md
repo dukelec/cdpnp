@@ -79,6 +79,10 @@ Run `pnp_main.py` or `start.sh`, then open the following URL in your web browser
 
 Test without hardware: `./pnp_main.py --debug --dev None`
 
+For Windows users without Python, `tools/build_win.sh` (run on Linux) makes `dist/cdpnp-<version>-win64.zip`:
+the embeddable Python with the dependencies and this tool. Unzip it anywhere and run `cdpnp.bat`,
+it opens the page in the browser by itself. Windows 10 or later, x64.
+
 
 ### External API
 
