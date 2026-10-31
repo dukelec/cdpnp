@@ -16,7 +16,7 @@ import { CDWebSocket } from './utils/cd_ws.js?v=__V__';
 import { csa, csa_need_save, ws_ns, VERSION } from './index.js?v=__V__';
 import { set_motor_pos, set_pump, set_camera_cfg, cam_comp_snap } from './dev_cmd.js?v=__V__';
 import { csa_to_page_input, input_change, save_cfg } from './input_ctrl.js?v=__V__';
-import { search_current_comp, select_comp, move_to_comp, get_comp_values, pos_from_page,
+import { search_current_comp, search_first_comp, select_comp, move_to_comp, get_comp_values, pos_from_page,
          set_board, get_board_safe, set_step, get_step_safe, get_comp_search } from './pos_list.js?v=__V__';
 import { cands_state, scale_info } from './comp_track.js?v=__V__';
 import { cali_scale } from './calibration.js?v=__V__';
@@ -172,8 +172,8 @@ async select(a) {
 async run() {
     if (elm('btn_run').disabled)
         throw new Error('already running');
-    if (!search_current_comp() && !Object.keys(pos_from_page()).length)
-        throw new Error('the component list is empty, load a csv first');
+    if (!search_current_comp() && !search_first_comp())
+        throw new Error('the component list is empty (or all deleted), load a csv first');
     if (!elm('camera_detect').value)
         throw new Error('the camera detect method is empty, set it first (POST /api/camera {"detect": "default"})');
     elm('btn_run').onclick();   // runs until the list is done, not awaited

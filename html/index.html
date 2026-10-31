@@ -15,6 +15,42 @@
 .content table tbody tr:last-child > td {
     border-bottom-width: 0;
 }
+/* the components list: tables in tables, a fixed width for every column (the first row of each table
+   sets them), and no padding around the inner tables, so that the columns line up with the head */
+#pos_table, #pos_table table {
+    table-layout: fixed;
+}
+#pos_table table {
+    width: 100%;
+}
+#pos_table td.nest_td {
+    padding: 0;
+}
+#pos_table .c_fp { width: 18em; }
+#pos_table .c_ofs { width: 12em; }
+#pos_table .c_val { width: 16em; }
+#pos_table .c_ref { width: 10em; }
+#pos_table .c_num { width: 7em; }
+#pos_table .c_del { width: 2.5em; }
+/* a deleted part keeps its row, hidden unless "Show deleted" is checked */
+#pos_list:not(.show_del) .list_comp_del,
+#pos_list:not(.show_del) .all_del {
+    display: none;
+}
+.list_comp_del > td:not(.del_td) {
+    color: #b5b5b5;
+    text-decoration: line-through;
+}
+.del_td a {
+    color: #b5b5b5;
+    cursor: pointer;
+}
+.del_td a:hover {
+    color: #ff3860;
+}
+.list_comp_del > .del_td a:hover, .all_del > .del_td a:hover {
+    color: #23d160;
+}
 </style>
 
 </head>
@@ -220,7 +256,9 @@
 
     <br>
     <div class="container">
-        <h1 class="title is-size-4"><span>${L('Components')}</span></h1>
+        <h1 class="title is-size-4"><span>${L('Components')}</span>
+            <label class="checkbox is-size-7 has-text-weight-normal" style="margin-left: 1em;"><input type="checkbox" id="show_del">
+                <span>${L('Show deleted')}</span> (<span id="del_cnt">0</span>)</label></h1>
         <span>
             ${L('Current')}: <span id="cur_progress">-- / --</span> &nbsp;|&nbsp;
                      <span id="cur_comp">-- -- --</span> <span id="cur_board">--</span> &nbsp;|&nbsp;
@@ -235,12 +273,13 @@
         <br>
         
         <div class="content" style="font-size: 12px;">
-              <table style="width: 80em;">
+              <table id="pos_table" style="width: 82em;">
                   <thead>
                       <tr>
-                          <td style="width: 20em;">${L('Footprint')}</td> <td>${L('Offset')}</td>
-                          <td style="width: 20em;">${L('Value')}</td> <td style="width: 10em;">${L('Reference')}</td>
-                          <td style="width: 7em;">X</td> <td style="width: 7em;">Y</td> <td style="width: 7em;">R</td>
+                          <td class="c_fp">${L('Footprint')}</td> <td class="c_ofs">${L('Offset')}</td>
+                          <td class="c_val">${L('Value')}</td> <td class="c_ref">${L('Reference')}</td>
+                          <td class="c_num">X</td> <td class="c_num">Y</td> <td class="c_num">R</td>
+                          <td class="c_del"></td> <td class="c_del"></td>
                       </tr>
                   </thead>
                   <tbody class="js-sortable-table" id="pos_list">

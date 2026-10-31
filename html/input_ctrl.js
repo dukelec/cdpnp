@@ -9,7 +9,7 @@ import { read_file, download, readable_float, cpy, sleep, wildcard_test } from '
 import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js?v=__V__';
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs } from './index.js?v=__V__';
 import { pld_csa_to_page, pld_csa_from_page } from './preload_ctrl.js?v=__V__';
-import { pos_to_page, pos_from_page } from './pos_list.js?v=__V__';
+import { pos_to_page, pos_from_page, pos_normalize } from './pos_list.js?v=__V__';
 import { scale_show, scale_reset, cands_draw } from './comp_track.js?v=__V__';
 import { } from './calibration.js?v=__V__';
 
@@ -508,7 +508,7 @@ document.getElementById('btn_import_prj').onclick = async function() {
 document.getElementById('btn_export_prj').onclick = async function() {
     let c = await db.get('tmp', 'csa');
     let l = await db.get('tmp', 'list');
-    let exp_dat = { version: 'cdpnp.prj v0', csa: {}, list: l};
+    let exp_dat = { version: 'cdpnp.prj v1', csa: {}, list: pos_normalize(l) };  // v1: the list in arrays
     cpy(exp_dat.csa, csa, csa_prj_export);
     console.info('export prj data:', exp_dat);
     let file_dat = JSON.stringify(exp_dat, null, 4);

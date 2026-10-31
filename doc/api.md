@@ -223,7 +223,10 @@ it resumes from a pause (the tray may have been changed meanwhile), when the
 model changes and when a search position is selected by hand.
 
 `GET /api/page/comps` is the component list loaded from the csv, grouped by
-footprint and value, each entry `[name, x, y, angle]` in pcb coordinates.
+footprint and value in the order of the page (the order the run goes):
+`[[footprint, [[value, [[name, x, y, angle], ...]], ...]], ...]`, x, y and
+angle in pcb coordinates. A part deleted on the page has a fifth item `true`,
+the run skips it and `select` does not take it.
 `POST /api/page/select` picks one, and with `"goto": true` moves the camera
 over its place on the current board, which is what clicking a component does.
 

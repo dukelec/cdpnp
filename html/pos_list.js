@@ -133,16 +133,19 @@ function search_first_comp()
 
 function get_comp_progress(comp)
 {
+    // the place of comp among the parts of its value left to place, the deleted ones not counted
     let progress = [0, 0];
-    let pos = pos_from_page();    
-    let parents = search_comp_parents(comp);
-    let comps = pos[parents[0]][parents[1]];
-    for (let i = 0; i < comps.length; i++) {
-        if (comp == comps[i][0]) {
-            progress[0] = i + 1;
+    let comp_elm = null;
+    for (let elm of document.getElementById('pos_list').getElementsByClassName('list_comp')) {
+        if (elm.querySelector('td').innerText == comp) {
+            comp_elm = elm;
             break;
         }
     }
+    if (!comp_elm)
+        return progress;
+    let comps = Array.from(comp_elm.closest('.list_value').getElementsByClassName('list_comp'));
+    progress[0] = comps.indexOf(comp_elm) + 1;
     progress[1] = comps.length;
     return progress;
 }
@@ -231,40 +234,57 @@ async function move_to_comp(comp) {
 window.move_to_comp = move_to_comp;
 
 
+// The list is [[footprint, [[value, [[name, x, y, angle, deleted], ...]], ...]], ...], deleted is
+// left out unless true. It used to be {footprint: {value: [...]}}, still taken here (an old saved list
+// or project file): the keys of an object do not keep the order the user sorts them in, any key that
+// looks like an integer ("100", "1206") always comes first, in numeric order.
+function pos_normalize(pos) {
+    if (!pos)
+        return [];
+    if (Array.isArray(pos))
+        return pos;
+    return Object.entries(pos).map(([footprint, values]) => [footprint, Object.entries(values)]);
+}
+
+// A deleted part keeps its row, with the class list_comp_del in place of list_comp: whatever looks
+// for the parts to place (the run, the progress, select) only sees list_comp, and Restore puts it
+// back where it was. The rows are hidden unless "Show deleted" is checked.
 function pos_to_page(pos) {
     let pos_list = document.getElementById('pos_list');
     pos_list.innerHTML = '';
     
-    for (let footprint in pos) {
+    for (let [footprint, values] of pos_normalize(pos)) {
         let html_value = '';
-        for (let value in pos[footprint]) {
+        for (let [value, comps] of values) {
             let html_comp = '';
-            for (let comp of pos[footprint][value]) {
+            for (let comp of comps) {
                 html_comp += `
-                    <tr class='list_comp' onclick=move_to_comp('${comp[0]}');>
-                        <td style="width: 10em;">${comp[0]}</td>
-                        <td style="width: 7em;">${readable_float(comp[1])}</td>
-                        <td style="width: 7em;">${readable_float(comp[2])}</td>
-                        <td style="width: 7em;">${readable_float(comp[3])}</td>
+                    <tr class='${comp[4] ? 'list_comp_del' : 'list_comp'}' onclick="comp_click(this, '${comp[0]}');">
+                        <td class="c_ref">${comp[0]}</td>
+                        <td class="c_num">${readable_float(comp[1])}</td>
+                        <td class="c_num">${readable_float(comp[2])}</td>
+                        <td class="c_num">${readable_float(comp[3])}</td>
+                        <td class="c_del del_td"><a onclick="comp_del_toggle(this, event);"></a></td>
                     </tr>`;
             }
             html_value += `
                 <tr class='list_value'>
-                    <td style="width: 20em;">${value}</td>
-                    <td>
+                    <td class="c_val">${value}</td>
+                    <td class="nest_td">
                         <table>
                             <tbody class="js-sortable-table">
                                 ${html_comp}
                             </tbody>
                         </table>
                     </td>
+                    <td class="c_del del_td"><a onclick="comp_del_toggle(this, event);"></a></td>
                 </tr>`;
         }
         let html = `
             <tr class='list_footprint'>
-                <td>${footprint}</td>
-                <td>--</td>
-                <td colspan="5">
+                <td class="c_fp">${footprint}</td>
+                <td class="c_ofs">--</td>
+                <td colspan="7" class="nest_td">
                     <table>
                         <tbody class="js-sortable-table">
                             ${html_value}
@@ -284,36 +304,93 @@ function pos_to_page(pos) {
         });
     }
     
+    del_refresh();
     offset_apply();
 }
 
 function pos_from_page() {
-    let pos = {};
+    let pos = [];
     let pos_list = document.getElementById('pos_list');
     let footprint_list = pos_list.getElementsByClassName('list_footprint');
     for (let footprint_elm of footprint_list) {
-        let footprint = footprint_elm.querySelector('td').innerText;
-        pos[footprint] = {};
+        let values = [];
         let value_list = footprint_elm.getElementsByClassName('list_value');
         for (let value_elm of value_list) {
-            let value = value_elm.querySelector('td').innerText;
-            pos[footprint][value] = [];
-            let comp_list = value_elm.getElementsByClassName('list_comp');
-            for (let comp_elm of comp_list) {
+            let comps = [];
+            for (let comp_elm of value_elm.querySelectorAll('.list_comp, .list_comp_del')) {
                 let comp_tds = comp_elm.querySelectorAll('td');
-                pos[footprint][value].push([comp_tds[0].innerText,
-                    Number(comp_tds[1].innerText), Number(comp_tds[2].innerText), Number(comp_tds[3].innerText)]);
+                let comp = [comp_tds[0].innerText,
+                    Number(comp_tds[1].innerText), Number(comp_tds[2].innerText), Number(comp_tds[3].innerText)];
+                if (comp_elm.classList.contains('list_comp_del'))
+                    comp.push(true);
+                comps.push(comp);
             }
+            values.push([value_elm.querySelector('td').innerText, comps]);
         }
+        pos.push([footprint_elm.querySelector('td').innerText, values]);
     }
     return pos;
 }
+
+// the delete / restore buttons, the rows and groups left with nothing to place hidden, and the count
+function del_refresh() {
+    let pos_list = document.getElementById('pos_list');
+    for (let elm of pos_list.querySelectorAll('.list_value, .list_footprint'))
+        elm.classList.toggle('all_del', !elm.getElementsByClassName('list_comp').length);
+    for (let elm of pos_list.querySelectorAll('.del_td > a')) {
+        let row = elm.closest('tr');
+        let del = row.classList.contains('list_comp') || (row.classList.contains('list_value') && !row.classList.contains('all_del'));
+        elm.innerText = del ? '✕' : '↺';
+        elm.title = row.classList.contains('list_value') ? (del ? L('Delete all of this value') : L('Restore all of this value'))
+                                                         : (del ? L('Delete') : L('Restore'));
+    }
+    let n = pos_list.getElementsByClassName('list_comp_del').length;
+    document.getElementById('del_cnt').innerText = n;
+    pos_list.classList.toggle('show_del', document.getElementById('show_del').checked);
+}
+
+window.comp_click = function(row, comp) {
+    if (row.classList.contains('list_comp'))
+        move_to_comp(comp);
+};
+
+// on a part: delete or restore it; on a value: delete all of its parts, or restore them all once none is left
+window.comp_del_toggle = function(btn, event) {
+    event.stopPropagation();
+    let row = btn.closest('tr');
+    let rows = row.classList.contains('list_value') ? Array.from(row.querySelectorAll('.list_comp, .list_comp_del')) : [row];
+    let del = rows.some(r => r.classList.contains('list_comp'));
+    let cur = search_current_comp();
+    let cur_row = cur ? rows.find(r => r.classList.contains('list_comp') && r.querySelector('td').innerText == cur) : null;
+    if (del && cur_row) {
+        // the run would lose its place: it finds the next part by the current one
+        if (document.getElementById('btn_run').disabled) {
+            alert(L('The run is on this part, select another part first'));
+            return;
+        }
+        let all = Array.from(document.getElementById('pos_list').getElementsByClassName('list_comp'));
+        let next = all.slice(all.indexOf(cur_row) + 1).find(r => !rows.includes(r));
+        select_comp(null);
+        for (let r of rows)
+            r.className = 'list_comp_del';
+        if (next)
+            select_comp(next.querySelector('td').innerText);
+    } else {
+        for (let r of rows)
+            r.className = del ? 'list_comp_del' : 'list_comp';
+        select_comp(search_current_comp());     // the progress and the next part change
+    }
+    del_refresh();
+    document.getElementById('btn_save_cfg').style.background = 'yellow';
+};
+
+document.getElementById('show_del').onchange = del_refresh;
 
 function csv_to_pos(csv)
 {
     let csv_list = csv_parser(csv);
     let ref_cnt = {};
-    let pos = {};
+    let pos = [];
     for (let row of csv_list) {
         console.log(row)
         if (!isFinite(row[5]) || row[0] === undefined)
@@ -333,15 +410,14 @@ function csv_to_pos(csv)
         if (row_[3] > 180.0)
             row_[3] = -(360 - row_[3]);
         
-        if (row[2] in pos) {
-            if (row[1] in pos[row[2]])
-                pos[row[2]][row[1]].push(row_);
-            else
-                pos[row[2]][row[1]] = [row_];
-        } else {
-            pos[row[2]] = {};
-            pos[row[2]][row[1]] = [row_];
-        }
+        // grouped in the order they first appear in the csv
+        let fp = pos.find(f => f[0] == row[2]);
+        if (!fp)
+            pos.push(fp = [row[2], []]);
+        let val = fp[1].find(v => v[0] == row[1]);
+        if (!val)
+            fp[1].push(val = [row[1], []]);
+        val[1].push(row_);
     }
     return pos;
 }
@@ -450,6 +526,6 @@ window.btn_select_board = async function (idx) {
 
 export {
     search_comp_parents, search_next_comp, search_current_comp, search_first_comp, select_comp, move_to_comp,
-    get_comp_values, pos_to_page, pos_from_page, csv_to_pos,
+    get_comp_values, pos_normalize, pos_to_page, pos_from_page, csv_to_pos,
     set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe
 };

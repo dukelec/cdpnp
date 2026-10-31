@@ -70,7 +70,7 @@ let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'cam_scale_samples
 
 const WS_CLOSE_DUPLICATE = 4001; // server close code: the page is already opened in another window
 
-const VERSION = 'v3.15';    // shown in the title, web_serve.py reads it from here
+const VERSION = 'v3.16';    // shown in the title, web_serve.py reads it from here
 // replaced by web_serve.py with "<VERSION>-<hash of all own front end files>", the same
 // string the ?v= of every own js url carries, so a changed front end means changed urls
 // and the browser is bound to fetch the new files

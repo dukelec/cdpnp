@@ -151,7 +151,8 @@ class PnpApi:
         return self._req('POST', '/page/cfg', None, {'vals': vals, 'save': save})
 
     def comps(self):
-        """{'list': {footprint: {value: [[name, x, y, angle], ...]}}, 'comp': selected, 'board'}"""
+        """{'list': [[footprint, [[value, [[name, x, y, angle(, True if deleted)], ...]], ...]], ...],
+            'comp': selected, 'board'}, in the order of the page"""
         return self._req('GET', '/page/comps')
 
     def select(self, comp, goto=False):

@@ -116,6 +116,12 @@ let trans_zh_cn = {
     'Clear': '清除',
     
     'Components': '元件列表',
+    'Show deleted': '显示已删除',
+    'Delete': '删除',
+    'Restore': '恢复',
+    'Delete all of this value': '删除这个值的全部元件',
+    'Restore all of this value': '恢复这个值的全部元件',
+    'The run is on this part, select another part first': '正在运行这个元件，请先选择其它元件',
     'Current': '当前',
     'Height': '高度',
     'Tray comps': '料盘元件',

@@ -116,6 +116,12 @@ let trans_zh_hk = {
     'Clear': '清除',
     
     'Components': '元件列表',
+    'Show deleted': '顯示已刪除',
+    'Delete': '刪除',
+    'Restore': '恢復',
+    'Delete all of this value': '刪除這個值的全部元件',
+    'Restore all of this value': '恢復這個值的全部元件',
+    'The run is on this part, select another part first': '正在運行這個元件，請先選擇其它元件',
     'Current': '當前',
     'Height': '高度',
     'Tray comps': '料盤元件',
