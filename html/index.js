@@ -12,8 +12,10 @@ import { search_comp_parents, search_next_comp, select_comp, move_to_comp, get_c
          set_board, get_board_safe, set_step, get_step_safe, set_comp_search, get_comp_search, get_comp_safe } from './pos_list.js?v=__V__';
 import { input_init, csa_to_page_input } from './input_ctrl.js?v=__V__';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, get_pump_hw_ver, check_suck_pressure, set_pump, pcb2xyz,
-         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg } from './dev_cmd.js?v=__V__';
+         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, get_cv_comps } from './dev_cmd.js?v=__V__';
 import { init_api } from './api.js?v=__V__';
+import { cands_scan, cands_next, cands_cur, cands_snapped, cands_lost, cands_fail, cands_picked, cands_clear,
+         cands_reset_ref } from './comp_track.js?v=__V__';
 
 let csa_dft = {
     cur_pos: [0, 0, 0, 0],
@@ -23,6 +25,7 @@ let csa_dft = {
     grab_ofs:    [33.53, 6.45], // camera to grab rotation center
     nozzle_cali: [-0.1, -0.05], // error vector at 0 degree
     cam_angle: [0, 0],          // cam1 and cam2 err angle
+    cam_scale_samples: [],      // [pixel radius, mm] pairs measured by the snaps, the mm per pixel of cam1 (comp_track.js)
     comp_search: [[55, 142], [65, 142]],
     cam_dz: 7,
     comp_base_z: -89.9,
@@ -59,15 +62,15 @@ let csa_dft = {
 let csa = {};
 deep_merge(csa, csa_dft);
 
-let csa_need_save = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'fiducial_pcb', 'fiducial_cam',
-                     'user_pos', 'motor_speed', 'nozzle_expos', 'nozzle_thresh',
+let csa_need_save = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'cam_scale_samples', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z',
+                     'fiducial_pcb', 'fiducial_cam', 'user_pos', 'motor_speed', 'nozzle_expos', 'nozzle_thresh',
                      'offset_config', 'pld_search', 'pld_base_z', 'pld_comp_offset', 'pld_comp_space', 'pld_start_at', 'pld_tgt_grid', 'pld_rotate', 'pld_enable'];
 let csa_prj_export = ['pcb_base_z', 'fiducial_pcb', 'fiducial_cam', 'offset_config'];
-let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
+let csa_cfg_export = ['grab_ofs', 'nozzle_cali', 'cam_angle', 'cam_scale_samples', 'comp_search', 'cam_dz', 'comp_base_z', 'pcb_base_z', 'user_pos'];
 
 const WS_CLOSE_DUPLICATE = 4001; // server close code: the page is already opened in another window
 
-const VERSION = 'v3.14';    // shown in the title, web_serve.py reads it from here
+const VERSION = 'v3.15';    // shown in the title, web_serve.py reads it from here
 // replaced by web_serve.py with "<VERSION>-<hash of all own front end files>", the same
 // string the ?v= of every own js url carries, so a changed front end means changed urls
 // and the browser is bound to fetch the new files
@@ -124,6 +127,8 @@ document.getElementById('btn_run').onclick = async function() {
     document.getElementById('btn_stop').disabled = false;
     csa.stop = false;
     let parents_pre = null;
+    cands_clear();      // what the tray looked like before this run is not to be trusted,
+    cands_reset_ref();  // nor is the size of whatever the last run picked
     
     let z_middle = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
     if (csa.cur_pos[2] < z_middle) {
@@ -148,8 +153,10 @@ document.getElementById('btn_run').onclick = async function() {
         if (parents_pre && parents_pre[0] != parents[0]) {
             csa.comp_height = null;
             document.getElementById('cur_height').innerText = `--`;
+            cands_reset_ref();
         }
         if (parents_pre && (parents_pre[0] != parents[0] || parents_pre[1] != parents[1])) {
+            cands_clear();  // the user changes the tray now
             document.getElementById('pause_en').checked = true;
             //document.getElementById('camera_light1').checked = true;
             await set_camera_cfg("");
@@ -164,14 +171,18 @@ document.getElementById('btn_run').onclick = async function() {
             break;
         if (document.getElementById('pause_en').checked) {
             console.log(`enter wait`);
-            if (step == 3) {
-                console.log(`exit pickup before pause`);
+            if (step == 2 || step == 3) {
+                // the head may stand at a recorded part, and the list is dropped below: go back
+                // through the search position; to snap where the camera is put by hand during
+                // the pause, select Snap before releasing it (the step is read again then)
+                console.log(`back to goto_comp before pause`);
                 set_step(1);
             }
             while (document.getElementById('pause_en').checked)
                 await sleep(100);
             console.log(`exit wait`);
             parents_pre = null;
+            cands_clear();  // the tray may have been changed during the pause: look again
             continue;
         }
         
@@ -203,8 +214,16 @@ document.getElementById('btn_run').onclick = async function() {
             document.getElementById('camera_light1').checked = false;
             await document.getElementById('camera_light1').onchange();
             await z_keep_high(70);
-            csa.cur_pos[0] = csa.comp_search[search][0];
-            csa.cur_pos[1] = csa.comp_search[search][1];
+            // a part recorded at the search position and not tried yet: go straight to it,
+            // else to the search position, and record what the camera sees there
+            let cand = cands_next();
+            if (cand) {
+                csa.cur_pos[0] = cand.pos[0];
+                csa.cur_pos[1] = cand.pos[1];
+            } else {
+                csa.cur_pos[0] = csa.comp_search[search][0];
+                csa.cur_pos[1] = csa.comp_search[search][1];
+            }
             csa.cur_pos[3] = 0;
             if (csa.cur_pos[2] != csa.comp_top_z) {
                 await set_motor_pos(70);
@@ -221,6 +240,21 @@ document.getElementById('btn_run').onclick = async function() {
                     continue;
                 }
             }
+            if (!cand && document.getElementById('pause_en').checked) {
+                // paused on the way to the search position: the user places the tray under the camera
+                // now, so stay here, and look at it once the pause is released (step 1 again)
+                console.log('  paused at the search position, scan later');
+                continue;
+            }
+            if (!cand) {
+                await cands_scan(get_cv_comps);
+                cand = cands_next();
+                if (cand) {
+                    csa.cur_pos[0] = cand.pos[0];
+                    csa.cur_pos[1] = cand.pos[1];
+                    await set_motor_pos(100);
+                }
+            }
             set_step(2);
             continue;
         }
@@ -231,11 +265,16 @@ document.getElementById('btn_run').onclick = async function() {
             await document.getElementById('camera_light1').onchange();
             let ret = await cam_comp_snap();
             if (ret < 0) {
-                if (++search >= csa.comp_search.length)
-                    search = 0;
-                set_comp_search(search);
+                if (cands_cur()) {
+                    cands_lost();   // the recorded part is not there any more, try the next
+                } else {
+                    if (++search >= csa.comp_search.length)
+                        search = 0;
+                    set_comp_search(search);
+                }
                 set_step(1);
             } else {
+                cands_snapped([csa.cur_pos[0], csa.cur_pos[1]]);
                 csa.cv_cur_r -= csa.cam_angle[0];
                 set_step(3);
             }
@@ -279,10 +318,12 @@ document.getElementById('btn_run').onclick = async function() {
             await z_keep_high(70, 260000);
             if (await check_suck_pressure()) {
                 await set_pump(0);
+                cands_fail();
                 document.getElementById('pause_en').checked = true;
                 set_step(1);
                 continue;
             }
+            cands_picked(csa.cv_cur_size);
             
             if (document.getElementById('check2_en').checked) {
                 set_step(4);
@@ -428,6 +469,7 @@ document.getElementById('btn_run').onclick = async function() {
         }
     }
     console.log('all comp finished');
+    cands_clear();
     csa.cur_pos[3] = 0;
     document.getElementById('btn_pld_clear').onclick();
     await set_motor_pos();

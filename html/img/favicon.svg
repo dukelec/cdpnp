@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<!-- a pick and place nozzle holding a chip, the edges on a 4 unit grid to stay sharp at 16 px -->
+<style>
+  path { fill: #101820 }
+  @media (prefers-color-scheme: dark) { path { fill: #fff } }
+</style>
+<path d="M 26,4 h 12 a 2,2 0 0 1 2,2 v 12 l -4,10 v 8 h -8 v -8 l -4,-10 v -14 a 2,2 0 0 1 2,-2 z"/>
+<path d="M 10,40 h 44 a 2,2 0 0 1 2,2 v 10 h -48 v -10 a 2,2 0 0 1 2,-2 z"/>
+<path d="M 12,52 h 4 v 8 h -4 z M 24,52 h 4 v 8 h -4 z M 36,52 h 4 v 8 h -4 z M 48,52 h 4 v 8 h -4 z"/>
+</svg>

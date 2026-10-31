@@ -202,6 +202,12 @@ async def dev_handle(sock, dat, src):
         logger.info(f"get_cv_cur")
         await sock.sendto(cv_dat['cur'], src)
     
+    elif dat['action'] == 'get_cv_comps': # every detection of the last frame, with the frame it belongs to
+        logger.info(f"get_cv_comps")
+        last = cv_dat['last']
+        await sock.sendto({'seq': last['seq'], 'ts': last['ts'], 'dev': last['dev'], 'detect': last['detect'],
+                           'cur': last['cur'], 'comps': last['comps']} if last else None, src)
+    
     elif dat['action'] == 'wait_stop':
         logger.info(f"wait_stop")
         if dev:

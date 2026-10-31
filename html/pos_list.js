@@ -8,6 +8,7 @@ import { L } from './utils/lang.js?v=__V__';
 import { csv_parser, read_file, readable_float } from './utils/helper.js?v=__V__';
 import { set_motor_pos, pcb2xyz } from './dev_cmd.js?v=__V__';
 import { csa, db } from './index.js?v=__V__';
+import { cands_clear } from './comp_track.js?v=__V__';
 import { disable_goto_btn, offset_apply } from './input_ctrl.js?v=__V__';
 
 
@@ -432,6 +433,7 @@ window.btn_select_search = function (idx) {
     if (idx >= csa.comp_search.length)
         return;
     set_comp_search(idx);
+    cands_clear();  // the parts recorded at the old position are not where the run goes now
 };
 
 window.btn_select_step = function (idx) {

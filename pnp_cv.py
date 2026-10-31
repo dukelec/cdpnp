@@ -21,7 +21,8 @@ cur_path = Path(__file__).parent.absolute()
 cv_dat = {
     'dev': 1,
 
-    'cur': None,
+    'cur': None,    # the chosen detection, [x, y, angle, dist] (+ [long, short] side in pixels for a component)
+    'comps': [],    # every detection of the frame, cur first, the same entries
     'img_queue': None,
 
     'detect': 'default',
@@ -41,7 +42,7 @@ cv_dat = {
     # the last frame, for the external api (api_serve.py): one dict swapped in whole, so a reader
     # on another thread always sees a raw jpg, its annotated image and its detection together
     #   {'seq': N, 'ts': time.time(), 'dev': 1 | 2, 'detect': str, 'raw': jpg bytes,
-    #    'img': annotated bgr ndarray, 'cur': [x, y, angle, dist] | None}
+    #    'img': annotated bgr ndarray, 'cur': [x, y, angle, dist, ...] | None, 'comps': [cur, ...]}
     'last': None
 }
 
@@ -109,7 +110,8 @@ def cv_get_pos(img, detect):
 
         x_center, y_center = round(cam_width/2), round(cam_height/2)
         l_center = abs(center[0] - x_center) + abs(center[1] - y_center)
-        comps.append([center_f[0], center_f[1], angle, l_center])
+        # the size as long and short side, so it does not depend on the orientation
+        comps.append([center_f[0], center_f[1], angle, l_center, max(width, height), min(width, height)])
 
         label = str(angle) + (' !' if detect == 'limit_angle' else '')
         cv.drawContours(img,[box],0,(0,0,255),1)
@@ -128,6 +130,7 @@ def cv_get_pos(img, detect):
         cv_dat['cur'] = comps[0]
     else:
         cv_dat['cur'] = None
+    cv_dat['comps'] = comps
     return img
 
 
@@ -184,6 +187,7 @@ def cv_get_circle(img, detect):
         cv_dat['cur'] = comps[0]
     else:
         cv_dat['cur'] = None
+    cv_dat['comps'] = comps
     return img
 
 
@@ -288,6 +292,7 @@ def cv_get_pad(img, detect):
         cv_dat['cur'] = comps[0]
     else:
         cv_dat['cur'] = None
+    cv_dat['comps'] = comps
     return img
 
 
@@ -369,6 +374,9 @@ def pic_rx():
                     img = cv_get_pad(img, detect)
                 elif detect:
                     img = cv_get_pos(img, detect)
+                else:   # nothing looked for, so nothing found: do not keep the result of an older mode
+                    cv_dat['cur'] = None
+                    cv_dat['comps'] = []
 
                 if dev_idx == 1:
                     img = cv.drawMarker(img, (int(cam_width/2),int(cam_height/2)), color=(0,255,0), markerType=cv.MARKER_CROSS, thickness=1)
@@ -377,7 +385,7 @@ def pic_rx():
 
                 last = cv_dat['last']
                 cv_dat['last'] = {'seq': (last['seq'] + 1) if last else 1, 'ts': time(), 'dev': dev_idx,
-                                  'detect': detect, 'raw': rx_dat, 'img': img, 'cur': cv_dat['cur']}
+                                  'detect': detect, 'raw': rx_dat, 'img': img, 'cur': cv_dat['cur'], 'comps': cv_dat['comps']}
 
                 if not cv_dat['img_queue'].full():
                     if not cv_dat['local']:

@@ -18,6 +18,8 @@ import { set_motor_pos, set_pump, set_camera_cfg, cam_comp_snap } from './dev_cm
 import { csa_to_page_input, input_change, save_cfg } from './input_ctrl.js?v=__V__';
 import { search_current_comp, select_comp, move_to_comp, get_comp_values, pos_from_page,
          set_board, get_board_safe, set_step, get_step_safe, get_comp_search } from './pos_list.js?v=__V__';
+import { cands_state, scale_info } from './comp_track.js?v=__V__';
+import { cali_scale } from './calibration.js?v=__V__';
 
 
 function elm(id) {
@@ -40,7 +42,8 @@ function run_state() {
         check2_en: elm('check2_en').checked,
         putdown_en: elm('putdown_en').checked,
         less_detect: elm('less_detect').checked,
-        preload_en: elm('preload_en').checked
+        preload_en: elm('preload_en').checked,
+        cands: cands_state()    // the parts recorded at the comp search position, see comp_track.js
     };
 }
 
@@ -72,6 +75,7 @@ async info() {
         pump_hw_ver: csa.pump_hw_ver,
         pump_suck_on: csa.pump_suck_on,
         camera: camera_state(),
+        cam_scale: scale_info(),    // the mm per pixel of camera 1 as measured so far
         run: run_state(),
         cfg: cfg_get()
     };
@@ -191,6 +195,13 @@ async stop() {
 async step(a) {
     set_step(a.idx);
     return run_state();
+},
+
+// measure the mm per pixel of camera 1 around a part at the comp search position, and apply it
+async cali_scale() {
+    if (elm('btn_run').disabled)
+        throw new Error('the run is in progress, stop it first');
+    return await cali_scale(false);
 },
 
 async board(a) {

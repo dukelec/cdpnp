@@ -8,6 +8,7 @@ import { L } from './utils/lang.js?v=__V__';
 import { sleep } from './utils/helper.js?v=__V__';
 import { csa_to_page_pos } from './input_ctrl.js?v=__V__';
 import { csa, cmd_sock } from './index.js?v=__V__';
+import { px2mm, cand_sizes } from './comp_track.js?v=__V__';
 
 
 function update_aux() {
@@ -156,7 +157,16 @@ async function get_cv_cur() {
     return dat ? dat[0] : null;
 }
 
-// 10mm / 344 pixel
+// every detection of the last frame: {seq, ts, dev, detect, cur, comps: [[x, y, angle, dist, long, short], ...]}
+async function get_cv_comps() {
+    cmd_sock.flush();
+    await cmd_sock.sendto({'action': 'get_cv_comps'}, ['server', 'dev']);
+    let dat = await cmd_sock.recvfrom(1000);
+    console.log('get_cv_comps ret', dat);
+    return dat ? dat[0] : null;
+}
+
+// 10mm / 344 pixel, for camera 2; camera 1 has its calibrated scale (comp_track.js px2mm)
 let DIV_MM2PIXEL = 10/344;
 
 async function cam_comp_snap(times=3, max_err=0.02) {
@@ -170,8 +180,8 @@ async function cam_comp_snap(times=3, max_err=0.02) {
     for (let i = 0; i < times; i++) {
         cv = await get_cv_cur();
         if (cv) {
-            let dx = (cv[0] - cam_width/2) * DIV_MM2PIXEL
-            let dy = (cv[1] - cam_height/2) * DIV_MM2PIXEL
+            let px = [cv[0] - cam_width/2, cv[1] - cam_height/2];
+            let [dx, dy] = dev == 1 ? px2mm(px[0], px[1]) : [px[0] * DIV_MM2PIXEL, px[1] * DIV_MM2PIXEL];
             console.log(`cv i: ${i}, dx: ${dx}, dy: ${dy}`)
             csa.cur_pos[0] += dx * sign
             csa.cur_pos[1] += dy * sign
@@ -187,11 +197,12 @@ async function cam_comp_snap(times=3, max_err=0.02) {
     }
     cv = await get_cv_cur();
     csa.cv_cur_r = cv ? cv[2] : null; // [-89, 90]
+    csa.cv_cur_size = cand_sizes(cv);  // [long, short] pixels, or null
     return cv ? 0 : -1;
 }
 
 
 export {
     get_camera_cfg, set_camera_cfg, get_motor_pos, set_motor_pos, get_pump_hw_ver, get_pump_pressure, check_suck_pressure, set_pump,
-    pcb2xyz, z_keep_high, enable_force, get_cv_cur, cam_comp_snap, set_vision_cfg
+    pcb2xyz, z_keep_high, enable_force, get_cv_cur, get_cv_comps, cam_comp_snap, set_vision_cfg
 };

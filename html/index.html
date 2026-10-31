@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!--link rel="icon" type="image/png" href="./img/icon.png" /-->
+<link rel="icon" type="image/svg+xml" href="./img/favicon.svg?v=__V__">
 <title>CDPNP Tools</title>
 
 <link rel="stylesheet" href="./libs/bulma-0.9.4.css">
@@ -138,6 +138,12 @@
         <button class="button is-small goto_btn" id="btn_cali_cam1">${L('Cali cam')}1</button>
         <input type="text" id="cam2_angle" onchange="input_change()">
         <button class="button is-small goto_btn" id="btn_cali_cam2">${L('Cali cam')}2</button>
+        <br>
+        <span style="display: inline-block; min-width: 138px;" title="${L('mm per pixel of camera 1, from its calibration; edge: how much more (+) or less a pixel is worth at the corner of the frame')}">
+            ${L('Cam scale')}:</span>
+        <span id="cam_scale">--</span>
+        <button class="button is-small goto_btn" id="btn_cali_scale" title="${L('Snap on a part at the comp search position, then move around it out to the edge of the frame and measure')}">${L('Calibration')}</button>
+        <button class="button is-small" id="btn_scale_reset">${L('Reset')}</button>
         
         <div id="input_search"></div>
         <span style="display: inline-block; min-width: 138px;" title="${L('Height of nozzle to target when focusing (better not modify this)')}">
@@ -221,6 +227,10 @@
                      ${L('Height')}: <span id="cur_height">--</span>
             <br>
             ${L('Next')}: <span id="next_comp">-- -- --</span> &nbsp;|&nbsp; ${L('Amount')}: <span id="next_total">--</span>
+            <br>
+            <span title="${L('The parts seen at the comp search position, the run goes to them one by one')}">${L('Tray comps')}</span>: <span id="cand_state">--</span>
+            <span title="${L('The frame at the search position: blue left, orange current, green picked, grey lost, red fail; the black cross is the camera now')}"><canvas
+                id="cand_map" width="150" height="200" style="display: none; width: 75px; height: 100px; vertical-align: middle; margin-left: 6px; border: 1px solid #dbdbdb; background: #fafafa;"></canvas></span>
         </span>
         <br>
         

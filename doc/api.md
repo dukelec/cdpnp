@@ -66,6 +66,8 @@ POST   /api/page/pause       body 1 or 0
 POST   /api/page/stop        stop the run
 POST   /api/page/step        body 0..6: the step the run continues with
 POST   /api/page/board       body 0..9: the board the run continues with
+POST   /api/page/cali_scale   measure the mm per pixel of camera 1 around a part at the
+                             comp search position (the Calibration button of Cam scale)
 ```
 
 Errors come back as a 4xx / 5xx with a one line `err: ...` body.
@@ -83,11 +85,29 @@ trays, its image is 600 x 800 (width x height, the raw jpg is rotated 90
 degrees to get there); `dev` 2 looks up at the nozzle from the bed, 800 x 600,
 mirrored. The crosshair drawn in the middle of the annotated image is the
 camera's optical center. At the working height one pixel of camera 1 is
-10/344 mm (`mm_per_pixel` in `/api/cv` and `/api/camera`), so an object
+about 10/344 mm (`mm_per_pixel` in `/api/cv` and `/api/camera`), so an object
 found at pixel (x, y) is `offset_mm = ((x - w/2), (y - h/2)) * mm_per_pixel`
 from the camera center, which `/api/cv` also gives. The page moves the head by
 that offset (negated for camera 2) to center the camera on the object, which
 is what `/api/snap` does.
+
+The page calibrates that constant for camera 1, since the lens is not linear
+from the center to the edge: `POST /api/page/cali_scale`, the Calibration
+button next to Cam scale, snaps on a part at the comp search position, moves
+the head to known offsets around it out to the edge of the frame (22
+positions, radius 70 to 350 px), and notes where the part shows up each time,
+one sample of pixel radius against mm each. Put a single part there and
+remove the others, so the camera follows the right one. The samples are
+fitted as `mm = a*r + b*r^3`, and `cam_scale` in `GET /api/page` tells the
+fit: `a` (the mm per pixel at the center), `b`, the number of `samples`,
+`edge_pct`, how much more (+) or less a pixel is worth at the corner of the
+frame, and `max_err`, the largest distance between a sample and the fit. The
+call returns the same, plus `list`, the samples, and takes about half a
+minute. The samples are the config value `cam_scale_samples`
+(`[[pixel radius, mm], ...]`), kept like any config value: the Save button,
+or `"save": true`, after the calibration; `[]` goes back to the plain
+constant. `/api/cv` keeps giving the plain constant, so a script that wants
+the calibrated value reads `cam_scale`.
 
 Camera center and nozzle are not the same point: the config value `grab_ofs`
 is the vector from the camera center to the nozzle rotation center, and
@@ -113,9 +133,14 @@ in each frame:
 `/api/cv` is the result for the last frame: `cur` is `[x, y, angle, dist]`
 in pixels of the annotated image (dist is the L1 distance of the object to
 the image center, the page picks the nearest one), or `null` when nothing was
-found, with the frame `seq` and `ts` it belongs to. The detect mode and the
-camera must be set before the frame is taken, so after `POST /api/camera`
-wait for a new frame (`/api/frame?wait=1`) before reading `/api/cv`.
+found, with the frame `seq` and `ts` it belongs to. For a component (`default`
+/ `limit_angle`) two more values follow: the long and the short side of its
+bounding box in pixels. `comps` is every detection of the frame in the same
+form, `cur` first, then the others by their distance to the center; this is
+what the page records at a comp search position to go to the parts one by
+one (see `cands` below). The detect mode and the camera must be set before
+the frame is taken, so after `POST /api/camera` wait for a new frame
+(`/api/frame?wait=1`) before reading `/api/cv`.
 
 `/api/frame` returns the annotated image as png (what the OpenCV window on
 the backend shows: the contours, the angle label, the cross on the chosen
@@ -169,14 +194,33 @@ refused, pause or stop the run first.
 
 `GET /api/page` is what the page knows: `cur_pos` (the position the page
 believes, kept up to date by every move through the page), the camera boxes,
-`run` (running, pause, step, board, the selected component and the progress)
-and `cfg`, the config values of the page: `grab_ofs`, `nozzle_cali`,
-`cam_angle`, `comp_search` (the tray search positions), `cam_dz`,
-`comp_base_z`, `pcb_base_z`, `fiducial_pcb`, `fiducial_cam`, `user_pos`,
-`motor_speed`, `nozzle_expos`, `nozzle_thresh`, `offset_config` and the
-`pld_*` preload values. `POST /api/page/cfg` changes any of them, the input
-boxes follow; a change is kept in the browser only with `"save": true`, as
-the Save button does.
+`cam_scale` (above), `run` (running, pause, step, board, the selected
+component, the progress and `cands`, below) and `cfg`, the config values of
+the page: `grab_ofs`, `nozzle_cali`, `cam_angle`, `cam_scale_samples`,
+`comp_search` (the tray search positions), `cam_dz`, `comp_base_z`,
+`pcb_base_z`, `fiducial_pcb`, `fiducial_cam`, `user_pos`, `motor_speed`,
+`nozzle_expos`, `nozzle_thresh`, `offset_config` and the `pld_*` preload
+values. `POST /api/page/cfg` changes any of them, the input boxes follow; a
+change is kept in the browser only with `"save": true`, as the Save button
+does.
+
+`run.cands` is the list of parts the run recorded at the comp search
+position: when the run arrives there (step `goto_comp` with nothing recorded)
+it takes one frame and keeps every detection with its machine position
+(`pos`, where the camera center is over the part), its `size` (long and short
+side in pixels) and its `angle`. The following picks go straight to the best
+remaining one and only snap there; the search position is visited again when
+none is left. The order is by `score`, lower first: the distance to the
+center of the frame it was seen in (1 for the corner) plus 4 times the
+relative size error against `ref_size`, the size of the last part picked with
+success (`ref_from_pick`), or the median of the list before any pick, so a
+speck of dirt is tried last. `state` is `new` (not tried), `try` (the head is
+on its way), `snap` (centered, being picked), `picked`, `lost` (nothing found
+there any more) or `fail` (picked but the pressure said nothing was held);
+`total`, `new`, `picked`, `lost`, `fail` and `odd` (size error above 50 %)
+are the counts the page shows. The list is dropped when the run starts, whenever
+it resumes from a pause (the tray may have been changed meanwhile), when the
+model changes and when a search position is selected by hand.
 
 `GET /api/page/comps` is the component list loaded from the csv, grouped by
 footprint and value, each entry `[name, x, y, angle]` in pcb coordinates.

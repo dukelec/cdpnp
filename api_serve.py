@@ -33,7 +33,8 @@ from pnp_cv import cv_dat
 
 logger = logging.getLogger('cdpnp.api')
 
-MM_PER_PIXEL = 10 / 344     # of camera 1 at its working height, the same constant the page uses
+MM_PER_PIXEL = 10 / 344     # of camera 1 at its working height, the page's starting value (it refines it, see
+                            # cam_scale in GET /api/page)
 CAM_SIZE = {1: (600, 800), 2: (800, 600)}   # (width, height) of the annotated image of each camera
 
 # the page clamps a target the same way (dev_cmd.js set_motor_pos), applied here for a move
@@ -220,12 +221,12 @@ def cv_info():
     """What the vision code found in the last frame, with the frame it belongs to."""
     last = cv_dat['last']
     if last is None:
-        return {'cur': None, 'seq': 0, 'ts': None, 'dev': cv_dat['dev'], 'detect': cv_dat['detect'],
+        return {'cur': None, 'comps': [], 'seq': 0, 'ts': None, 'dev': cv_dat['dev'], 'detect': cv_dat['detect'],
                 'width': CAM_SIZE[cv_dat['dev']][0], 'height': CAM_SIZE[cv_dat['dev']][1],
                 'mm_per_pixel': MM_PER_PIXEL}
     h, w = last['img'].shape[:2]
     cur = last['cur']
-    return {'cur': cur, 'seq': last['seq'], 'ts': last['ts'], 'dev': last['dev'], 'detect': last['detect'],
+    return {'cur': cur, 'comps': last['comps'], 'seq': last['seq'], 'ts': last['ts'], 'dev': last['dev'], 'detect': last['detect'],
             'width': w, 'height': h, 'mm_per_pixel': MM_PER_PIXEL,
             # the same thing in mm from the image center, the way the page moves the camera onto it
             'offset_mm': [round((cur[0] - w / 2) * MM_PER_PIXEL, 4),
@@ -481,6 +482,10 @@ async def h_step(request):
     return web.json_response(await page_call('step', {'idx': idx}))
 
 
+async def h_cali_scale(request):
+    return web.json_response(await page_call('cali_scale', timeout=310))
+
+
 async def h_board(request):
     idx = await body_value(request, 'idx')
     if not isinstance(idx, int) or not 0 <= idx <= 9:
@@ -528,6 +533,8 @@ down is more negative), degrees. The machine calls need no page in the browser, 
   POST   /api/page/stop        stop the run
   POST   /api/page/step        body 0..6: the step the run continues with
   POST   /api/page/board       body 0..9: the board the run continues with
+  POST   /api/page/cali_scale  measure the mm per pixel of camera 1 around a part at the
+                               comp search position (the Calibration button of Cam scale)
 '''
 
 
@@ -578,6 +585,7 @@ async def start_api(addr, port):
         web.post('/api/page/stop', h_stop),
         web.post('/api/page/step', h_step),
         web.post('/api/page/board', h_board),
+        web.post('/api/page/cali_scale', h_cali_scale),
     ])
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()

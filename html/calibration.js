@@ -6,11 +6,12 @@
 
 import { L } from './utils/lang.js?v=__V__';
 import { readable_float, sleep } from './utils/helper.js?v=__V__';
-import { get_camera_cfg, get_motor_pos, set_motor_pos, check_suck_pressure, set_pump, get_cv_cur,
+import { get_camera_cfg, get_motor_pos, set_motor_pos, check_suck_pressure, set_pump, get_cv_cur, get_cv_comps,
          z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, set_vision_cfg } from './dev_cmd.js?v=__V__';
 import { set_step, get_step_safe, set_comp_search, get_comp_search } from './pos_list.js?v=__V__';
 import { csa_to_page_input, input_change } from './input_ctrl.js?v=__V__';
 import { csa, cal_grab_ofs, rotate_vector } from './index.js?v=__V__';
+import { px2mm, scale_info, scale_info_of, scale_set } from './comp_track.js?v=__V__';
 
 
 document.getElementById('btn_cali_offset').onclick = async function() {
@@ -412,6 +413,153 @@ document.getElementById('btn_cali_cam1').onclick = async function() {
 };
 
 
+// The mm per pixel of camera 1 (comp_track.js): with a part centered under the camera, the
+// head goes to known offsets around it, out to the edge of the frame, and where the part
+// shows up in pixels against the offset in mm is one sample each. The offsets cover the
+// radius from 70 to 350 px in every direction, so the fit tells the lens from the center
+// to the corner at once, instead of waiting for the run to gather that many snaps.
+const SCALE_CALI_OFFSETS = [  // mm, the part appears at -offset / scale pixels
+    [2, 0], [4, 0], [6.5, 0], [-2, 0], [-4, 0], [-6.5, 0],
+    [0, 2], [0, 4], [0, 6.5], [0, 9], [0, -2], [0, -4], [0, -6.5], [0, -9],
+    [4.5, 6], [4.5, -6], [-4.5, 6], [-4.5, -6], [5.5, 8], [5.5, -8], [-5.5, 8], [-5.5, -8]
+];
+
+async function scale_measure() {
+    const W = 600, H = 800;
+    let x0 = csa.cur_pos[0], y0 = csa.cur_pos[1];
+    await sleep(600);
+    let cv = await get_cv_cur();
+    if (!cv)
+        return null;
+    let p0 = px2mm(cv[0] - W/2, cv[1] - H/2);   // the part is this much off the center to begin with, mm
+    let size0 = cv.length > 5 ? [cv[4], cv[5]] : null;
+    let a0 = scale_info().a;
+    let samples = [];
+    for (let [dx, dy] of SCALE_CALI_OFFSETS) {
+        if (csa.stop)
+            break;
+        while (document.getElementById('pause_en').checked)
+            await sleep(100);
+        csa.cur_pos[0] = x0 + dx;
+        csa.cur_pos[1] = y0 + dy;
+        await set_motor_pos(100);
+        await sleep(800);
+        let ret = await get_cv_comps();
+        let t = [p0[0] - dx, p0[1] - dy];           // where the part really is now, mm from the center
+        let exp = [W/2 + t[0] / a0, H/2 + t[1] / a0]; // and about where that is in the frame
+        let best = null, best_d = 60;
+        for (let c of (ret && ret.comps) || []) {
+            if (size0 && c.length > 5 && (Math.abs(c[4] - size0[0]) > 4 || Math.abs(c[5] - size0[1]) > 4))
+                continue;   // another part or a speck, not the one tracked
+            let d = Math.hypot(c[0] - exp[0], c[1] - exp[1]);
+            if (d < best_d) {
+                best = c;
+                best_d = d;
+            }
+        }
+        if (!best) {
+            console.log(`scale cali: part not found at offset ${dx}, ${dy}`);
+            continue;
+        }
+        let r = Math.hypot(best[0] - W/2, best[1] - H/2);
+        let m = Math.hypot(t[0], t[1]);
+        console.log(`scale cali: offset ${dx}, ${dy} -> r ${r.toFixed(1)} px, ${m.toFixed(4)} mm, ${(m / r).toFixed(6)} mm/px`);
+        samples.push([Math.round(r * 10) / 10, Math.round(m * 10000) / 10000]);
+    }
+    csa.cur_pos[0] = x0;
+    csa.cur_pos[1] = y0;
+    await set_motor_pos(100);
+    return samples;
+}
+
+// ask: tell the user what to prepare and confirm before the samples replace the config's (the
+// button); the api asks nothing and applies them at once
+async function cali_scale(ask=true) {
+    if (!document.getElementById('camera_detect').value)
+        throw new Error(L("please set camera vision detect method!"));
+    if (!document.getElementById('btn_stop').disabled)
+        throw new Error(L("please stop smt first!"));
+    if (ask && !confirm(`${L('Put a single part at')} ${L('Comp search')} #${get_comp_search()} ` +
+                        `${L('and remove the others, so the camera can follow it to the edge of the frame. Start?')}`))
+        throw new Error('cancelled');
+    if (document.getElementById('camera_dev').value != '1' || !document.getElementById('camera_en').checked) {
+        console.log("auto enable camera before run task");
+        document.getElementById('camera_dev').value = 1;
+        document.getElementById('camera_en').checked = true;
+        await document.getElementById('camera_dev').onchange();
+    }
+    document.getElementById('btn_run').disabled = true;
+    document.getElementById('btn_stop').disabled = false;
+    csa.stop = false;
+    
+    let z_middle = Math.min(csa.cur_pos[2] + csa.cam_dz, -2);
+    if (csa.cur_pos[2] < z_middle) {
+        csa.cur_pos[2] = z_middle;
+        await set_motor_pos(100);
+    }
+    
+    // a part under the camera: the one nearest to a comp search position, as the run finds it
+    let search = get_comp_search();
+    let samples = null;
+    for (let i = 0; i < csa.comp_search.length && !csa.stop; i++) {
+        document.getElementById('camera_light1').checked = false;
+        await document.getElementById('camera_light1').onchange();
+        await z_keep_high(70);
+        csa.cur_pos[0] = csa.comp_search[search][0];
+        csa.cur_pos[1] = csa.comp_search[search][1];
+        csa.cur_pos[3] = 0;
+        if (csa.cur_pos[2] != csa.comp_top_z) {
+            await set_motor_pos(70);
+            csa.cur_pos[2] = csa.comp_top_z;
+            await set_motor_pos(100);
+        } else {
+            await set_motor_pos(100);
+        }
+        if (await cam_comp_snap() < 0) {
+            if (++search >= csa.comp_search.length)
+                search = 0;
+            set_comp_search(search);
+            continue;
+        }
+        samples = await scale_measure();
+        break;
+    }
+    console.log('cali_scale finished', samples);
+    csa.stop = true;
+    document.getElementById('btn_run').disabled = false;
+    document.getElementById('btn_stop').disabled = true;
+    
+    if (!samples || samples.length < 8) {
+        let msg = L('Camera scale calibration failed: no part found, or it was lost on the way') +
+                  (samples ? ` (${samples.length} ${L('samples')})` : '');
+        if (ask)
+            alert(msg);
+        throw new Error(msg);
+    }
+    let info = scale_info_of(samples);
+    let edge = (info.edge_pct >= 0 ? '+' : '') + info.edge_pct.toFixed(2);
+    let msg = `${L('Update cam scale')}: ${info.a.toFixed(6)} mm/px, ${L('edge')} ${edge}%, ${info.samples} ${L('samples')}, ` +
+              `${L('max error')} ${info.max_err} mm`;
+    if (ask && !confirm(msg))
+        return { applied: false, ...info, list: samples };
+    scale_set(samples);
+    csa_to_page_input();
+    await input_change();   // the Save button turns yellow, as for any config change
+    console.log('cam scale updated');
+    return { applied: true, ...info, list: samples };
+}
+
+document.getElementById('btn_cali_scale').onclick = async function() {
+    try {
+        await cali_scale(true);
+    } catch (err) {
+        console.log('cali_scale:', err.message);
+        if (err.message != 'cancelled' && !document.getElementById('btn_stop').disabled)  // refused before it started
+            alert(err.message);
+    }
+};
+
+
 document.getElementById('btn_cali_cam2').onclick = async function() {
     if (!document.getElementById('camera_detect').value) {
         alert(L("please set camera vision detect method!"));
@@ -690,4 +838,4 @@ document.getElementById('btn_cali_cam2').onclick = async function() {
 };
 
 
-export { };
+export { cali_scale };

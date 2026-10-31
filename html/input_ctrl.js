@@ -10,6 +10,7 @@ import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } 
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs } from './index.js?v=__V__';
 import { pld_csa_to_page, pld_csa_from_page } from './preload_ctrl.js?v=__V__';
 import { pos_to_page, pos_from_page } from './pos_list.js?v=__V__';
+import { scale_show, scale_reset, cands_draw } from './comp_track.js?v=__V__';
 import { } from './calibration.js?v=__V__';
 
 
@@ -52,6 +53,7 @@ function auto_hide() {
 
 function csa_to_page_pos()
 {
+    cands_draw();   // the camera's place on the tray map follows every move
     document.getElementById('cur_pos').innerHTML =
         `${readable_float(csa.cur_pos[0])}, ${readable_float(csa.cur_pos[1])},
          ${readable_float(csa.cur_pos[2])}, ${readable_float(csa.cur_pos[3])}`;
@@ -62,6 +64,7 @@ function csa_to_page_pos()
 
 function csa_to_page_input()
 {
+    scale_show();
     document.getElementById('motor_speed').value = csa.motor_speed;
     document.getElementById('nozzle_expos').value = csa.nozzle_expos;
     document.getElementById('nozzle_thresh').value = csa.nozzle_thresh;
@@ -541,6 +544,13 @@ function offset_apply() {
                 subs[1].innerText = offsets[wildcard];
         }
     }
+};
+
+document.getElementById('btn_scale_reset').onclick = async function() {
+    if (!confirm(L('Forget the measured camera scale and start again from 10/344 mm per pixel?')))
+        return;
+    scale_reset();
+    await input_change();   // the Save button turns yellow
 };
 
 document.getElementById('offset_apply').onclick = async function() {
