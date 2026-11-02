@@ -13,6 +13,25 @@ from time import sleep
 from cdnet.utils.log import *
 from cdnet.dispatch import *
 
+# registers of the module firmware in tools/firmware (the configs in tools/cdbus_gui_configs),
+# tools/fw_cfg_update.py brings the modules to it
+# cdstep v3:
+STEP_TP_ACCEL_EMG   = 0x015c    # u32
+STEP_TP_STATE       = 0x017f    # i8, trap planner: -1: disable, 0: idle, 1: planning
+STEP_REF_VOLT       = 0x0290    # u16, mV
+STEP_LIM_EN         = 0x0293    # bool
+STEP_SET_HOME       = 0x03fe    # write 0x80 to set home position
+STEP_STATE          = 0x0400    # 0: disable drive, 5: enable (position with trap planner)
+STEP_MEAS_POS       = 0x0494    # i32
+STEPZ_FORCE_TRIG    = 0x0500    # cdstep-z: arm the force trigger for the next move
+# cdcam v2:
+CAM_CAPTURE_CTRL    = 0x005f    # 0x80: cancel, 1: one-shot, 8: continuous
+CAM_CAPTURE_STATE   = 0x0060    # 0: idle, 1: one-shot, 8: continuous
+CAM_EXPOSURE        = 0x0044
+CAM_LED_EN          = 0x0069
+
+FW_DEVS = ['00:00:01', '00:00:02', '00:00:03', '00:00:04', '00:00:05', '00:00:11', '00:00:21', '00:00:22']
+
 # 4mm / (50 * 512 (md: 7)) = ~ mm per micro step
 # 360' / (50 * 512 (md: 7)) = ~' per micro step
 DIV_MM2STEP = 0.00015625
@@ -90,15 +109,15 @@ def get_pump_pressure():
 def enable_motor():
     for i in range(5):
         xyz['logger'].info(f'motor enable: #{i+1}')
-        rx = cd_reg_rw(f'00:00:0{i+1}', 0x0108, struct.pack("<B", 1))
+        rx = cd_reg_rw(f'00:00:0{i+1}', STEP_STATE, struct.pack("<B", 5))
         xyz['logger'].info('motor enable ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set emergency accel #{i+1}')
-        rx = cd_reg_rw(f'00:00:0{i+1}', 0x00c8, struct.pack("<I", 80000000 if i != 4 else 2000000))
+        rx = cd_reg_rw(f'00:00:0{i+1}', STEP_TP_ACCEL_EMG, struct.pack("<I", 80000000 if i != 4 else 2000000))
         xyz['logger'].info('motor set ret: ' + rx.hex())
         
         xyz['logger'].info(f'motor set vref #{i+1}')
-        rx = cd_reg_rw(f'00:00:0{i+1}', 0x00ae, struct.pack("<H", 800 if i != 4 else 450))
+        rx = cd_reg_rw(f'00:00:0{i+1}', STEP_REF_VOLT, struct.pack("<H", 800 if i != 4 else 450))
         xyz['logger'].info('motor set vref ret: ' + rx.hex())
 
 
@@ -111,16 +130,16 @@ def load_pos(mask=0xf):
         tx_num = 0
         rx_num = 0
         if mask & 1:
-            xyz['sock'].sendto(b'\x00'+struct.pack("<H", 0x0100) + struct.pack("<B", 4), ('00:00:03', 0x5))
+            xyz['sock'].sendto(b'\x00'+struct.pack("<H", STEP_MEAS_POS) + struct.pack("<B", 4), ('00:00:03', 0x5))
             tx_num += 1
         if mask & 2:
-            xyz['sock'].sendto(b'\x00'+struct.pack("<H", 0x0100) + struct.pack("<B", 4), ('00:00:01', 0x5))
+            xyz['sock'].sendto(b'\x00'+struct.pack("<H", STEP_MEAS_POS) + struct.pack("<B", 4), ('00:00:01', 0x5))
             tx_num += 1
         if mask & 4:
-            xyz['sock'].sendto(b'\x00'+struct.pack("<H", 0x0100) + struct.pack("<B", 4), ('00:00:04', 0x5))
+            xyz['sock'].sendto(b'\x00'+struct.pack("<H", STEP_MEAS_POS) + struct.pack("<B", 4), ('00:00:04', 0x5))
             tx_num += 1
         if mask & 8:
-            xyz['sock'].sendto(b'\x00'+struct.pack("<H", 0x0100) + struct.pack("<B", 4), ('00:00:05', 0x5))
+            xyz['sock'].sendto(b'\x00'+struct.pack("<H", STEP_MEAS_POS) + struct.pack("<B", 4), ('00:00:05', 0x5))
             tx_num += 1
         
         for i in range(tx_num):
@@ -151,8 +170,8 @@ def load_pos(mask=0xf):
 def wait_stop():
     for i in range(5):
         while True:
-            rx = cd_reg_rw(f'00:00:0{i+1}', 0x0109, read=1)
-            if rx[0] == 0x00 and rx[1] == 0:
+            rx = cd_reg_rw(f'00:00:0{i+1}', STEP_TP_STATE, read=1)
+            if rx[0] == 0x00 and rx[1] != 1: # idle, or -1: drive disabled
                 break
             sleep(0.1)
 
@@ -171,7 +190,7 @@ def wait_finish(axis, wait):
 
 
 def enable_force():
-    rx = cd_reg_rw('00:00:04', 0x006c, struct.pack("<B", 1))
+    rx = cd_reg_rw('00:00:04', STEPZ_FORCE_TRIG, struct.pack("<B", 1))
     xyz['logger'].info(f'enable force ret: {rx[0]:02x}')
 
 
@@ -245,7 +264,7 @@ def detect_origin():
     goto_pos([0, 0, 110, 0], 100, 50000)
     for i in range(4):
         xyz['logger'].info(f'motor set origin: #{i+1}')
-        rx = cd_reg_rw(f'00:00:0{i+1}', 0x00b1, struct.pack("<B", 1)) # set origin
+        rx = cd_reg_rw(f'00:00:0{i+1}', STEP_SET_HOME, struct.pack("<B", 0x80)) # set origin
         xyz['logger'].info('motor set origin ret: ' + rx.hex())
     sleep(0.5)
     xyz['last_pos'] = load_pos()
@@ -256,21 +275,41 @@ def detect_origin():
     goto_pos([-315, -265, 110, -375], 100, 50000)
     for i in range(5):
         xyz['logger'].info(f'motor set origin: #{i+1}')
-        rx = cd_reg_rw(f'00:00:0{i+1}', 0x00b1, struct.pack("<B", 1))
+        rx = cd_reg_rw(f'00:00:0{i+1}', STEP_SET_HOME, struct.pack("<B", 0x80))
         xyz['logger'].info('motor set origin ret: ' + rx.hex())
     
     xyz['logger'].info(f'motor disable limit switch: #5')
-    rx = cd_reg_rw(f'00:00:05', 0x00b5, struct.pack("<B", 0))
+    rx = cd_reg_rw(f'00:00:05', STEP_LIM_EN, struct.pack("<B", 0))
     xyz['logger'].info('motor disable limit switch ret: ' + rx.hex())
     sleep(0.5)
     xyz['last_pos'] = load_pos()
     goto_pos([2, 2, -2, 7.2*17], 100) # 360/50=7.2, 7.2*17=122.4
     
     xyz['logger'].info(f'motor set origin: #5')
-    rx = cd_reg_rw(f'00:00:05', 0x00b1, struct.pack("<B", 1))
+    rx = cd_reg_rw(f'00:00:05', STEP_SET_HOME, struct.pack("<B", 0x80))
     xyz['logger'].info('motor set origin ret: ' + rx.hex())
     sleep(0.5)
     xyz['last_pos'] = load_pos()
+
+
+def check_fw():
+    """old module firmware (its SW is a git hash, the new ones vX.Y) has other register addresses:
+    refuse to drive it"""
+    old = []
+    for addr in FW_DEVS:
+        try:
+            info = cd_info_rd(addr).decode(errors='replace')
+        except Exception:
+            info = 'no reply: cdnet v1 firmware, or not connected'
+        xyz['logger'].info(f'{addr}: {info}')
+        m = re.search(r'SW:\s*([^\s;,]+)', info)
+        if '(bl)' in info or not m or not re.fullmatch(r'v\d+\.\d+', m[1]):
+            old.append(f'{addr} ({info})')
+    if old:
+        for o in old:
+            xyz['logger'].error(f'module firmware not up to date: {o}')
+        xyz['logger'].error('update the modules first: python3 tools/fw_cfg_update.py')
+        raise Exception('module firmware not up to date')
 
 
 def xyz_init():
@@ -278,19 +317,20 @@ def xyz_init():
     xyz['sock'] = CDNetSocket(('', 0x40)) # bit[4:3] should be zero for qxchg
     xyz['sock_dbg'] = CDNetSocket(('', 9))
     _thread.start_new_thread(dbg_echo, ())
+    check_fw()
     
-    rx = cd_reg_rw(f"00:00:21", 0x005f, struct.pack("<B", 0))
+    rx = cd_reg_rw(f"00:00:21", CAM_CAPTURE_CTRL, struct.pack("<B", 0x80))
     xyz['logger'].info('stop cam1 ret: ' + rx.hex())
-    rx = cd_reg_rw(f"00:00:22", 0x005f, struct.pack("<B", 0))
+    rx = cd_reg_rw(f"00:00:22", CAM_CAPTURE_CTRL, struct.pack("<B", 0x80))
     xyz['logger'].info('stop cam2 ret: ' + rx.hex())
     
     xyz['last_pos'] = load_pos()
     
     all_enable = True
     for i in range(5):
-        rx = cd_reg_rw(f'00:00:0{i+1}', 0x0108, read=1)
+        rx = cd_reg_rw(f'00:00:0{i+1}', STEP_STATE, read=1)
         xyz['logger'].info('motor check enable ret: ' + rx.hex())
-        if rx[1] != 1:
+        if rx[1] != 5:
             all_enable = False
     
     enable_motor()
@@ -300,7 +340,9 @@ def xyz_init():
     xyz['logger'].info(f'check pump hw version...')
     rx = cd_info_rd('00:00:11').decode()
     xyz['logger'].info(f'check pump hw version ret: {rx}')
-    if 'HW: ' in rx:
-        xyz['pump_hw_ver'] = rx.split('HW: ')[1][:2]
+    # the pump type rather than its hw version: v2: pressure control, it reports HW: v2;
+    # v1: valve / pump on and off, any other HW (v1, v2.0) or none (the old builds)
+    m = re.search(r'HW:\s*([^\s;,]+)', rx)
+    xyz['pump_hw_ver'] = 'v2' if m and m[1] == 'v2' else 'v1'
     xyz['logger'].info(f'pump hw version: {xyz["pump_hw_ver"]}')
 

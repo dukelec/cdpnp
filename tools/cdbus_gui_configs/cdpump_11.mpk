@@ -1,1 +1,1 @@
-Éßversion®cdgui v1£regè™magic_code¶0xcdcd®conf_ver¶0x0105©conf_from§0x01©do_reboot°0©save_conf°0´bus_cfg_mac§0x11Æbus_cfg_baud_lß1000000Æbus_cfg_baud_h®10000000Æbus_cfg_filter©0xff 0xff¨bus_cfg_mode°0µbus_cfg_tx_permit_len¢20¥bus_cfg_max_idle_len£200≤bus_cfg_tx_pre_len°1¶dbg_en°0®gpo_pins°0£dbg†
+Çßversion®cdgui v1£regä´bus_cfg_mac§0x11Æbus_cfg_baud_lß1000000Æbus_cfg_baud_h®10000000Æbus_cfg_filter©0xff 0xff¨bus_cfg_mode°1µbus_cfg_idle_wait_len¢10µbus_cfg_tx_permit_len¢20¥bus_cfg_max_idle_len£200≤bus_cfg_tx_pre_len°1¶dbg_en°0

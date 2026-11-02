@@ -1,0 +1,86 @@
+{
+    "reg": {
+        // fmt: [c]: string, b: int8_t, B: uint8_t, h: int16_t, H: uint16_t, i: int32_t, I: uint32_t, f: float
+        // show: 0: normal, 1: hex, 2: bytes
+        "list": [
+            [ 0x0000, 2, "H", 1, "magic_code", "Magic code: 0xcdcd" ],
+            [ 0x0002, 2, "H", 1, "conf_ver", "Config version" ],
+            [ 0x0004, 1, "B", 1, "conf_from", "0: default config, 1: all from flash, 2: partly from flash" ],
+            [ 0x0005, 1, "b", 0, "do_reboot", "1: reboot to bl, 2: reboot to app" ],
+            [ 0x0007, 1, "b", 0, "save_conf", "Write 1 to save current config to flash" ],
+
+            [ 0x000c, 1, "B", 1, "bus_cfg_mac", "RS-485 port id, range: 0~254" ],
+            [ 0x0010, 4, "I", 0, "bus_cfg_baud_l", "RS-485 baud rate for first byte" ],
+            [ 0x0014, 4, "I", 0, "bus_cfg_baud_h", "RS-485 baud rate for follow bytes" ],
+            [ 0x0018, 2, "[B]", 1, "bus_cfg_filter", "Multicast address" ],
+            [ 0x001a, 1, "B", 0, "bus_cfg_mode", "0: Traditional, 1: Arbitration, 2: Break Sync" ],
+            [ 0x001b, 1, "B", 0, "bus_cfg_idle_wait_len", "Bus idle wait time" ],
+            [ 0x001c, 2, "H", 0, "bus_cfg_tx_permit_len", "Allow send wait time" ],
+            [ 0x001e, 2, "H", 0, "bus_cfg_max_idle_len", "Max idle wait time for BS mode" ],
+            [ 0x0020, 1, "B", 0, "bus_cfg_tx_pre_len", "Active TX_EN before TX" ],
+
+            [ 0x0024, 1, "b", 0, "dbg_en", "1: Report debug message to host, 0: do not report" ],
+
+            [ 0x0045, 1, "B", 1, "dbg_raw_msk", "Config which raw debug data to be send" ],
+            [ 0x0048, 24, "{H,H}", 1, "dbg_raw[0]", "Config raw debug for plot0" ],
+
+            [ 0x0074, 4, "f", 0, "pid_pressure_kp", "" ],
+            [ 0x0078, 4, "f", 0, "pid_pressure_ki", "" ],
+            [ 0x007c, 4, "f", 0, "pid_pressure_kd", "" ],
+            [ 0x0080, 4, "f", 0, "pid_pressure_out_min", "" ],
+            [ 0x0084, 4, "f", 0, "pid_pressure_out_max", "" ],
+
+            [ 0x00f8, 4, "f", 0, "set_pressure", "" ],
+            //[ 0x0110, 4, "f", 0, "ori_pressure", "" ],
+            //[ 0x0114, 4, "f", 0, "bias_pressure", "" ],
+
+            [ 0x0124, 4, "f", 0, "sen_pressure", "kpa" ],
+            [ 0x0128, 4, "f", 0, "sen_temperature", "c" ],
+            [ 0x014c, 1, "B", 0, "cur_valve", "" ],
+            [ 0x014e, 2, "H", 0, "cur_pwm", "" ],
+            [ 0x0150, 4, "I", 0, "loop_cnt", "" ]
+        ],
+        
+        // button groups
+        "reg_r": [["magic_code","save_conf"],["bus_cfg_mac","bus_cfg_tx_pre_len"],["dbg_en"],["dbg_raw_msk"],
+                  ["dbg_raw[0]"],["pid_pressure_kp","pid_pressure_out_max"],["set_pressure"],["sen_pressure","loop_cnt"]],
+        "reg_w": [["magic_code","conf_ver"],["do_reboot"],["save_conf"],["bus_cfg_mac"],["bus_cfg_baud_l","bus_cfg_baud_h"],
+                  ["bus_cfg_filter","bus_cfg_tx_pre_len"],["dbg_en"],["dbg_raw_msk"],["dbg_raw[0]"],
+                  ["pid_pressure_kp","pid_pressure_out_max"],["set_pressure"]],
+        "less_r": [],
+        "less_w": []
+    },
+    
+    "plot": {
+        "mask": "dbg_raw_msk",
+        "reg_overlay": [
+            // addr, ofs, len, type, name
+            //[0x1234, 8, 4, "f", "name"],
+            ["pid_pressure_ki", 20, 4, "f", "pid target"],
+            ["pid_pressure_ki", 24, 4, "f", "i_term"],
+            ["pid_pressure_ki", 28, 4, "f", "last_in"]
+        ],
+        "plots": [
+            {
+                // "color": ["black", "red", "green"]
+                "cfg_reg": "dbg_raw[0]",
+                "x_fmt": "B1",
+                "label": ["N", "pid target", "i_term", "last_in", "cur_pwm"],
+                "cal": {
+                    "err": "_d[3].at(-1) - _d[1].at(-1)", // data3 - data1
+                    "in_avg": "                     \
+                        let a = 0;                  \
+                        for (let i = 0; i < 5; i++) \
+                            a += _d[3].at(-1-i);    \
+                        return a / 5;"
+                },
+                "fft": {
+                    "sample_rate": 5000,
+                    "size": 4096
+                }
+            }
+        ]
+    },
+    
+    "iap": { "reboot": 0x0005, "keep_bl": 0x0006, "batch_pkts": 3 }
+}

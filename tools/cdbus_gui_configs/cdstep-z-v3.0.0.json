@@ -1,0 +1,103 @@
+{
+    "reg": {
+        // fmt: [c]: string, b: int8_t, B: uint8_t, h: int16_t, H: uint16_t, i: int32_t, I: uint32_t, f: float
+        // show: 0: normal, 1: hex, 2: bytes
+        "list": [
+            [ 0x0000, 2, "H", 1, "magic_code", "Magic code: 0xcdcd" ],
+            [ 0x0002, 2, "H", 1, "conf_ver", "Config version" ],
+            [ 0x0004, 1, "B", 0, "conf_from", "0: default config, 1: all from flash, 2: partly from flash" ],
+            [ 0x0005, 1, "B", 0, "do_reboot", "1: reboot to bl, 2: reboot to app" ],
+            [ 0x0007, 1, "b", 0, "save_conf", "Write 1 to save current config to flash" ],
+
+            [ 0x000f, 1, "B", 1, "mac", "RS-485 port id, range: 0~254", [0, 254] ],
+            [ 0x0010, 4, "I", 0, "baud_rate_l", "RS-485 baud rate for first byte" ],
+            [ 0x0014, 4, "I", 0, "baud_rate_h", "RS-485 baud rate for follow bytes" ],
+            [ 0x0018, 2, "[B]", 1, "bus_filter_m", "Multicast address" ],
+            [ 0x001c, 1, "B", 0, "bus_mode", "0: Traditional, 1: Arbitration, 2: Break Sync" ],
+            [ 0x001d, 1, "B", 0, "bus_idle_wait_len", "Bus idle wait time" ],
+            [ 0x001e, 2, "H", 0, "bus_tx_permit_len", "Allow send wait time" ],
+            [ 0x0020, 2, "H", 0, "bus_max_idle_len", "Max idle wait time for BS mode" ],
+            [ 0x0022, 1, "B", 0, "bus_tx_pre_len", "Active TX_EN before TX" ],
+
+            [ 0x0030, 1, "B", 0, "dbg_en", "1: Report debug message to host, 0: do not report" ],
+            [ 0x0031, 1, "B", 1, "dbg_raw_en", "Enable raw debug plot" ],
+            [ 0x0032, 24, "{H,B2}", 1, "dbg_raw", "Config raw debug for plot" ],
+
+            [ 0x0060, 4, "H,B2", 1, "qxchg_mcast", "Quick-exchange multicast data slice" ],
+            [ 0x0064, 16, "{H,B2}", 1, "qxchg_set", "Config the write data components for quick-exchange channel" ],
+            [ 0x0074, 20, "{H,B2}", 1, "qxchg_ret", "Config the return data components for quick-exchange channel" ],
+
+            [ 0x0150, 4, "i", 0, "tp_pos", "Set target position" ],
+            [ 0x0154, 4, "I", 0, "tp_speed", "Set target speed" ],
+            [ 0x0158, 4, "I", 0, "tp_accel", "Set target accel" ],
+            [ 0x015c, 4, "I", 0, "tp_accel_emg", "Set emergency accel" ],
+            [ 0x0160, 4, "I", 0, "tp_max_err", "Maximum allowed position error, 0: disabled" ],
+            [ 0x017f, 1, "b", 0, "tp_state", "trap_planner: -1: disable, 0: idle, 1: planning" ],
+            [ 0x0180, 4, "i", 0, "tp_vel_out", "Current planned velocity" ],
+
+            [ 0x01b0, 4, "f", 0, "pid_pos_kp", "" ],
+            [ 0x01bc, 4, "i", 0, "pid_pos_out_min", "" ],
+            [ 0x01c0, 4, "i", 0, "pid_pos_out_max", "" ],
+
+            [ 0x0290, 2, "H", 0, "ref_volt", "Motor driver reference voltage, unit: mV" ],
+            [ 0x0292, 1, "B", 0, "md_val", "Motor driver md[2:0] pin value" ],
+            [ 0x0293, 1, "b", 0, "lim_en", "Enable limit switch" ],
+
+            // project private config, saved
+            [ 0x0300, 2, "H", 1, "prj_conf_ver", "Project config layout version" ],
+            [ 0x0304, 2, "H", 0, "force_protection", "Force protection, unit: 100 raw counts; the force fell this far below the first move's baseline: retreat to position 0" ],
+            [ 0x0306, 2, "H", 0, "force_threshold", "Force threshold, unit: 100 raw counts; armed by force_trigger_en, the force fell this far below the baseline taken at move start: stop in place" ],
+
+            [ 0x03fe, 1, "B", 0, "set_home", "Write 0x80 to set home position" ],
+            [ 0x0400, 1, "B", 0, "state", "0: disable drive, 5: enable drive" ],
+
+            [ 0x0440, 4, "i", 0, "tgt_pos", "PID target position" ],
+            [ 0x0444, 4, "i", 0, "tgt_speed", "PID output speed" ],
+
+            [ 0x0494, 4, "i", 0, "meas_pos", "Motor current position" ],
+
+            [ 0x04e0, 4, "I", 0, "loop_cnt", "Count for plot" ],
+            [ 0x04e5, 1, "b", 0, "drv_mo", "MO pin state of drv chip, for debug" ],
+            [ 0x04e6, 10, "[c]", 0, "string_test", "String test" ],
+
+            // project private status, not saved
+            [ 0x0500, 1, "b", 0, "force_trigger_en", "Write 1 to arm the force trigger for the next move, cleared when it fires or when the move arrives" ]
+        ],
+        
+        // button groups
+        "reg_r": [["magic_code","save_conf"],["mac","bus_filter_m"],["bus_mode","bus_tx_pre_len"],["dbg_en"],["dbg_raw_en","dbg_raw"],["qxchg_mcast"],["qxchg_set","qxchg_ret"],["tp_pos","tp_max_err"],["tp_state","tp_vel_out"],["pid_pos_kp"],["pid_pos_out_min","pid_pos_out_max"],["ref_volt","lim_en"],["prj_conf_ver","force_threshold"],["set_home","state"],["tgt_pos","meas_pos"],["loop_cnt"],["drv_mo"],["string_test"],["force_trigger_en"]],
+        "reg_w": [["magic_code","conf_ver"],["do_reboot"],["save_conf"],["mac","bus_filter_m"],["bus_mode","bus_tx_pre_len"],["dbg_en"],["dbg_raw_en"],["dbg_raw"],["qxchg_mcast"],["qxchg_set","qxchg_ret"],["tp_pos"],["tp_speed","tp_max_err"],["pid_pos_kp"],["pid_pos_out_min","pid_pos_out_max"],["ref_volt","md_val"],["lim_en"],["force_protection","force_threshold"],["set_home"],["state"],["string_test"],["force_trigger_en"]],
+        "less_r": [["tp_pos","tp_accel"],["state","loop_cnt"]],
+        "less_w": [["tp_pos"],["tp_speed","tp_accel"],["state"]]
+    },
+    
+    "plot": {
+        "mask": "dbg_raw_en",
+        "reg_overlay": [
+            // addr, ofs, len, type, name
+            //[0x1234, 8, 4, "f", "name"],
+            //["pid_pos_kp", 24, 4, "i", "pid target"]
+        ],
+        "plots": [
+            {
+                // "color": ["black", "red", "green"]
+                "cfg_reg": "dbg_raw",
+                "x_fmt": "H1",
+                "label": ["N", "tp_pos", "tp_state", "tgt_pos", "meas_pos", "tp_vel_out"],
+                "cal": {
+                    "pos_err": "_d[4].at(-1) - _d[3].at(-1)" // data4 - data3
+                },
+                "fft": {
+                    "sample_rate": 5000,
+                    "size": 4096
+                }
+            }, {
+                "cfg_reg": "dbg_raw",
+                "x_fmt": "H1",
+                "label": ["N", "meas_pos", "tgt_speed", "tp_state"]
+            }
+        ]
+    },
+    
+    "iap": { "reboot": 0x0005, "keep_bl": 0x0006, "batch_pkts": 3 }
+}
