@@ -340,9 +340,9 @@ def xyz_init():
     xyz['logger'].info(f'check pump hw version...')
     rx = cd_info_rd('00:00:11').decode()
     xyz['logger'].info(f'check pump hw version ret: {rx}')
-    # the pump type rather than its hw version: v2: pressure control, it reports HW: v2;
-    # v1: valve / pump on and off, any other HW (v1, v2.0) or none (the old builds)
-    m = re.search(r'HW:\s*([^\s;,]+)', rx)
-    xyz['pump_hw_ver'] = 'v2' if m and m[1] == 'v2' else 'v1'
+    # the pump type rather than its hw version: v2: pressure control, HW: v2 (otp never written) or v2.1 and above;
+    # v1: valve / pump on and off, any other HW (v1, v2.0, err) or none (the old builds)
+    m = re.search(r'HW:\s*v(\d+)(?:\.(\d+))?', rx)
+    xyz['pump_hw_ver'] = 'v2' if m and (int(m[1]), int(m[2] or 1)) >= (2, 1) else 'v1'
     xyz['logger'].info(f'pump hw version: {xyz["pump_hw_ver"]}')
 

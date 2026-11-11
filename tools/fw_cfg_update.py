@@ -14,10 +14,12 @@ cdnet v1 (L1 frames, 80:00:xx) or cdnet v2 (L0 frames, 00:00:xx) firmware,
 in app or in bootloader mode.
 
   1. scan: each module is asked for its info string in both protocols, the
-     firmware variant is told from the model, the HW field of the new builds,
-     the git hash the old builds report as SW (see firmware/fw_hashes.json)
-     or, when still open, by comparing the flash with the candidate files; the
-     bl and the app of a new build are compared with the files.
+     firmware variant is told from the model, the HW field if there is one
+     (only its major, modules shipped without a version in the otp have none),
+     the flash size, the git hash the old builds report as SW (see
+     firmware/fw_hashes.json), the git tag in the app image or, when still
+     open, by comparing the flash with the candidate files; the bl and the app
+     of a new build are compared with the files.
   2. a plan is printed, nothing is written before it is confirmed.
   3. per module, all at the configured address and baud rate (1M/10M), as the
      other modules keep talking on the bus and a 115200 bps node would break
@@ -168,9 +170,9 @@ class BridgeTarget:
 
 # the cdbus bridge, told by the usb vid: stm32g0b1 (hw v4 / v5) or at32f405 (hw v6)
 BRIDGES = {
-    0x0483: BridgeTarget('cdbus bridge hw v4 / v5', ('v4', 'v5'), 'app/cdbridge45_fw_v*.hex', 'bl/cdbridge45_bl_v*.hex',
+    0x0483: BridgeTarget('cdbus bridge hw v4 / v5', (4, 5), 'app/cdbridge45_fw_v*.hex', 'bl/cdbridge45_bl_v*.hex',
                          app_addr=0x08009000, conf_addr=0x0801f800, conf_ver=0x0204, flash_kb=128),
-    0x2e3c: BridgeTarget('cdbus bridge hw v6', ('v6',), 'app/cdbridge6_fw_v*.hex', 'bl/cdbridge6_bl_v*.hex',
+    0x2e3c: BridgeTarget('cdbus bridge hw v6', (6,), 'app/cdbridge6_fw_v*.hex', 'bl/cdbridge6_bl_v*.hex',
                          app_addr=0x08006000, conf_addr=0x0803f800, conf_ver=0x0205, flash_kb=None),
 }
 
@@ -182,19 +184,19 @@ MODELS = {
     'mdrv-step-r': ('cdstep', ['step_r']),
     'cdstep-z':    ('cdstep', ['step_z']),
     'mdrv-step-z': ('cdstep', ['step_z']),
-    'cdpump':      ('cdpump2', ['pump1', 'pump2']), # the new pump1 builds report cdpump too, with HW
+    'cdpump':      ('cdpump2', ['pump1', 'pump2']), # the new pump1 builds report cdpump too
     'mdrv-pump':   ('cdpump1', ['pump1']),
     'cdcam':       ('cdcam', ['cam1', 'cam23']),
 }
-def pump_hw(hw):
-    """HW: v2 is the pump with pressure control (pump2), any other the valve / pump on and off one (pump1)"""
-    return 'pump2' if hw == 'v2' else 'pump1'
+def hw_major(hw):
+    """'v3.1', 'v1.10.2' (from the otp), 'v2', 'v1.xx' (older builds) -> the major, None for anything else ('err')"""
+    m = re.fullmatch(r'v(\d+)(?:\.(?:\d+|x+)){0,2}', hw or '')
+    return int(m[1]) if m else None
 
-# models shared by several hardware lines: the new builds tell theirs by the HW field
-HW_VARIANTS = {
-    'cdcam': {'v1.x': 'cam1', 'v1.xx': 'cam1', 'v2': 'cam23', 'v3': 'cam23'}.get, # v1.x / v2: cdctl-b, v1.xx / v3: cdctl01a
-    'cdpump': pump_hw,
-}
+# a pump goes by its flash size: the pump1 bl and the old builds have no HW
+CAM_HW = {1: 'cam1', 2: 'cam23', 3: 'cam23'}
+# a cam without HW (otp never written) reports the same SW on both lines, the tag of its image tells
+CAM_TAGS = {'cdcam1': 'cam1', 'cdcam3': 'cam23'}
 # the bootloader is shared by the variants of a module
 STEPS = {'step', 'step_r', 'step_z'}
 
@@ -297,9 +299,18 @@ def parse_ver(s):
 def fmt_ver(v):
     return f'v{v[0]}.{v[1]}' if v else 'an old build'
 
+def image_strs(img):
+    return {m.group(1).decode() for m in re.finditer(rb'([\x20-\x7e]{4,})\x00', img)}
+
+def image_cam_variant(img):
+    """the cam variant an app image was built for, by the tag of its full git version, None if not told"""
+    found = (re.fullmatch(r'(\w+)_v\d+\.\d+-\d+-g[0-9a-f]{7,40}(?:-dirty)?', x) for x in image_strs(img))
+    tags = {m[1] for m in found if m}
+    return CAM_TAGS.get(tags.pop()) if len(tags) == 1 else None
+
 def image_version(img):
     """the version a firmware image reports, from the strings in it, None for a git hash"""
-    strs = {m.group(1).decode() for m in re.finditer(rb'([\x20-\x7e]{4,})\x00', img)}
+    strs = image_strs(img)
     full = {x for x in strs if re.fullmatch(r'(?:\w+_)?v\d+\.\d+-\d+-g[0-9a-f]{7,40}(?:-dirty)?', x)}
     if len(full) == 1:
         return parse_ver(full.pop())
@@ -733,8 +744,8 @@ class Module(Flasher):
             cands = set(cands)
         if not cands:
             raise UpdateError(f'unknown model "{info.model}"')
-        if info.hw and info.model in HW_VARIANTS: # the pump2 bl tells it too
-            v = HW_VARIANTS[info.model](info.hw)
+        if info.hw and info.model == 'cdcam':
+            v = CAM_HW.get(hw_major(info.hw))
             if not v:
                 raise UpdateError(f'unknown hardware "HW: {info.hw}" of {info.model}')
             cands &= {v}
@@ -753,7 +764,7 @@ class Module(Flasher):
                 c = allowed
             else:
                 raise UpdateError(f'{"/".join(sorted(cands))} does not belong at {self.addr}')
-        if len(c) > 1 and len({TARGETS[v].flash_kb for v in c}) > 1: # e.g. a pump in its bl: g031 or g071
+        if len(c) > 1 and len({TARGETS[v].flash_kb for v in c}) > 1: # a pump: g031 or g071
             self.attach()
             kb = self.flash_kb()
             c = {v for v in c if TARGETS[v].flash_kb == kb}
@@ -765,7 +776,12 @@ class Module(Flasher):
             if args.variant[self.addr] not in c:
                 raise UpdateError(f'--variant {args.variant[self.addr]}: not one of {sorted(c)}')
             c = {args.variant[self.addr]}
-        if len(c) > 1: # e.g. a cam in its bl, which does not tell the hw line: compare the app with the files
+        if len(c) > 1 and c <= set(CAM_TAGS.values()):
+            self.attach()
+            v = image_cam_variant(self.node.read_region(APP_ADDR, min(TARGETS[x].conf_addr for x in c) - APP_ADDR))
+            if v in c:
+                c = {v}
+        if len(c) > 1: # e.g. a cam in its bl, with an app of no known tag: compare the app with the files
             self.attach()
             for v in sorted(c):
                 if self.same(TARGETS[v].load().app):
@@ -1042,7 +1058,7 @@ class Bridge(Flasher):
         t = BRIDGES[vid].load()
         if self.info.hw == 'err':
             self.note.append('HW: err, its bus controller was not recognized: the bus is down')
-        elif self.info.hw and self.info.hw not in t.hw:
+        elif self.info.hw and hw_major(self.info.hw) not in t.hw:
             raise UpdateError(f'reports HW: {self.info.hw}, but the usb vid says {t.desc}')
         self.t = t
 

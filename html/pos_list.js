@@ -448,15 +448,16 @@ document.getElementById('btn_load_csv').onclick = async function() {
 
 
 function set_board(idx) {
-    for (let i = 0; i < 10; i++)
-        document.getElementById(`btn_board${i}`).style.backgroundColor = '';
+    for (let btn of document.getElementsByClassName('btn_board'))
+        btn.style.backgroundColor = '';
     document.getElementById(`btn_board${idx}`).style.backgroundColor = '#D5F5E3';
     document.getElementById(`cur_board`).innerText = `#${idx}`;
 }
 
 function get_board_safe() {
-    for (let i = 0; i < 10; i++)
-        if (document.getElementById(`btn_board${i}`).style.backgroundColor)
+    let btns = document.getElementsByClassName('btn_board');
+    for (let i = 0; i < btns.length; i++)
+        if (btns[i].style.backgroundColor)
             return i;
     document.getElementById(`btn_board0`).style.backgroundColor = '#D5F5E3';
     document.getElementById(`cur_board`).innerText = `#0`;

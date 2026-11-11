@@ -488,8 +488,8 @@ async def h_cali_scale(request):
 
 async def h_board(request):
     idx = await body_value(request, 'idx')
-    if not isinstance(idx, int) or not 0 <= idx <= 9:
-        raise web.HTTPBadRequest(text='err: board must be 0..9\n')
+    if not isinstance(idx, int) or idx < 0:
+        raise web.HTTPBadRequest(text='err: board must be a whole number from 0\n')
     return web.json_response(await page_call('board', {'idx': idx}))
 
 
@@ -532,7 +532,7 @@ down is more negative), degrees. The machine calls need no page in the browser, 
   POST   /api/page/pause       body 1 or 0
   POST   /api/page/stop        stop the run
   POST   /api/page/step        body 0..6: the step the run continues with
-  POST   /api/page/board       body 0..9: the board the run continues with
+  POST   /api/page/board       body 0..: the board the run continues with
   POST   /api/page/cali_scale  measure the mm per pixel of camera 1 around a part at the
                                comp search position (the Calibration button of Cam scale)
 '''

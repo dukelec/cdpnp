@@ -65,7 +65,7 @@ POST   /api/page/run         start the semi-automatic placement
 POST   /api/page/pause       body 1 or 0
 POST   /api/page/stop        stop the run
 POST   /api/page/step        body 0..6: the step the run continues with
-POST   /api/page/board       body 0..9: the board the run continues with
+POST   /api/page/board       body 0..: the board the run continues with
 POST   /api/page/cali_scale   measure the mm per pixel of camera 1 around a part at the
                              comp search position (the Calibration button of Cam scale)
 ```

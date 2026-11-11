@@ -9,7 +9,7 @@ import { read_file, download, readable_float, cpy, sleep, wildcard_test } from '
 import { set_camera_cfg, get_motor_pos, set_motor_pos, set_pump, enable_force } from './dev_cmd.js?v=__V__';
 import { csa_dft, csa, cmd_sock, db, csa_need_save, csa_prj_export, csa_cfg_export, cal_grab_ofs } from './index.js?v=__V__';
 import { pld_csa_to_page, pld_csa_from_page } from './preload_ctrl.js?v=__V__';
-import { pos_to_page, pos_from_page, pos_normalize } from './pos_list.js?v=__V__';
+import { pos_to_page, pos_from_page, pos_normalize, get_board_safe } from './pos_list.js?v=__V__';
 import { scale_show, scale_reset, cands_draw } from './comp_track.js?v=__V__';
 import { } from './calibration.js?v=__V__';
 
@@ -19,6 +19,23 @@ function disable_goto_btn(val) {
     for (let b of btn)
         b.disabled = val;
     document.getElementById('pos_list').style.backgroundColor = val ? '#f0f0f0' : '';
+}
+
+// created on demand, there is no limit on the number of boards
+function fiducial_rows(count) {
+    for (let i = document.getElementsByClassName('fiducial_grp').length; i < count; i++) {
+        document.getElementById('panel_row').insertAdjacentHTML('beforebegin', `
+            <div id="fiducial_grp${i}" class="fiducial_grp">
+                <span style="display: inline-block; min-width: 138px;">${L('Fiducial cam')} #${i}:</span>
+                <input type="text" id="fiducial_cam${i}_0" onchange="input_change()">
+                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_0')">${L('Goto')}</button>
+                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_0')">${L('Update')}</button>
+                <input type="text" id="fiducial_cam${i}_1" onchange="input_change()">
+                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_1')">${L('Goto')}</button>
+                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_1')">${L('Update')}</button>
+                <button class="button is-small btn_board" onclick="btn_select_board(${i})" id="btn_board${i}">${L('Select')}</button>
+            </div>`);
+    }
 }
 
 function auto_hide() {
@@ -31,15 +48,13 @@ function auto_hide() {
             skip_hide = false;
         }
     }
-    skip_hide = true;
-    for (let i = 0; i < 10; i++) {
-        if (i < csa.fiducial_cam.length) {
-            document.getElementById(`fiducial_grp${i}`).style.display = '';
-        } else {
-            document.getElementById(`fiducial_grp${i}`).style.display = skip_hide ? '' : 'none';
-            skip_hide = false;
-        }
-    }
+    fiducial_rows(csa.fiducial_cam.length + 1);     // the blank one is for adding a board by hand
+    let grps = document.getElementsByClassName('fiducial_grp');
+    for (let i = 0; i < grps.length; i++)
+        grps[i].style.display = i <= csa.fiducial_cam.length ? '' : 'none';
+    let ref = document.getElementById('panel_ref'), ref_val = Number(ref.value);
+    ref.innerHTML = csa.fiducial_cam.map((_, i) => `<option value="${i}">#${i}</option>`).join('');
+    ref.value = ref_val < csa.fiducial_cam.length ? ref_val : 0;
     skip_hide = true;
     for (let i = 0; i < 8; i++) {
         if (i < csa.user_pos.length) {
@@ -95,7 +110,8 @@ function csa_to_page_input()
     document.getElementById('fiducial_pcb1').value =
         `${readable_float(csa.fiducial_pcb[1][0])}, ${readable_float(csa.fiducial_pcb[1][1])}`;
     
-    for (let i = 0; i < 10; i++) {
+    fiducial_rows(csa.fiducial_cam.length + 1);
+    for (let i = 0; i < document.getElementsByClassName('fiducial_grp').length; i++) {
         if (i < csa.fiducial_cam.length) {
             document.getElementById(`fiducial_cam${i}_0`).value = 
                 `${readable_float(csa.fiducial_cam[i][0][0])}, ${readable_float(csa.fiducial_cam[i][0][1])}`;
@@ -203,6 +219,54 @@ async function input_change() {
 }
 window.input_change = input_change;
 
+
+// The step is along the axes of Fiducial pcb, turned by the measured angle of the reference board, as pcb2xyz does.
+// The reference board keeps its index, so its place in the grid, the others are relative to it.
+window.btn_panel_gen = async function() {
+    if (document.getElementById('btn_run').disabled) {
+        alert(L('Stop the run first'));
+        return;
+    }
+    let step = document.getElementById('panel_step').value.split(',').map(Number);
+    let nx = Number(document.getElementById('panel_x').value);
+    let ny = Number(document.getElementById('panel_y').value);
+    if (step.length != 2 || !step.every(isFinite) || !Number.isInteger(nx) || !Number.isInteger(ny)
+            || nx < 1 || ny < 1 || (nx > 1 && !step[0]) || (ny > 1 && !step[1])) {
+        alert(L('Check the step (dx, dy, not 0 where there is more than one board) and X × Y (whole numbers)'));
+        return;
+    }
+    let ref = Number(document.getElementById('panel_ref').value);
+    if (ref >= nx * ny) {
+        alert(L('The reference board is outside X × Y'));
+        return;
+    }
+    let base = csa.fiducial_cam[ref];
+    let [p0, p1] = csa.fiducial_pcb;
+    let pcb_d = [p1[0] - p0[0], p1[1] - p0[1]];
+    let cam_d = base ? [base[1][0] - base[0][0], base[1][1] - base[0][1]] : [0, 0];
+    // written this way to catch NaN too; a stale Fiducial pcb would give a wrong angle without any error
+    if (!(Math.abs(Math.hypot(...cam_d) / Math.hypot(...pcb_d) - 1) < 0.05)) {
+        alert(L('Locate the reference board first: Fiducial pcb and the Fiducial cam of that board must be filled, with the same distance between the two points'));
+        return;
+    }
+    if (csa.fiducial_cam.length > 1 && !confirm(L('Replace the fiducials of the other boards?')))
+        return;
+
+    let a = Math.atan2(cam_d[1], cam_d[0]) - Math.atan2(pcb_d[1], pcb_d[0]);
+    let [cos, sin] = [Math.cos(a), Math.sin(a)];
+    fiducial_rows(nx * ny + 1);
+    for (let i = 0; i < document.getElementsByClassName('fiducial_grp').length; i++) {
+        if (i == ref)
+            continue;
+        let x = (i % nx - ref % nx) * step[0], y = (Math.floor(i / nx) - Math.floor(ref / nx)) * step[1];
+        for (let j = 0; j < 2; j++)
+            document.getElementById(`fiducial_cam${i}_${j}`).value = i < nx * ny ?
+                `${readable_float(base[j][0] + x * cos - y * sin, 3)}, ${readable_float(base[j][1] + x * sin + y * cos, 3)}` : '';
+    }
+    await input_change();
+    let board = get_board_safe();
+    await window.btn_select_board(board < nx * ny ? board : 0);   // the list may have got shorter
+};
 
 window.btn_update_xy = async function(name) {
     let xy = `${readable_float(csa.cur_pos[0])}, ${readable_float(csa.cur_pos[1])}`;
@@ -573,19 +637,13 @@ function input_init() {
                 <button class="button is-small" onclick="btn_select_search(${i})" id="btn_comp_search${i}">${L('Select')}</button>
             </div>`);
     }
-    for (let i = 0; i < 10; i++) {
-        fiducial.insertAdjacentHTML('beforeend', `
-            <div id="fiducial_grp${i}">
-                <span style="display: inline-block; min-width: 138px;">${L('Fiducial cam')} #${i}:</span>
-                <input type="text" id="fiducial_cam${i}_0" onchange="input_change()">
-                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_0')">${L('Goto')}</button>
-                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_0')">${L('Update')}</button>
-                <input type="text" id="fiducial_cam${i}_1" onchange="input_change()">
-                <button class="button is-small goto_btn" onclick="btn_goto_xy('fiducial_cam${i}_1')">${L('Goto')}</button>
-                <button class="button is-small" onclick="btn_update_xy('fiducial_cam${i}_1')">${L('Update')}</button>
-                <button class="button is-small" onclick="btn_select_board(${i})" id="btn_board${i}">${L('Select')}</button>
-            </div>`);
-    }
+    fiducial.insertAdjacentHTML('beforeend', `
+        <div id="panel_row">
+            <span style="display: inline-block; min-width: 138px;" title="${L('Fills the other boards from the chosen one, which keeps its place in the X × Y grid. Numbered row by row, the step is along the axes of Fiducial pcb, a negative step goes the other way.')}">${L('Panel from')} <select id="panel_ref"></select>:</span>
+            <input type="text" id="panel_step" placeholder="dx, dy"> mm &nbsp;|&nbsp;
+            X × Y: <input type="text" id="panel_x" size="2" value="1"> × <input type="text" id="panel_y" size="2" value="1">
+            <button class="button is-small" onclick="btn_panel_gen()">${L('Generate')}</button>
+        </div>`);
     for (let i = 0; i < 8; i++) {
         fiducial.insertAdjacentHTML('beforeend', `
             <div id="user_grp${i}">
