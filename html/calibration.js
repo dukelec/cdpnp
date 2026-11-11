@@ -7,15 +7,16 @@
 import { L } from './utils/lang.js?v=__V__';
 import { readable_float, sleep } from './utils/helper.js?v=__V__';
 import { get_camera_cfg, get_motor_pos, set_motor_pos, check_suck_pressure, set_pump, get_cv_cur, get_cv_comps,
-         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, set_vision_cfg } from './dev_cmd.js?v=__V__';
-import { set_step, get_step_safe, set_comp_search, get_comp_search } from './pos_list.js?v=__V__';
+         z_keep_high, enable_force, cam_comp_snap, set_camera_cfg, set_vision_cfg, fid_mode, detect_for_parts } from './dev_cmd.js?v=__V__';
+import { set_step, get_step_safe, set_comp_search, get_comp_search, get_board_safe } from './pos_list.js?v=__V__';
 import { csa_to_page_input, input_change } from './input_ctrl.js?v=__V__';
-import { csa, cal_grab_ofs, rotate_vector } from './index.js?v=__V__';
+import { csa, cal_grab_ofs, rotate_vector, show_banner } from './index.js?v=__V__';
 import { px2mm, scale_info, scale_info_of, scale_set } from './comp_track.js?v=__V__';
+import { fid_fit } from './fid_fit.js?v=__V__';
 
 
 document.getElementById('btn_cali_offset').onclick = async function() {
-    if (!document.getElementById('camera_detect').value) {
+    if (!detect_for_parts()) {
         alert(L("please set camera vision detect method!"));
         return;
     }
@@ -250,7 +251,7 @@ document.getElementById('btn_update_vision').onclick = async function() {
 
 
 document.getElementById('btn_cali_cam1').onclick = async function() {
-    if (!document.getElementById('camera_detect').value) {
+    if (!detect_for_parts()) {
         alert(L("please set camera vision detect method!"));
         return;
     }
@@ -475,7 +476,7 @@ async function scale_measure() {
 // ask: tell the user what to prepare and confirm before the samples replace the config's (the
 // button); the api asks nothing and applies them at once
 async function cali_scale(ask=true) {
-    if (!document.getElementById('camera_detect').value)
+    if (!detect_for_parts())
         throw new Error(L("please set camera vision detect method!"));
     if (!document.getElementById('btn_stop').disabled)
         throw new Error(L("please stop smt first!"));
@@ -561,7 +562,7 @@ document.getElementById('btn_cali_scale').onclick = async function() {
 
 
 document.getElementById('btn_cali_cam2').onclick = async function() {
-    if (!document.getElementById('camera_detect').value) {
+    if (!detect_for_parts()) {
         alert(L("please set camera vision detect method!"));
         return;
     }
@@ -838,4 +839,247 @@ document.getElementById('btn_cali_cam2').onclick = async function() {
 };
 
 
-export { cali_scale };
+// ------------------------------------------------------------ fiducials
+
+const FID_BACK = 0.5;       // mm, the last move always comes from -x, -y: the same side of the lead screw
+const FID_TOL = 0.03;       // mm, one more approach when ending farther off the center than this
+const FID_NEAR = 8;         // mm, how far off the center a fiducial is looked for by hand
+const FID_NEAR_ALL = 3;     // mm, with Lock all, the old position is close and a pad can pass for a circle
+
+// median position of the fiducial nearest to the center over n new frames, mm from the center; null when it
+// is not seen. The first new frame may be from the move, one farther than max_mm is not the one looked for
+async function fid_offset(n, max_mm) {
+    let seq = -1, first = true, l = [];
+    for (let t = 0; l.length < n; t++) {
+        if (t > n * 40)
+            return null;
+        let r = await get_cv_comps();
+        if (!r || r.seq == seq || !r.detect.startsWith('fid')) {
+            await sleep(40);
+            continue;
+        }
+        seq = r.seq;
+        if (first) {
+            first = false;
+        } else if (r.cur) {
+            let mm = px2mm(r.cur[0] - 300, r.cur[1] - 400);
+            if (Math.hypot(mm[0], mm[1]) <= max_mm)
+                l.push(mm);
+        }
+    }
+    let median = i => {
+        let v = l.map(p => p[i]).sort((a, b) => a - b);
+        return (v[(n - 1) >> 1] + v[n >> 1]) / 2;
+    };
+    return [median(0), median(1)];
+}
+
+// the position of the fiducial under the camera: where the axes stopped, plus what is left in the frame
+async function fid_approach(max_mm) {
+    await sleep(900);
+    let o = await fid_offset(2, max_mm);
+    if (!o)
+        return null;
+    for (let i = 0; i < 3; i++) {
+        let tgt = [csa.cur_pos[0] + o[0], csa.cur_pos[1] + o[1]];
+        csa.cur_pos[0] = tgt[0] - FID_BACK;
+        csa.cur_pos[1] = tgt[1] - FID_BACK;
+        await set_motor_pos(100);
+        csa.cur_pos[0] = tgt[0];
+        csa.cur_pos[1] = tgt[1];
+        await set_motor_pos(100, 60000);
+        await sleep(900);
+        o = await fid_offset(5, 1);
+        if (!o)
+            return null;
+        if (Math.hypot(o[0], o[1]) <= FID_TOL)
+            break;
+    }
+    return [csa.cur_pos[0] + o[0], csa.cur_pos[1] + o[1]];
+}
+
+let fid_answer_set = null;
+window.fid_answer = a => { if (fid_answer_set) fid_answer_set(a); };
+
+// waits for the user, who can jog the head meanwhile; 'stop' when the Stop button ends a Lock all
+// found: false: nothing to accept, always: offer Always yes, ok: false: found, but looks wrong
+async function fid_ask(text, found, watch_stop, always, ok=true) {
+    let btn = (a, t) => `<button class="button is-small" onclick="fid_answer('${a}')">${L(t)}</button>`;
+    show_banner('fid_banner', `${text}\n` + (found ? btn('ok', 'Accept') + ' ' : '') + (found && always ? btn('always', 'Always yes') + ' ' : '') +
+                btn('manual', 'Use the current position') + ' ' + btn('retry', 'Detect again') + ' ' + btn('skip', 'Skip'), 'is-warning', found && ok ? '#ABEBC680' : undefined);
+    let answer = null;
+    fid_answer_set = a => { answer = a; };
+    while (!answer && !(watch_stop && csa.stop))
+        await sleep(50);
+    fid_answer_set = null;
+    show_banner('fid_banner', '');
+    return answer || 'stop';
+}
+
+// [x, y] of one point as found, or as the user placed it; null: not found, or skipped
+// auto: for Lock all, {on: Always yes was pressed, dev: p => mm off from the other points}
+async function fid_confirm(title, max_mm, ask, watch_stop, auto=null) {
+    while (true) {
+        let p = await fid_approach(max_mm);
+        if (!ask)
+            return p;
+        let dev = p && auto ? auto.dev(p) : 0, limit = csa.fiducial_pos_err;
+        if (p && auto && auto.on && dev <= limit)
+            return p;
+        let text = p ? L('Found: check that the crosshair is on the fiducial, or jog it there and use the current position')
+                     : L('Not found: jog the crosshair onto the fiducial and use the current position');
+        if (dev > limit)
+            text = `${L('Shifted more than the other points by')} ${dev.toFixed(2)} mm. ${text}`;
+        let a = await fid_ask(title ? `${title}: ${text}` : text, p != null, watch_stop, auto && !auto.on, !(dev > limit));
+        if (a == 'always') {
+            auto.on = true;
+            return p;
+        }
+        if (a == 'ok')
+            return p;
+        if (a == 'manual')
+            return [csa.cur_pos[0], csa.cur_pos[1]];
+        if (a != 'retry')
+            return null;
+    }
+}
+
+// the Fiducial entry of the detect box is selected meanwhile, so what the camera does shows on the page
+async function fid_session(fn) {
+    if (!fid_mode())
+        throw new Error(L('Fiducial size: a diameter, or W x H of a rectangular pad, in mm'));
+    let dev = document.getElementById('camera_dev'), en = document.getElementById('camera_en');
+    if (dev.value != '1' || !en.checked) {
+        dev.value = 1;
+        en.checked = true;
+        await dev.onchange();
+    }
+    let light = document.getElementById('camera_light1'), light_bk = light.checked;
+    let detect = document.getElementById('camera_detect'), detect_bk = detect.value;
+    light.checked = true;
+    detect.value = 'fiducial';
+    await light.onchange();         // sends both
+    try {
+        return await fn();
+    } finally {
+        light.checked = light_bk;
+        detect.value = detect_bk;
+        await light.onchange();
+    }
+}
+
+// x, y of the fiducial near the center of the frame, the head stays there; null: skipped by the user
+async function fid_lock(ask=false, title='') {
+    let p = await fid_session(async () => {
+        if (csa.cur_pos[2] != csa.pcb_top_z) {
+            csa.cur_pos[2] = csa.pcb_top_z;
+            await set_motor_pos(100);
+        }
+        return await fid_confirm(title, FID_NEAR, ask, false);
+    });
+    if (!p && !ask)
+        throw new Error(L('No fiducial found near the center: check that it is in view, and its size'));
+    return p;
+}
+
+// every point of every board; one not found or skipped keeps its old value and the others go on
+async function fid_lock_all(ask=false) {
+    if (!csa.fiducial_cam.length)
+        throw new Error(L('No fiducial to lock'));
+    let ret = { total: 0, locked: 0, failed: [], max_move: 0, moves: [], stopped: false };
+    let shifts = [], auto = { on: false, dev: null };   // shifts: of the points accepted so far
+    let median = l => { l = [...l].sort((a, b) => a - b); return l[l.length >> 1]; };
+    for (let row of csa.fiducial_cam)
+        ret.total += row.length;
+    document.getElementById('btn_run').disabled = true;
+    document.getElementById('btn_stop').disabled = false;
+    csa.stop = false;
+    try {
+        await fid_session(async () => {
+            for (let b = 0; b < csa.fiducial_cam.length; b++) {
+                for (let j = 0; j < csa.fiducial_cam[b].length; j++) {
+                    while (document.getElementById('pause_en').checked)
+                        await sleep(100);
+                    if (csa.stop) {
+                        ret.stopped = true;
+                        return;
+                    }
+                    let old = csa.fiducial_cam[b][j];
+                    let low = csa.cur_pos[2] != csa.pcb_top_z;
+                    if (low) {
+                        let z_middle = Math.min(Math.max(csa.pcb_top_z, csa.cur_pos[2]) + csa.cam_dz, -2);
+                        if (csa.cur_pos[2] < z_middle) {
+                            csa.cur_pos[2] = z_middle;
+                            await set_motor_pos(100);
+                        }
+                    }
+                    csa.cur_pos[0] = old[0];
+                    csa.cur_pos[1] = old[1];
+                    csa.cur_pos[3] = 0;
+                    await set_motor_pos(100);
+                    if (low) {
+                        csa.cur_pos[2] = csa.pcb_top_z;
+                        await set_motor_pos(100);
+                    }
+                    auto.dev = p => {
+                        let l = shifts.filter(s => s.b == b);   // a board placed apart moves on its own
+                        l = l.length ? l : shifts;
+                        return l.length ? Math.hypot(p[0] - old[0] - median(l.map(s => s.x)), p[1] - old[1] - median(l.map(s => s.y))) : 0;
+                    };
+                    let p = await fid_confirm(`#${b}.${j + 1}`, FID_NEAR_ALL, ask, true, auto);
+                    if (csa.stop) {
+                        ret.stopped = true;
+                        return;
+                    }
+                    if (!p) {
+                        ret.failed.push([b, j]);
+                        continue;
+                    }
+                    shifts.push({ b, x: p[0] - old[0], y: p[1] - old[1] });
+                    let m = Math.hypot(p[0] - old[0], p[1] - old[1]);
+                    ret.moves.push([b, j, Math.round(m * 1000) / 1000]);
+                    ret.max_move = Math.max(ret.max_move, m);
+                    ret.locked++;
+                    csa.fiducial_cam[b][j] = [Math.round(p[0] * 1e6) / 1e6, Math.round(p[1] * 1e6) / 1e6];
+                    csa_to_page_input();
+                }
+            }
+        });
+    } finally {
+        csa.stop = true;
+        document.getElementById('btn_run').disabled = false;
+        document.getElementById('btn_stop').disabled = true;
+    }
+    return ret;
+}
+
+// from the fiducials of the selected board, needs nothing but what is in the boxes
+async function cali_skew(ask=true) {
+    let f = fid_fit(csa.fiducial_pcb, csa.fiducial_cam[get_board_safe()] || []);
+    if (!f || f.collinear) {
+        let msg = L('XY skew needs 3 or 4 fiducials not on a line, in Fiducial pcb and in the selected board');
+        if (ask)
+            alert(msg);
+        throw new Error(msg);
+    }
+    let info = { skew: f.skew, n: f.n, max_err: f.max_err, scale_diff: f.scale_diff };
+    let msg = `${L('Update XY skew')}: ${f.skew.toFixed(4)}°, ${f.n} ${L('points')}, X/Y ${f.scale_diff.toFixed(3)}%, ` +
+              (f.n > 3 ? `${L('max error')} ${f.max_err.toFixed(3)} mm` : L('3 points have no check, 4 are better'));
+    if (ask && !confirm(msg))
+        return { applied: false, ...info };
+    csa.xy_skew = Math.round(f.skew * 1e6) / 1e6;
+    csa_to_page_input();
+    await input_change();
+    return { applied: true, ...info };
+}
+
+document.getElementById('btn_cali_skew').onclick = async function() {
+    try {
+        await cali_skew(true);
+    } catch (err) {
+        console.log('cali_skew:', err.message);
+    }
+};
+
+
+export { cali_scale, fid_lock, fid_lock_all, cali_skew };

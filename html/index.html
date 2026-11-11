@@ -134,6 +134,7 @@
             <option value="default" selected>${L('Default')}</option>
             <option value="limit_angle">${L('Limit angle')}</option>
             <option value="">-- ${L('None')} --</option>
+            <option value="fiducial">${L('Fiducial')}</option>
             <option value="cali_nozzle_13_4">${L('Cali nozzle')} 502</option> <!-- Φ13mm ±4mm -->
             <option value="cali_nozzle_22_4">${L('Cali nozzle')} 503</option>
             <option value="cali_nozzle_37_6">${L('Cali nozzle')} 504</option>
@@ -180,6 +181,11 @@
         <span id="cam_scale">--</span>
         <button class="button is-small goto_btn" id="btn_cali_scale" title="${L('Snap on a part at the comp search position, then move around it out to the edge of the frame and measure')}">${L('Calibration')}</button>
         <button class="button is-small" id="btn_scale_reset">${L('Reset')}</button>
+        <br>
+        <span style="display: inline-block; min-width: 138px;" title="${L('How far the X and Y motions of this machine are from 90 degrees, used for the boards with 2 fiducials. The Calibration button takes it from the 3 or 4 fiducials of the selected board.')}">
+            ${L('XY skew')} (°):</span>
+        <input type="text" id="xy_skew" onchange="input_change()">
+        <button class="button is-small goto_btn" id="btn_cali_skew">${L('Calibration')}</button>
         
         <div id="input_search"></div>
         <span style="display: inline-block; min-width: 138px;" title="${L('Height of nozzle to target when focusing (better not modify this)')}">
@@ -206,6 +212,14 @@
                 ${L('Fiducial pcb')}:</span>
             <input type="text" id="fiducial_pcb0" onchange="input_change()">
             <input type="text" id="fiducial_pcb1" onchange="input_change()">
+            <span style="display: inline-block; min-width: 84px;" title="${L('What Lock looks for: the diameter of the fiducial, or W x H of a rectangular pad')}">${L('Size')} (mm):</span> <input type="text" size="6" id="fiducial_size" onchange="fid_size_change()"> <span id="fiducial_size_px"></span>
+            <div>
+                <span style="display: inline-block; min-width: 138px;"></span>
+                <input type="text" id="fiducial_pcb2" onchange="input_change()">
+                <input type="text" id="fiducial_pcb3" onchange="input_change()">
+                <span style="display: inline-block; min-width: 84px;" title="${L('How far the size seen by the camera may be from Size, in mm')}">${L('Size err')}:</span> <input type="text" size="4" id="fiducial_size_err" onchange="fid_size_change()">
+                <span title="${L('With Always yes of Lock all: a point that shifted this much more than the other points of its board is asked about, in mm')}">${L('Pos err')}:</span> <input type="text" size="4" id="fiducial_pos_err" onchange="input_change()">
+            </div>
         </div>
         <div id="input_user"></div>
     </div>

@@ -6,7 +6,7 @@
 
 import { L } from './utils/lang.js?v=__V__';
 import { readable_float, sleep } from './utils/helper.js?v=__V__';
-import { set_camera_cfg, set_motor_pos, check_suck_pressure, set_pump, cam_comp_snap, pcb2xyz } from './dev_cmd.js?v=__V__';
+import { set_camera_cfg, set_motor_pos, check_suck_pressure, set_pump, cam_comp_snap, pcb2xyz, detect_for_parts } from './dev_cmd.js?v=__V__';
 import { get_comp_search } from './pos_list.js?v=__V__';
 import { csa, cal_grab_ofs } from './index.js?v=__V__';
 
@@ -81,7 +81,7 @@ document.getElementById('preload_en').onclick = async function() {
 
 
 document.getElementById('btn_pld_run').onclick = async function() {
-    if (!document.getElementById('camera_detect').value) {
+    if (!detect_for_parts()) {
         alert(L("please set camera vision detect method!"));
         return;
     }

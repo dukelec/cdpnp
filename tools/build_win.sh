@@ -17,7 +17,7 @@ set -e
 
 PY_VER=${PY_VER:-3.14.8}
 PY_TAG=$(echo "$PY_VER" | cut -d. -f1,2 | tr -d .)     # 3.14.8 -> 314
-DEPS="websockets pyserial u-msgpack-python aiohttp opencv-python<5 scipy"   # opencv 4, what the vision code was written against
+DEPS="websockets pyserial u-msgpack-python aiohttp opencv-python<5"   # opencv 4, what the vision code was written against
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
@@ -58,7 +58,6 @@ python3 -m pip install --quiet --disable-pip-version-check --no-compile \
     --platform win_amd64 --python-version "$PY_VER" --implementation cp --abi "cp$PY_TAG" \
     --only-binary=:all: $DEPS
 rm -rf "$OUT/python/Lib/site-packages/bin"
-find "$OUT/python/Lib/site-packages" -maxdepth 1 -name "*.whl" -delete    # the scipy wheel leaves an empty file named after itself
 find "$OUT/python/Lib/site-packages" -name __pycache__ -prune -exec rm -rf {} +
 
 # the files of the repo (and of pycdnet) as tracked

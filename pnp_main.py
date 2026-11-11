@@ -21,7 +21,6 @@ import struct
 import asyncio
 import math
 import numpy as np
-from scipy.optimize import fsolve
 from cd_ws import CDWebSocket
 from web_serve import ws_ns, start_web
 
@@ -72,30 +71,32 @@ if dev:
 print('start...')
 
 
-coeff = None
-fiducial_pcb = [ [0, 0], [1, 1] ]
-fiducial_cam = [ [0, 0], [10, 10] ]
+def collinear(p):
+    l = np.linalg.eigvalsh(np.cov(p.T, bias=True)) # ascending
+    return not l[0] >= l[1] * 0.0025
 
-def equations(p):
-    s, a, d_x, d_y = p
-    F = np.empty((4))
-    for i in range(2):
-        F[i*2] = (fiducial_pcb[i][0] * math.cos(a) - fiducial_pcb[i][1] * math.sin(a)) * s + d_x - fiducial_cam[i][0]
-        F[i*2+1] = (fiducial_pcb[i][0] * math.sin(a) + fiducial_pcb[i][1] * math.cos(a)) * s + d_y - fiducial_cam[i][1]
-    return F
 
-def pcb2xyz(p, pcb):
-    s, a, d_x, d_y = p
-    step_x = (pcb[0] * math.cos(a) - pcb[1] * math.sin(a)) * s + d_x
-    step_y = (pcb[0] * math.sin(a) + pcb[1] * math.cos(a)) * s + d_y
-    return step_x, step_y, math.degrees(math.atan2(math.sin(-a), math.cos(-a))) # return limited-range angle
-
-def update_coeff():
-    global coeff
-    coeff = fsolve(equations, (1, 1, 1, 1)) # ret: scale, angle, del_x, del_y
-    #print(f'coefficient:', coeff)
-    #print('equations(coeff):', equations(coeff))
-    #print('coeff:', coeff)
+# skew: how far the X and Y motions are from 90 degrees (deg), the commanded position is
+# C * square position with C = [[1, k/2], [k/2, 1]]
+# 2 fiducials: rotation, scale and offset, on top of the skew of the machine
+# 3 or more: least squares affine, which takes up the skew and what the PCB itself does
+def pcb2xyz(pcb, cam, x, y, skew=0):
+    n = min(len(pcb), len(cam))
+    p, c = np.array(pcb[:n], dtype=float), np.array(cam[:n], dtype=float)
+    if n >= 3 and not collinear(p):
+        m = np.linalg.lstsq(np.c_[p, np.ones(n)], c, rcond=None)[0]
+        ret = np.array([x, y, 1.0]) @ m
+        a = math.atan2(m[0, 1] - m[1, 0], m[0, 0] + m[1, 1])
+    else:
+        k = math.radians(skew)
+        C = np.array([[1, k / 2], [k / 2, 1]])
+        w = np.linalg.solve(C, c[:2].T).T
+        z = complex(*(w[1] - w[0])) / complex(*(p[1] - p[0]))
+        t = complex(*w[0]) - z * complex(*p[0])
+        q = z * complex(x, y) + t
+        ret = C @ np.array([q.real, q.imag])
+        a = np.angle(z)
+    return float(ret[0]), float(ret[1]), math.degrees(math.atan2(math.sin(-a), math.cos(-a))) # limited-range angle
 
 
 async def dev_service():
@@ -111,8 +112,6 @@ async def dev_service():
 
 
 async def dev_handle(sock, dat, src):
-    global coeff, fiducial_pcb, fiducial_cam
-    
     if dat['action'] == 'get_motor_pos':
         logger.info('get_motor_pos')
         p = load_pos() if dev else [0, 0, 0, 0]
@@ -192,11 +191,7 @@ async def dev_handle(sock, dat, src):
     
     elif dat['action'] == 'pcb2xyz':
         logger.info(f"pcb2xyz")
-        fiducial_pcb = dat['pcb']
-        fiducial_cam = dat['cam']
-        update_coeff()
-        p_xy = pcb2xyz(coeff, (dat['x'], dat['y']))
-        await sock.sendto(p_xy, src)
+        await sock.sendto(pcb2xyz(dat['pcb'], dat['cam'], dat['x'], dat['y'], dat.get('skew', 0)), src)
     
     elif dat['action'] == 'get_cv_cur':
         logger.info(f"get_cv_cur")

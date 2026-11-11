@@ -411,15 +411,17 @@ async def h_snap(request):
 
 
 async def h_pcb2xyz(request):
-    body = await body_json(request, '{"pcb": [[x, y], [x, y]], "cam": [[x, y], [x, y]], "x": X, "y": Y}')
+    body = await body_json(request, '{"pcb": [[x, y], [x, y]], "cam": [[x, y], [x, y]], "x": X, "y": Y, "skew": 0}')
     for k in ('pcb', 'cam'):
         v = body.get(k)
-        if not (isinstance(v, list) and len(v) == 2 and all(isinstance(p, list) and len(p) == 2 for p in v)):
-            raise web.HTTPBadRequest(text=f'err: "{k}" must be [[x, y], [x, y]], the two fiducials\n')
+        if not (isinstance(v, list) and 2 <= len(v) <= 4 and all(isinstance(p, list) and len(p) == 2 for p in v)):
+            raise web.HTTPBadRequest(text=f'err: "{k}" must be [[x, y], ...], 2 to 4 fiducials\n')
     for k in ('x', 'y'):
         if not isinstance(body.get(k), (int, float)):
             raise web.HTTPBadRequest(text=f'err: "{k}" must be a number\n')
-    ret = await dev_call('pcb2xyz', pcb=body['pcb'], cam=body['cam'], x=body['x'], y=body['y'])
+    if not isinstance(body.get('skew', 0), (int, float)):
+        raise web.HTTPBadRequest(text='err: "skew" must be a number\n')
+    ret = await dev_call('pcb2xyz', pcb=body['pcb'], cam=body['cam'], x=body['x'], y=body['y'], skew=body.get('skew', 0))
     return web.json_response(ret)
 
 
@@ -486,6 +488,19 @@ async def h_cali_scale(request):
     return web.json_response(await page_call('cali_scale', timeout=310))
 
 
+async def h_fid_lock(request):
+    body = await body_json(request, '{"board": 0, "point": 2}')
+    return web.json_response(await page_call('fid_lock', body or {}, timeout=60))
+
+
+async def h_fid_lock_all(request):
+    return web.json_response(await page_call('fid_lock_all', timeout=3600))
+
+
+async def h_cali_skew(request):
+    return web.json_response(await page_call('cali_skew'))
+
+
 async def h_board(request):
     idx = await body_value(request, 'idx')
     if not isinstance(idx, int) or idx < 0:
@@ -518,7 +533,8 @@ down is more negative), degrees. The machine calls need no page in the browser, 
                                ?timeout=S; X-Frame-* headers carry seq / ts / cv
   POST   /api/snap             center the camera on the detected part (page needed),
                                body {"times": 3, "max_err": 0.02}
-  POST   /api/pcb2xyz          body {"pcb":[[..],[..]],"cam":[[..],[..]],"x":X,"y":Y}
+  POST   /api/pcb2xyz          body {"pcb":[[..],[..]],"cam":[[..],[..]],"x":X,"y":Y,"skew":0}
+                               2 to 4 fiducials, skew: the page's xy_skew (deg), used with 2
                                -> [x, y, angle] in machine coordinates
   POST   /api/wait_stop        wait until every motor has stopped
   POST   /api/force            arm the z force sensor: the next move down stops on touch
@@ -535,6 +551,11 @@ down is more negative), degrees. The machine calls need no page in the browser, 
   POST   /api/page/board       body 0..: the board the run continues with
   POST   /api/page/cali_scale  measure the mm per pixel of camera 1 around a part at the
                                comp search position (the Calibration button of Cam scale)
+  POST   /api/page/fid_lock    lock on the fiducial nearest to the center of the frame, from
+                               one side; body {"board": 0, "point": 2} also fills that box
+  POST   /api/page/fid_lock_all  the same for every fiducial of every board, -> {total,
+                               locked, failed: [[board, point], ...], max_move, moves, stopped}
+  POST   /api/page/cali_skew   xy_skew from the 3 or 4 fiducials of the selected board
 '''
 
 
@@ -586,6 +607,9 @@ async def start_api(addr, port):
         web.post('/api/page/step', h_step),
         web.post('/api/page/board', h_board),
         web.post('/api/page/cali_scale', h_cali_scale),
+        web.post('/api/page/fid_lock', h_fid_lock),
+        web.post('/api/page/fid_lock_all', h_fid_lock_all),
+        web.post('/api/page/cali_skew', h_cali_skew),
     ])
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()

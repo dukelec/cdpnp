@@ -29,12 +29,29 @@ async function get_camera_cfg() {
     document.getElementById('camera_light1').checked = !!dat[0].light1;
     document.getElementById('camera_light2').checked = !!dat[0].light2;
     document.getElementById('camera_dev').value = dat[0].dev;
-    document.getElementById('camera_detect').value = dat[0].detect;
+    document.getElementById('camera_detect').value = dat[0].detect.startsWith('fid') ? 'fiducial' : dat[0].detect;
+}
+
+// what the camera is told to look for a fiducial, from the size box; null if the size makes no sense
+function fid_mode() {
+    let m = String(csa.fiducial_size).trim().match(/^([\d.]+)(?:\s*[x*×]\s*([\d.]+))?$/i);
+    if (!m || !(Number(m[1]) > 0) || (m[2] && !(Number(m[2]) > 0)) || !(csa.fiducial_size_err > 0))
+        return null;
+    let k = px2mm(1, 0)[0], a = Number(m[1]) / k, t = Math.max(csa.fiducial_size_err / k, 3).toFixed(1);
+    return m[2] ? `fidrect_${a.toFixed(1)}_${(Number(m[2]) / k).toFixed(1)}_${t}` : `fiducial_${a.toFixed(1)}_${t}`;
+}
+
+// the detect method for the parts: Fiducial in the box only shows the fiducials
+function detect_for_parts() {
+    let v = document.getElementById('camera_detect').value;
+    return v == 'fiducial' ? '' : v;
 }
 
 async function set_camera_cfg(_detect=null, exposure=20) {
     let dev = Number(document.getElementById('camera_dev').value);
     let detect = _detect == null ? document.getElementById('camera_detect').value : _detect;
+    if (detect == 'fiducial')
+        detect = fid_mode() || '';
     let light1 = document.getElementById('camera_light1').checked;
     let light2 = document.getElementById('camera_light2').checked;
     cmd_sock.flush();
@@ -125,9 +142,11 @@ async function set_pump(val) {
 
 async function pcb2xyz(pcb, cam, x, y) {
     cmd_sock.flush();
-    await cmd_sock.sendto({'action': 'pcb2xyz', 'pcb': pcb, 'cam': cam, 'x': x, 'y': y}, ['server', 'dev']);
+    await cmd_sock.sendto({'action': 'pcb2xyz', 'pcb': pcb, 'cam': cam, 'x': x, 'y': y, 'skew': csa.xy_skew}, ['server', 'dev']);
     let dat = await cmd_sock.recvfrom(1000);
     console.log('pcb2xyz ret', dat ? dat[0] : null);
+    if (dat && !Array.isArray(dat[0]))  // never hand an error text to a move
+        throw new Error(`pcb2xyz: ${dat[0]}`);
     return dat ? dat[0] : null;
 }
 
@@ -204,5 +223,5 @@ async function cam_comp_snap(times=3, max_err=0.02) {
 
 export {
     get_camera_cfg, set_camera_cfg, get_motor_pos, set_motor_pos, get_pump_hw_ver, get_pump_pressure, check_suck_pressure, set_pump,
-    pcb2xyz, z_keep_high, enable_force, get_cv_cur, get_cv_comps, cam_comp_snap, set_vision_cfg
+    pcb2xyz, z_keep_high, enable_force, get_cv_cur, get_cv_comps, cam_comp_snap, set_vision_cfg, fid_mode, detect_for_parts
 };

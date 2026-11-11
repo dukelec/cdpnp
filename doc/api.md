@@ -51,7 +51,8 @@ GET    /api/frame            the last frame, ?type=cv (annotated png, default) o
                              ?timeout=S; X-Frame-* headers carry seq / ts / cv
 POST   /api/snap             center the camera on the detected part (page needed),
                              body {"times": 3, "max_err": 0.02}
-POST   /api/pcb2xyz          body {"pcb":[[..],[..]],"cam":[[..],[..]],"x":X,"y":Y}
+POST   /api/pcb2xyz          body {"pcb":[[..],[..]],"cam":[[..],[..]],"x":X,"y":Y,"skew":0}
+                             2 to 4 fiducials, skew: the page's xy_skew (deg), used with 2
                              -> [x, y, angle] in machine coordinates
 POST   /api/wait_stop        wait until every motor has stopped
 POST   /api/force            arm the z force sensor: the next move down stops on touch
@@ -68,6 +69,11 @@ POST   /api/page/step        body 0..6: the step the run continues with
 POST   /api/page/board       body 0..: the board the run continues with
 POST   /api/page/cali_scale   measure the mm per pixel of camera 1 around a part at the
                              comp search position (the Calibration button of Cam scale)
+POST   /api/page/fid_lock    lock on the fiducial near the center of the frame, body
+                             {"board": 0, "point": 2} also fills that box
+POST   /api/page/fid_lock_all  the same for every fiducial of every board, the Stop
+                             button of the page stops it
+POST   /api/page/cali_skew   xy_skew from the 3 or 4 fiducials of the selected board
 ```
 
 Errors come back as a 4xx / 5xx with a one line `err: ...` body.
@@ -115,6 +121,44 @@ is the vector from the camera center to the nozzle rotation center, and
 section of the page.
 
 
+### Fiducials and the XY skew
+
+A board has 2 to 4 fiducials: `fiducial_pcb` is their list in pcb coordinates,
+`fiducial_cam` one list per board of where the camera found them, the first 2
+are needed and a list ends at its first blank point.
+
+With 2 the pcb is placed by rotation, scale and offset, on top of `xy_skew`,
+in degrees, how far the X and Y motions of this machine are from 90. A
+commanded position is `C * p` of a position p in square coordinates, with
+`C = [[1, k/2], [k/2, 1]]` and k the skew in radians. With 3 or 4 a least
+squares affine is used and `xy_skew` is not, the fit already holds it and what
+the PCB itself does (stretch, v-cuts). 3 points have no redundancy, 4 show
+how well they agree. Points about on a line fall back to the first 2.
+
+`POST /api/page/fid_lock` looks for what `fiducial_size` says, in mm: a
+diameter (a bright round mark) or `W x H` of a rectangular pad, +/-
+`fiducial_size_err` mm, the
+one nearest to the center of the frame, at most 8 mm off. It moves there with
+the last 0.5 mm going in +x and +y, so the lead screw backlash is the same every
+time, and reports the position from the mean of 5 frames.
+`POST /api/page/fid_lock_all` does that for every point of every board, looking
+at most 3 mm from the old position; a point not found keeps its old value and
+is listed in `failed`. The Lock and Lock all buttons of the page do the same
+and then wait for the user at every point: accept it, jog the crosshair onto
+the fiducial and use the current position, detect again, or skip it. Always
+yes in Lock all accepts the points that follow by itself, except one not found
+or shifted more than `fiducial_pos_err` mm beyond the median of the other points
+of its board.
+The api calls do not ask, so check what they return. Detection is not reliable on
+blotchy pads such as HASL.
+
+`POST /api/page/cali_skew` takes `xy_skew` from the 3 or 4 points of the
+selected board, once per machine: `save` it afterwards like any config value,
+`xy_skew` is exported with the config, `fiducial_size`, `fiducial_size_err` and
+`fiducial_pos_err` with the project. The
+detect modes are `fiducial_D_T`, diameter D +/- T pixels, and `fidrect_W_H_T`.
+
+
 ### The camera and the vision result
 
 `/api/camera` sets up what the cameras do: `enable` streams frames from the
@@ -129,6 +173,9 @@ in each frame:
 - `cali_nozzle_D_T`: a circle of diameter D +/- T pixels, the nozzle hole,
   camera 2 (the threshold is `nozzle_thresh` of `/api/vision`)
 - `cali_pad`: the pads of a footprint, their common center and angle
+- `fiducial`: through the page, what `fiducial_size` says: the page turns it into
+  `fiducial_D_T` (diameter D +/- T pixels) or `fidrect_W_H_T` (a rectangular pad).
+  It only shows the fiducials, a run needs a detect method for the parts
 
 `/api/cv` is the result for the last frame: `cur` is `[x, y, angle, dist]`
 in pixels of the annotated image (dist is the L1 distance of the object to
@@ -197,8 +244,8 @@ believes, kept up to date by every move through the page), the camera boxes,
 `cam_scale` (above), `run` (running, pause, step, board, the selected
 component, the progress and `cands`, below) and `cfg`, the config values of
 the page: `grab_ofs`, `nozzle_cali`, `cam_angle`, `cam_scale_samples`,
-`comp_search` (the tray search positions), `cam_dz`, `comp_base_z`,
-`pcb_base_z`, `fiducial_pcb`, `fiducial_cam`, `user_pos`, `motor_speed`,
+`xy_skew`, `comp_search` (the tray search positions), `cam_dz`, `comp_base_z`,
+`pcb_base_z`, `fiducial_pcb`, `fiducial_cam`, `fiducial_size`, `fiducial_size_err`, `fiducial_pos_err`, `user_pos`, `motor_speed`,
 `nozzle_expos`, `nozzle_thresh`, `offset_config` and the `pld_*` preload
 values. `POST /api/page/cfg` changes any of them, the input boxes follow; a
 change is kept in the browser only with `"save": true`, as the Save button

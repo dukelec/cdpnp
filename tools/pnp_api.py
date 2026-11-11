@@ -123,10 +123,11 @@ class PnpApi:
         Returns {'found', 'pos', 'angle'}."""
         return self._req('POST', '/snap', None, {'times': times, 'max_err': max_err})
 
-    def pcb2xyz(self, pcb, cam, x, y):
-        """Machine coordinates [x, y, angle] of pcb point (x, y), given the two fiducials
-        in pcb coordinates and where the camera found them."""
-        return self._req('POST', '/pcb2xyz', None, {'pcb': pcb, 'cam': cam, 'x': x, 'y': y})
+    def pcb2xyz(self, pcb, cam, x, y, skew=0):
+        """Machine coordinates [x, y, angle] of pcb point (x, y), given 2 to 4 fiducials
+        in pcb coordinates and where the camera found them. skew: the page's xy_skew, used
+        with 2 fiducials."""
+        return self._req('POST', '/pcb2xyz', None, {'pcb': pcb, 'cam': cam, 'x': x, 'y': y, 'skew': skew})
 
     def wait_stop(self):
         return self._req('POST', '/wait_stop', None, '')
@@ -174,6 +175,20 @@ class PnpApi:
 
     def board(self, idx):
         return self._req('POST', '/page/board', None, {'idx': idx})
+
+    def fid_lock(self, board=None, point=None):
+        """Lock on the fiducial near the center of the frame, {'pos', 'box'}; board and point
+        (0..3) also fill that box."""
+        return self._req('POST', '/page/fid_lock', None, {} if board is None else {'board': board, 'point': point})
+
+    def fid_lock_all(self):
+        """Go to every fiducial of every board and lock on it, {'total', 'locked', 'failed',
+        'max_move', 'moves', 'stopped'}."""
+        return self._req('POST', '/page/fid_lock_all', None, '')
+
+    def cali_skew(self):
+        """xy_skew from the 3 or 4 fiducials of the selected board, applied at once."""
+        return self._req('POST', '/page/cali_skew', None, '')
 
 
 if __name__ == '__main__':
