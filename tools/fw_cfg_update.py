@@ -90,11 +90,13 @@ R_SAVE_CONF = 0x0007
 
 
 class Target:
-    def __init__(self, desc, app, bl, cfg, flash_kb, conf_addr, conf_ver, end_common, conf_ranges, min_bl, skip=()):
+    def __init__(self, desc, app, bl, cfg, flash_kb, conf_addr, conf_ver, end_common, conf_ranges, min_bl, skip=(),
+                 cfg_set='default'):
         self.desc = desc
         self.min_bl = min_bl            # --keep-bl: an older bl is updated anyway, see Flasher.keep_bl
         self.app_pat, self.bl_pat = app, bl
         self.cfg = cfg                  # cdbus gui config: register names of the .mpk files
+        self.cfg_set = cfg_set          # reg.sets of the config: its own registers and the write groups
         self.flash_kb = flash_kb
         self.conf_addr = conf_addr      # APP_CONF_ADDR
         self.conf_ver = conf_ver        # APP_CONF_VER
@@ -120,20 +122,20 @@ class Target:
 _STEP = dict(flash_kb=128, conf_addr=0x0801f800, conf_ver=0x0300, end_common=0x0031, min_bl='v3.0',
              skip=('dbg_raw_en', 'tp_pos', 'tp_state', 'tp_vel_out'))
 _PRJ = [(0x0008, 0x0294), (0x0300, 0x03d0)]
-_CAM = dict(bl='bl/cdcam123_bl_v*.hex', cfg='cdcam-v2.0.0.json', flash_kb=128, conf_addr=0x0801f800,
+_CAM = dict(bl='bl/cdcam123_bl_v*.hex', cfg='cdcam-v2.0.2.json', flash_kb=128, conf_addr=0x0801f800,
             conf_ver=0x0200, end_common=0x002c, conf_ranges=[(0x0008, 0x005f)], min_bl='v3.0')
 
 TARGETS = {
-    'step':   Target('cdstep',   app='app/cdstep34_fw_v*.hex',  bl='bl/cdstep34_bl_v*.hex', cfg='cdstep-v3.0.0.json',
+    'step':   Target('cdstep',   app='app/cdstep34_fw_v*.hex',  bl='bl/cdstep34_bl_v*.hex', cfg='cdstep-v3.0.2.json',
                      conf_ranges=[(0x0008, 0x0294)], **_STEP),
-    'step_r': Target('cdstep-r', app='app/cdstep34r_fw_v*.hex', bl='bl/cdstep34_bl_v*.hex', cfg='cdstep-r-v3.0.0.json',
-                     conf_ranges=_PRJ, **_STEP),
-    'step_z': Target('cdstep-z', app='app/cdstep34z_fw_v*.hex', bl='bl/cdstep34_bl_v*.hex', cfg='cdstep-z-v3.0.0.json',
-                     conf_ranges=_PRJ, **_STEP),
-    'pump1':  Target('cdpump1 (g031)', app='app/cdpump1_fw_v*.hex', bl='bl/cdpump1_bl_v*.hex', cfg='cdpump-v2.0.0.json',
-                     flash_kb=64, conf_addr=0x0800f800, conf_ver=0x0200, end_common=0x002c,
+    'step_r': Target('cdstep-r', app='app/cdstep34r_fw_v*.hex', bl='bl/cdstep34_bl_v*.hex', cfg='cdstep-v3.0.2.json',
+                     cfg_set='cdpnp_r', conf_ranges=_PRJ, **_STEP),
+    'step_z': Target('cdstep-z', app='app/cdstep34z_fw_v*.hex', bl='bl/cdstep34_bl_v*.hex', cfg='cdstep-v3.0.2.json',
+                     cfg_set='cdpnp_z', conf_ranges=_PRJ, **_STEP),
+    'pump1':  Target('cdpump1 (g031)', app='app/cdpump1_fw_v*.hex', bl='bl/cdpump1_bl_v*.hex', cfg='cdpump-v2.0.3.json',
+                     cfg_set='onoff', flash_kb=64, conf_addr=0x0800f800, conf_ver=0x0200, end_common=0x002c,
                      conf_ranges=[(0x0008, 0x0036)], min_bl='v2.0'),
-    'pump2':  Target('cdpump2', app='app/cdpump2_fw_v*.hex', bl='bl/cdpump2_bl_v*.hex', cfg='cdpump-v2.0.1.json',
+    'pump2':  Target('cdpump2', app='app/cdpump2_fw_v*.hex', bl='bl/cdpump2_bl_v*.hex', cfg='cdpump-v2.0.3.json',
                      flash_kb=128, conf_addr=0x0801f800, conf_ver=0x0200, end_common=0x002b,
                      conf_ranges=[(0x0008, 0x00e2)], min_bl='v3.0', skip=('dbg_raw_msk',)),
     'cam1':   Target('cdcam1',  app='app/cdcam1_*.hex',  **_CAM),
@@ -330,7 +332,7 @@ def load_json5(path):
     str_re = r'"(?:\\.|[^"\\])*"'
     def sub1(m):
         t = m.group(0)
-        return t if t[0] == '"' else '' if t[0] == '/' else str(int(t, 16))
+        return re.sub(r'\\\r?\n', '', t) if t[0] == '"' else '' if t[0] == '/' else str(int(t, 16)) # \ line continuation
     s = re.sub(str_re + r'|//[^\n]*|/\*.*?\*/|\b0[xX][0-9a-fA-F]+\b', sub1, s, flags=re.S)
     s = re.sub(str_re + r'|,(?=\s*[\]}])', lambda m: m.group(0) if m.group(0)[0] == '"' else '', s)
     return json.loads(s)
@@ -426,11 +428,12 @@ class Reg:
 
 
 class RegMap:
-    def __init__(self, cfg_name):
+    def __init__(self, cfg_name, set_name):
         self.path = pjoin(CFG_DIR, cfg_name)
         cfg = load_json5(self.path)['reg']
+        rset = cfg['sets'][set_name]
         self.regs = {}
-        for r in cfg['list']:
+        for r in cfg['list'] + rset.get('list', []):
             addr, len_, fmt, show, name = r[:5]
             fsize = _fields(fmt)[1]
             if fmt.startswith('{') and len_ != fsize: # one register per element, as cdbus gui names them
@@ -438,7 +441,7 @@ class RegMap:
                     self.regs[f'{name}.{n}'] = Reg(addr + fsize * n, fsize, fmt, show, f'{name}.{n}')
             else:
                 self.regs[name] = Reg(addr, len_, fmt, show, name)
-        self.w_grps = [self._span(g) for g in cfg['reg_w']]
+        self.w_grps = [self._span(g) for g in rset['w']]
 
     def _span(self, g):
         def find(n):
@@ -822,7 +825,7 @@ class Module(Flasher):
         self.conf_new = self.conf_page_new()
         self.mpk_name = self.allowed[self.variant]
         self.mpk = load_mpk(self.mpk_name)
-        self.regmap = RegMap(t.cfg)
+        self.regmap = RegMap(t.cfg, t.cfg_set)
         self.conf_image() # check the .mpk early
         self.todo = []
         if self.need_bl:
@@ -849,7 +852,7 @@ class Module(Flasher):
         for name, val in self.mpk.items():
             r = self.regmap.regs.get(name)
             if r is None:
-                raise UpdateError(f'{self.mpk_name}: {name} is not in {self.t.cfg}')
+                raise UpdateError(f'{self.mpk_name}: {name} is not in {self.t.cfg} ({self.t.cfg_set})')
             if name in self.t.skip or not any(a <= r.addr and r.addr + r.len <= b for a, b in self.t.conf_ranges):
                 continue
             if r.name.split('.')[0] in ('prj_conf_ver',) or not self.regmap.writable(r):
